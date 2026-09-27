@@ -1,7 +1,16 @@
 [build]
+  command = "npm run build"
+  publish = "dist" # ou "build", conforme a pasta de saída do seu projeto
   functions = "netlify/functions"
 
+# Redireciona APENAS as chamadas da API para a Serverless Function
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+
+# Redireciona todas as restantes rotas para o frontend React/Vite (SPA fallback)
 [[redirects]]
   from = "/*"
-  to = "/.netlify/functions/api"
+  to = "/index.html"
   status = 200
