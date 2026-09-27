@@ -14,6 +14,11 @@ app.get('*', (_, res) => {
   res.sendFile(path.join(publicDir, 'index.html'));
 });
 
-app.listen(port, () => {
-  console.log(`🚀 Censo CEEPS (Supabase Frontend) rodando em http://localhost:${port}`);
-});
+// Apenas escuta a porta se não estiver rodando em ambiente Serverless (Netlify/Vercel)
+if (process.env.NETLIFY !== 'true' && !process.env.LAMBDA_TASK_ROOT && !process.env.VERCEL) {
+  app.listen(port, () => {
+    console.log(`🚀 Censo CEEPS rodando em http://localhost:${port}`);
+  });
+}
+
+export default app;
