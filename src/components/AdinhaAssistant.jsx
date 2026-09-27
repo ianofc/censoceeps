@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import './adinha-assistant.css';
+import './AdinhaAssistant.css';
 
-// Importação dos assets
-import adinhaDefault from '../assets/adinha-default.png';
-import adinhaThinking from '../assets/adinha-thinking.png';
-import adinhaTalking from '../assets/adinha-talking.png';
+// Importações com o caminho correto da subpasta 'imgs'
+import adinhaDefault from '../assets/imgs/adinhafrente.png';
+import adinhaThinking from '../assets/imgs/adinhaexpressaopensativa.png';
+import adinhaTalking from '../assets/imgs/adinhaexplicando.png';
 
 export const AdinhaAssistant = ({ endpointUrl = null }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -15,7 +15,7 @@ export const AdinhaAssistant = ({ endpointUrl = null }) => {
     }
   ]);
   const [input, setInput] = useState('');
-  const [status, setStatus] = useState('idle'); // idle | thinking | talking
+  const [status, setStatus] = useState('idle');
   const chatBottomRef = useRef(null);
 
   useEffect(() => {
@@ -46,7 +46,6 @@ export const AdinhaAssistant = ({ endpointUrl = null }) => {
     try {
       let replyText = '';
 
-      // Se o endpoint exato da PentaIA for fornecido, realiza a chamada real
       if (endpointUrl) {
         const response = await fetch(endpointUrl, {
           method: 'POST',
@@ -62,7 +61,6 @@ export const AdinhaAssistant = ({ endpointUrl = null }) => {
         const data = await response.json();
         replyText = data.reply || data.response || 'Processado com sucesso!';
       } else {
-        // Fallback temporário de simulação até a conexão do endpoint final
         await new Promise((resolve) => setTimeout(resolve, 1500));
         replyText = `Recebi sua mensagem sobre "${userText}". O motor ZIOS da PentaIA processará as diretrizes do Censo CEEP assim que o endpoint for conectado.`;
       }
@@ -84,7 +82,6 @@ export const AdinhaAssistant = ({ endpointUrl = null }) => {
     <aside className="adinha-container" aria-label="Assistente Virtual Adinha">
       {isOpen && (
         <div className="adinha-chat-window">
-          {/* Cabeçalho */}
           <div className="adinha-header">
             <div className="adinha-header-info">
               <img src={getAdinhaAvatar()} alt="Adinha" className="adinha-avatar-small" />
@@ -98,7 +95,6 @@ export const AdinhaAssistant = ({ endpointUrl = null }) => {
             </button>
           </div>
 
-          {/* Mensagens */}
           <div className="adinha-messages-body">
             {messages.map((msg, index) => (
               <div key={index} className={`adinha-message-wrapper ${msg.sender}`}>
@@ -111,7 +107,6 @@ export const AdinhaAssistant = ({ endpointUrl = null }) => {
             <div ref={chatBottomRef} />
           </div>
 
-          {/* Footer / Input */}
           <div className="adinha-footer">
             <input
               type="text"
@@ -132,7 +127,6 @@ export const AdinhaAssistant = ({ endpointUrl = null }) => {
         </div>
       )}
 
-      {/* Botão de Abertura */}
       <button onClick={() => setIsOpen(!isOpen)} className="adinha-trigger-btn" aria-label="Abrir assistente Adinha">
         <img src={getAdinhaAvatar()} alt="Avatar Adinha" className="adinha-trigger-avatar" />
       </button>
