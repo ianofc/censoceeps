@@ -1,5 +1,306 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Censo CEEPS</title><link rel="stylesheet" href="styles.css"><script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script></head><body>
-<div id="login" class="login wrap"><div class="brand">◈ Censo <strong>CEEPS</strong></div><div class="card"><h1>Acesso do entrevistador</h1><p>Registre entrevistas da comunidade escolar com respeito e sigilo.</p><form id="loginForm"><label>E-mail<input id="email" type="email" value="admin@escola.com" required></label><label>Senha<input id="senha" type="password" value="123456" required></label><button>Entrar</button><small id="loginError" class="error"></small></form></div></div>
-<div id="app" class="hidden"><header><div class="brand">◈ Censo <strong>CEEPS</strong></div><nav><button data-view="interview" class="active">Nova entrevista</button><button data-view="dashboard">Dashboard</button><button id="logout" class="outline">Sair</button></nav></header><main class="wrap">
-<section id="interview"><div class="hero"><div><span class="eyebrow">COLETA DE DADOS</span><h1>Entrevista étnico-racial</h1><p>Faça as perguntas com acolhimento. Nenhum nome ou matrícula é registrado.</p></div></div><form id="interviewForm"><div class="grid"><div class="card"><h2>Perfil na escola</h2><label>Vínculo<select name="vinculo" required><option value="ESTUDANTE">Estudante</option><option value="FUNCIONARIO">Funcionário, docente ou servidor</option></select></label><label>Turma ou setor<select name="grupo_escolar_id" id="groups" required></select></label><label>Faixa etária<select name="faixa_etaria" required><option>Menos de 15 anos</option><option>15 a 17 anos</option><option>18 a 29 anos</option><option>30 a 49 anos</option><option>50 anos ou mais</option></select></label></div><div class="card"><h2>Autodeclaração</h2><p class="question">Qual a cor ou raça declarada?</p><div class="options">${['Branca','Preta','Parda','Amarela','Indígena','Prefiro não responder'].map(x=>`<label><input type="radio" name="cor_raca" value="${x}" required>${x}</label>`).join('')}</div><label>Povo ou etnia indígena (opcional)<input name="povo_indigena" maxlength="100"></label></div></div><div class="grid"><div class="card"><h2>Ancestralidade</h2><label>Conhece a origem da família?<select name="conhece_ancestralidade" required><option>Sim, conheço bem</option><option>Conheço um pouco</option><option>Não conheço</option></select></label><label>Até qual geração? <select name="geracao_alcancada"><option value="">Não informado</option><option>Pais</option><option>Avós</option><option>Bisavós</option><option>Trisavós</option><option>Tetravós / tataravós</option></select></label></div><div class="card"><h2>Diálogo</h2><label>Já conversou sobre o tema?<select name="ja_conversou_sobre" required><option>Sim, com frequência</option><option>Sim, poucas vezes</option><option>Nunca</option></select></label><p class="question">Onde? (pode marcar várias)</p><div class="options">${['Família','Escola','Amigos','Redes sociais / internet'].map(x=>`<label><input type="checkbox" name="ambientes_conversa" value="${x}">${x}</label>`).join('')}</div></div></div><button class="primary">Salvar entrevista</button><span id="formMessage"></span></form></section>
-<section id="dashboard" class="hidden"><div class="hero"><div><span class="eyebrow">VISÃO GERAL</span><h1>Dashboard de diversidade</h1><p>Dados agregados para apoiar ações pedagógicas e institucionais.</p></div><div class="actions"><select id="filter"><option value="">Toda a comunidade</option><option value="ESTUDANTE">Estudantes</option><option value="FUNCIONARIO">Funcionários</option></select><button id="export" class="outline">Exportar CSV</button></div></div><div class="kpis"><div class="kpi"><span>ENTREVISTAS</span><b id="total">0</b></div><div class="kpi"><span>PRETAS + PARDAS</span><b id="negra">0%</b></div><div class="kpi"><span>VÍNCULOS</span><b id="vinculos">0</b></div></div><div class="charts"><div class="card"><h2>Cor ou raça</h2><canvas id="raceChart"></canvas></div><div class="card"><h2>Vínculo</h2><canvas id="linkChart"></canvas></div><div class="card wide"><h2>Entrevistas por turma ou setor</h2><canvas id="groupChart"></canvas></div></div></section></main></div><script src="app.js"></script></body></html>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ada Lovelace · Censo CEEPS</title>
+  
+  <!-- CSS -->
+  <link rel="stylesheet" href="styles.css">
+  
+  <!-- Phosphor Icons (para a barra lateral idêntica ao Ágora) -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  
+  <!-- Dependências Externas -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════
+     TELA DE LOGIN (Idêntica ao Ágora OS)
+══════════════════════════════════════════════════════ -->
+<div id="login">
+  <div class="login-card">
+    <div class="login-left">
+      <h2>⚗️ Ada Lovelace</h2>
+      <h1>A ciência nas suas mãos.</h1>
+      <p>O Portal Oficial de Iniciação Científica e Censo Escolar. Colete dados, gere relatórios e acompanhe a evolução do projeto em tempo real com transparência e segurança.</p>
+    </div>
+    <div class="login-right">
+      <h3>Acesso ao Sistema</h3>
+      <p>Inicie sessão com as credenciais de pesquisador ou gestor.</p>
+      <form id="loginForm">
+        <div class="input-group">
+          <label>E-mail Institucional</label>
+          <input id="email" type="email" placeholder="nome@aluno.ceep.com" required>
+        </div>
+        <div class="input-group">
+          <label>Chave de Segurança</label>
+          <input id="senha" type="password" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn-login" id="btnLogin">DESBLOQUEAR SISTEMA</button>
+        <div id="loginError" class="error-msg"></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     APP PRINCIPAL (Sidebar + Content)
+══════════════════════════════════════════════════════ -->
+<div id="app" class="hidden" style="width: 100%;">
+
+  <aside class="sidebar">
+    <div class="brand-icon">⚗️</div>
+    
+    <!-- Visão Professor -->
+    <button data-view="dashboard" class="nav-btn nav-teacher hidden active" title="Dashboard">
+      <i class="ph ph-chart-bar"></i>
+    </button>
+    <button data-view="admin-panel" class="nav-btn nav-teacher hidden" title="Auditoria Oficial">
+      <i class="ph ph-users"></i>
+    </button>
+
+    <!-- Visão Aluno -->
+    <button data-view="interview" class="nav-btn nav-student hidden active" title="Nova Entrevista">
+      <i class="ph ph-file-text"></i>
+    </button>
+
+    <div style="flex-grow: 1;"></div>
+    
+    <button id="logout" class="nav-btn" style="color: #ef4444;" title="Sair">
+      <i class="ph ph-sign-out"></i>
+    </button>
+  </aside>
+
+  <main>
+
+    <!-- ─── VISÃO DO ALUNO: ENTREVISTA ──────────────── -->
+    <section id="interview" class="hidden">
+      <div class="page-header">
+        <h1>Coleta de Dados</h1>
+        <div class="actions">
+          <button id="export-student-pdf"><i class="ph ph-printer"></i> Meu Relatório PDF</button>
+        </div>
+      </div>
+
+      <!-- Alerta Importante (Bloqueio Duplicidade) -->
+      <div class="white-card" style="border-left: 4px solid var(--primary-blue); margin-bottom: 24px; padding: 16px 24px;">
+        <p style="font-weight: 600; color: var(--primary-dark); font-size: 0.95rem;">
+          ⚠️ Atenção pesquisador(a) <span id="student-name"></span>: Um aluno ou funcionário não pode responder ao censo mais de uma vez. Verifique com o entrevistado antes de prosseguir.
+        </p>
+      </div>
+
+      <form id="interviewForm">
+        
+        <div class="form-card">
+          <h3>Identificação para Controle</h3>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
+            Utilizado apenas para evitar duplicidades no sistema. (As respostas permanecem anônimas para análises).
+          </p>
+          <div class="input-group">
+            <label>Nome Completo do Entrevistado</label>
+            <input type="text" id="nome_entrevistado" placeholder="Digite o nome completo do aluno ou funcionário" required>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-card">
+            <h3>Perfil Escolar</h3>
+            <div class="input-group" style="margin-bottom: 16px;">
+              <label>Vínculo</label>
+              <select id="vinculo" required>
+                <option value="ESTUDANTE">Estudante</option>
+                <option value="FUNCIONARIO">Funcionário/Docente</option>
+              </select>
+            </div>
+            <div class="input-group" style="margin-bottom: 16px;">
+              <label>Turma ou Setor</label>
+              <input type="text" id="grupo_escolar" placeholder="Ex: 1º ADM AM" required>
+            </div>
+            <div class="input-group">
+              <label>Faixa Etária</label>
+              <select id="faixa_etaria" required>
+                <option>Menos de 15 anos</option>
+                <option>15 a 17 anos</option>
+                <option>18 a 29 anos</option>
+                <option>30 a 49 anos</option>
+                <option>50 anos ou mais</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-card">
+            <h3>Gênero</h3>
+            <div class="radio-group">
+              <label><input type="radio" name="genero" value="Feminino" required> Feminino</label>
+              <label><input type="radio" name="genero" value="Masculino"> Masculino</label>
+              <label><input type="radio" name="genero" value="Outros"> Outros</label>
+              <label><input type="radio" name="genero" value="Prefiro não informar"> Prefiro não informar</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-card">
+            <h3>Autodeclaração Racial (IBGE)</h3>
+            <div class="radio-group">
+              <label><input type="radio" name="cor_raca" value="Branca" required> Branca</label>
+              <label><input type="radio" name="cor_raca" value="Preta"> Preta</label>
+              <label><input type="radio" name="cor_raca" value="Parda"> Parda</label>
+              <label><input type="radio" name="cor_raca" value="Amarela"> Amarela</label>
+              <label><input type="radio" name="cor_raca" value="Indígena"> Indígena</label>
+            </div>
+            <div class="input-group" style="margin-top: 16px;">
+              <label>Etnia Indígena (Opcional)</label>
+              <input type="text" id="povo_indigena" placeholder="Ex: Pataxó">
+            </div>
+          </div>
+
+          <div class="form-card">
+            <h3>Ancestralidade</h3>
+            <div class="input-group" style="margin-bottom: 16px;">
+              <label>Conhece a origem?</label>
+              <select id="conhece_ancestralidade" required>
+                <option>Sim, conheço bem</option>
+                <option>Conheço um pouco</option>
+                <option>Não conheço</option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label>Até qual geração?</label>
+              <select id="geracao_alcancada">
+                <option value="">Não informado</option>
+                <option>Pais</option>
+                <option>Avós</option>
+                <option>Bisavós</option>
+                <option>Tetravós ou além</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-card">
+          <h3>Preconceito & Diálogo</h3>
+          <div class="form-grid">
+            <div class="input-group">
+              <label>Já dialogou sobre raça?</label>
+              <select id="ja_conversou_sobre" required>
+                <option>Sim, frequentemente</option>
+                <option>Raramente</option>
+                <option>Nunca</option>
+              </select>
+            </div>
+            <div class="radio-group">
+              <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); border: none; padding: 0;">ONDE? (Marque as opções)</label>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <label><input type="checkbox" name="ambientes_conversa" value="Família"> Família</label>
+                <label><input type="checkbox" name="ambientes_conversa" value="Escola"> Escola</label>
+                <label><input type="checkbox" name="ambientes_conversa" value="Amigos"> Amigos</label>
+                <label><input type="checkbox" name="ambientes_conversa" value="Redes"> Redes Sociais</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="input-group" style="margin-top: 24px;">
+            <label>Já sofreu preconceito?</label>
+            <div class="radio-group" style="display: grid; grid-template-columns: 1fr 1fr;">
+              <label><input type="radio" name="sofreu_preconceito" value="Sim, por cor/raça" required onclick="toggleRelato(true)"> Sim (Cor/Raça)</label>
+              <label><input type="radio" name="sofreu_preconceito" value="Sim, por gênero" onclick="toggleRelato(true)"> Sim (Gênero)</label>
+              <label><input type="radio" name="sofreu_preconceito" value="Sim, por outro motivo" onclick="toggleRelato(true)"> Sim (Outro)</label>
+              <label><input type="radio" name="sofreu_preconceito" value="Não" onclick="toggleRelato(false)"> Não</label>
+            </div>
+          </div>
+          <div id="box-relato" class="input-group hidden" style="margin-top: 16px;">
+            <label>Relato (Opcional)</label>
+            <textarea id="relato_preconceito" rows="3"></textarea>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit" id="btnSubmitInterview">Registrar Entrevista</button>
+      </form>
+    </section>
+
+    <!-- ─── VISÃO DO PROFESSOR: DASHBOARD TEMPO REAL ──────────── -->
+    <section id="dashboard" class="hidden">
+      <div class="page-header">
+        <h1>Dashboard ao Vivo</h1>
+      </div>
+
+      <div class="dark-hero-card">
+        <h2>🔥 Termômetro do Censo Escolar</h2>
+        <div class="kpi-row">
+          <div class="kpi-item">
+            <span>Total de Entrevistas</span>
+            <b id="total" class="blue">0</b>
+          </div>
+          <div class="kpi-item">
+            <span>Pretas e Pardas</span>
+            <b id="negra">0%</b>
+          </div>
+          <div class="kpi-item">
+            <span>Pesquisadores Ativos</span>
+            <b id="alunos-ativos" class="green">0</b>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="white-card">
+          <h3>Cor ou Raça</h3>
+          <div class="chart-container"><canvas id="raceChart"></canvas></div>
+        </div>
+        <div class="white-card">
+          <h3>Gênero</h3>
+          <div class="chart-container"><canvas id="genderChart"></canvas></div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="white-card">
+          <h3>Vínculo</h3>
+          <div class="chart-container"><canvas id="linkChart"></canvas></div>
+        </div>
+        <div class="white-card">
+          <h3>Experiência de Preconceito</h3>
+          <div class="chart-container"><canvas id="preconceitoChart"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── VISÃO DO PROFESSOR: AUDITORIA OFICIAL ─────────────── -->
+    <section id="admin-panel" class="hidden">
+      <div class="page-header">
+        <h1>Auditoria Oficial</h1>
+        <div class="actions">
+          <button id="export-teacher-pdf" style="background: var(--primary-dark); color: white; border: none;">
+            <i class="ph ph-printer"></i> Relatório PDF
+          </button>
+        </div>
+      </div>
+
+      <div class="white-card">
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Aluno Pesquisador</th>
+                <th>Setor/Turma</th>
+                <th>Entrevistas Realizadas</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="student-list"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
