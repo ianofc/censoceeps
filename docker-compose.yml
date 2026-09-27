@@ -1,0 +1,173 @@
+version: "3.9"
+
+services:
+  # ============================================================
+  # HEIMDALL - Segurança & Middleware
+  # ============================================================
+  heimdall:
+    build:
+      context: .
+      dockerfile: pentaia/heimdall/Dockerfile
+    container_name: censoceeps-heimdall
+    ports:
+      - "8000:8000"
+    environment:
+      - SERVICE_NAME=heimdall
+      - PORT=8000
+      - HEIMDALL_ENABLED=true
+      - HEIMDALL_RATE_LIMIT_REQUESTS=100
+      - HEIMDALL_RATE_LIMIT_WINDOW_SECONDS=60
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - pentaia-net
+
+  # ============================================================
+  # ZIOS - Motor de IA & Chatbot (Adinha)
+  # ============================================================
+  zios:
+    build:
+      context: .
+      dockerfile: pentaia/zios/Dockerfile
+    container_name: censoceeps-zios
+    ports:
+      - "8001:8001"
+    environment:
+      - SERVICE_NAME=zios
+      - PORT=8001
+      - HOST=0.0.0.0
+      - RELOAD=false
+      - GOOGLE_GENAI_API_KEY=${GOOGLE_GENAI_API_KEY}
+    depends_on:
+      heimdall:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - pentaia-net
+    volumes:
+      - ./pentaia/zios/:/app/
+
+  # ============================================================
+  # TAS - Análise de Tendências
+  # ============================================================
+  tas:
+    build:
+      context: .
+      dockerfile: pentaia/tas/Dockerfile
+    container_name: censoceeps-tas
+    ports:
+      - "8002:8002"
+    environment:
+      - SERVICE_NAME=tas
+      - PORT=8002
+      - HOST=0.0.0.0
+      - RELOAD=false
+    depends_on:
+      heimdall:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - pentaia-net
+    volumes:
+      - ./pentaia/tas/:/app/
+
+  # ============================================================
+  # IRIS - Scraping & Coleta de Dados
+  # ============================================================
+  iris:
+    build:
+      context: .
+      dockerfile: pentaia/iris/Dockerfile
+    container_name: censoceeps-iris
+    ports:
+      - "8003:8003"
+    environment:
+      - SERVICE_NAME=iris
+      - PORT=8003
+      - HOST=0.0.0.0
+      - RELOAD=false
+    depends_on:
+      heimdall:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - pentaia-net
+    volumes:
+      - ./pentaia/iris/:/app/
+
+  # ============================================================
+  # MERCÚRIO - Hub de Distribuição
+  # ============================================================
+  mercurio:
+    build:
+      context: .
+      dockerfile: pentaia/mercurio/Dockerfile
+    container_name: censoceeps-mercurio
+    ports:
+      - "8004:8004"
+    environment:
+      - SERVICE_NAME=mercurio
+      - PORT=8004
+      - HOST=0.0.0.0
+      - TAS_TRENDS_URL=http://tas:8002/api/v1/recommend/trends
+      - IRIS_SCAN_URL=http://iris:8003/scan/full
+      - HEIMDALL_CHECK_URL=http://zios:8001/v1/proactive/heimdall/check
+      - MERCURIO_CORS_ALLOW_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080
+    depends_on:
+      heimdall:
+        condition: service_healthy
+      zios:
+        condition: service_healthy
+      tas:
+        condition: service_healthy
+      iris:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - pentaia-net
+    volumes:
+      - ./pentaia/mercurio/:/app/
+
+  # ============================================================
+  # EXPRESS - Proxy Frontend + SPA
+  # ============================================================
+  express:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: censoceeps-express
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=development
+    depends_on:
+      mercurio:
+        condition: service_healthy
+    networks:
+      - pentaia-net
+    volumes:
+      - ./src:/app/src
+
+networks:
+  pentaia-net:
+    driver: bridge
