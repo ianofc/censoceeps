@@ -1,0 +1,416 @@
+/* ============================================================================
+   ADINHA ASSISTANT - Estilos do Chat Flutuante
+   ============================================================================
+   
+   Assistente virtual Ada Lovelace integrado ao Censo CEEP
+   com suporte a:
+   - Chat flutuante com avatar animado
+   - Integração com ZIOS/Heimdall (PentaIA)
+   - Responsividade mobile-first
+   - Acessibilidade (ARIA labels, keyboard navigation)
+   
+============================================================================ */
+
+/* ===== VARIÁVEIS CSS ===== */
+:root {
+  --adinha-primary: #2563eb;
+  --adinha-primary-dark: #0f172a;
+  --adinha-bg-light: #f8fafc;
+  --adinha-border: #e2e8f0;
+  --adinha-text-dark: #1e293b;
+  --adinha-text-muted: #64748b;
+  --adinha-shadow: 0 10px 40px rgba(0, 0, 0, 0.16);
+  --adinha-transition: all 0.2s ease;
+}
+
+/* ===== CONTAINER FLUTUANTE ===== */
+.adinha-assistant-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1000;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+}
+
+/* ===== BOTÃO FLUTUANTE ===== */
+.adinha-float-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 3px solid #ffffff;
+  background: none;
+  cursor: pointer;
+  outline: none;
+  padding: 0;
+  transition: var(--adinha-transition);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35);
+  position: relative;
+}
+
+.adinha-float-btn:hover {
+  transform: scale(1.1);
+}
+
+.adinha-float-btn img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* Badge de notificação */
+.adinha-notification-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 24px;
+  height: 24px;
+  background-color: #ef4444;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+  color: #ffffff;
+  animation: adinha-pulse 2s infinite;
+}
+
+/* ===== JANELA DO CHAT ===== */
+.adinha-chat-window {
+  width: 360px;
+  height: 520px;
+  background-color: #ffffff;
+  border-radius: 16px;
+  box-shadow: var(--adinha-shadow);
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 16px;
+  overflow: hidden;
+  border: 1px solid var(--adinha-border);
+  animation: adinha-slideUp 0.3s ease-out;
+}
+
+/* ===== CABEÇALHO ===== */
+.adinha-header {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #ffffff;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #1e293b;
+}
+
+.adinha-header-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.adinha-header-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #94a3b8;
+  flex-shrink: 0;
+}
+
+.adinha-header-info h4 {
+  margin: 0 0 2px 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.adinha-header-info span {
+  font-size: 11px;
+  color: #cbd5e1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.adinha-header-close {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 20px;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+}
+
+.adinha-header-close:hover {
+  color: #ffffff;
+}
+
+/* ===== CORPO DAS MENSAGENS ===== */
+.adinha-messages {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  background-color: var(--adinha-bg-light);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.adinha-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.adinha-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.adinha-messages::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.adinha-messages::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ===== MENSAGEM INDIVIDUAL ===== */
+.adinha-message {
+  display: flex;
+  animation: adinha-fadeIn 0.3s ease-out;
+}
+
+.adinha-message.user {
+  justify-content: flex-end;
+}
+
+.adinha-message.assistant {
+  justify-content: flex-start;
+}
+
+.adinha-message-bubble {
+  max-width: 85%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.adinha-message.user .adinha-message-bubble {
+  background-color: var(--adinha-primary);
+  color: #ffffff;
+  border-radius: 14px 14px 4px 14px;
+}
+
+.adinha-message.assistant .adinha-message-bubble {
+  background-color: #ffffff;
+  color: var(--adinha-text-dark);
+  border-radius: 14px 14px 14px 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--adinha-border);
+}
+
+.adinha-message.error .adinha-message-bubble {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+/* Metadata da mensagem */
+.adinha-message-meta {
+  font-size: 10px;
+  color: #94a3b8;
+  margin-top: 6px;
+  opacity: 0.7;
+}
+
+.adinha-message.user .adinha-message-meta {
+  color: #e0e7ff;
+}
+
+/* ===== INDICADOR DE DIGITAÇÃO ===== */
+.adinha-thinking {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--adinha-text-muted);
+  font-style: italic;
+  padding: 12px;
+  background-color: #f1f5f9;
+  border-radius: 8px;
+}
+
+.adinha-thinking-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--adinha-primary);
+  animation: adinha-pulse 1.5s infinite;
+}
+
+/* ===== CAMPO DE ENTRADA ===== */
+.adinha-input-area {
+  padding: 14px;
+  background-color: #ffffff;
+  border-top: 1px solid var(--adinha-border);
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.adinha-input-field {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-size: 13px;
+  outline: none;
+  transition: var(--adinha-transition);
+  background-color: #ffffff;
+  font-family: inherit;
+}
+
+.adinha-input-field:focus {
+  border-color: var(--adinha-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.adinha-input-field:disabled {
+  background-color: #f1f5f9;
+  cursor: not-allowed;
+}
+
+.adinha-send-btn {
+  padding: 10px 16px;
+  background-color: var(--adinha-primary);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--adinha-transition);
+  flex-shrink: 0;
+  font-family: inherit;
+}
+
+.adinha-send-btn:hover:not(:disabled) {
+  background-color: #1d4ed8;
+}
+
+.adinha-send-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ===== ANIMAÇÕES ===== */
+@keyframes adinha-slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes adinha-fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes adinha-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* ===== RESPONSIVIDADE ===== */
+@media (max-width: 480px) {
+  .adinha-assistant-container {
+    bottom: 16px;
+    right: 16px;
+  }
+
+  .adinha-chat-window {
+    width: 100vw;
+    height: 100vh;
+    max-width: 360px;
+    max-height: 520px;
+    border-radius: 0;
+  }
+
+  .adinha-float-btn {
+    width: 60px;
+    height: 60px;
+  }
+
+  .adinha-message-bubble {
+    max-width: 90%;
+  }
+}
+
+/* ===== ACESSIBILIDADE ===== */
+@media (prefers-reduced-motion: reduce) {
+  .adinha-chat-window,
+  .adinha-message,
+  .adinha-float-btn,
+  .adinha-notification-badge {
+    animation: none;
+  }
+
+  .adinha-float-btn:hover {
+    transform: none;
+  }
+}
+
+/* ===== TEMAS ALTERNATIVOS ===== */
+
+/* Tema escuro (opcional) */
+@media (prefers-color-scheme: dark) {
+  .adinha-chat-window {
+    background-color: #1e293b;
+    border-color: #334155;
+  }
+
+  .adinha-messages {
+    background-color: #0f172a;
+  }
+
+  .adinha-message.assistant .adinha-message-bubble {
+    background-color: #1e293b;
+    color: #e2e8f0;
+    border-color: #334155;
+  }
+
+  .adinha-input-field {
+    background-color: #1e293b;
+    color: #e2e8f0;
+    border-color: #334155;
+  }
+
+  .adinha-input-area {
+    background-color: #0f172a;
+    border-top-color: #334155;
+  }
+}
