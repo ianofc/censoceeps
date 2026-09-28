@@ -19,7 +19,8 @@ import {
   User, 
   LogOut, 
   Flame,
-  Award
+  Award,
+  MoreHorizontal
 } from 'lucide-react';
 
 const adinhaAvatar = new URL('./assets/imgs/AdaLovelace.png', import.meta.url).href;
@@ -31,6 +32,7 @@ interface LayoutProps {
 function Layout({ session }: LayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -38,17 +40,27 @@ function Layout({ session }: LayoutProps) {
 
   const isActive = (path: string) => location.pathname === path;
 
+  // Fecha o menu "Mais" ao navegar
+  const handleNavigation = (path: string) => {
+    setShowMoreMenu(false);
+    navigate(path);
+  };
+
   return (
     <div className="flex flex-col lg:flex-row h-screen bg-slate-100 overflow-hidden font-sans relative">
       
-      {/* NAVBAR / DOCK FLUTUANTE COM BORDAS ARREDONDADAS E TAMANHO DINÂMICO */}
-      <aside className="m-4 lg:my-auto lg:ml-6 bg-slate-900/95 backdrop-blur-md border border-slate-800/80 rounded-3xl flex lg:flex-col items-center justify-between p-3 z-30 shadow-2xl shrink-0">
+      {/* 
+        NAVBAR / DOCK FLUTUANTE RESPONSIVA:
+        - Mobile: Barra Fixa na Parte Inferior (Bottom Bar) com tamanho dinâmico e menu "Mais"
+        - Desktop: Barra Lateral Flutuante com bordas arredondadas à esquerda
+      */}
+      <aside className="fixed bottom-0 left-0 right-0 z-40 m-3 lg:m-auto lg:ml-6 lg:static bg-slate-900/95 backdrop-blur-md border border-slate-800/80 rounded-3xl flex lg:flex-col items-center justify-between p-3 shadow-2xl shrink-0">
         
-        {/* Topo: Ícone da Adinha (Zios do Censo) */}
+        {/* Topo Desktop: Ícone da Adinha (Zios do Censo) */}
         <div className="hidden lg:flex flex-col items-center gap-1 mb-2">
           <button
             type="button"
-            onClick={() => navigate('/')}
+            onClick={() => handleNavigation('/')}
             title="Censo CEEP — Projeto Ada Lovelace"
             className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 p-0.5 shadow-md shadow-blue-500/20 ring-2 ring-white/20 transition-transform hover:scale-105 cursor-pointer flex items-center justify-center border-0"
           >
@@ -60,8 +72,10 @@ function Layout({ session }: LayoutProps) {
           </button>
         </div>
 
-        {/* Navegação Central com Ícones Alinhados */}
-        <nav className="flex lg:flex-col gap-2 w-full items-center justify-around lg:justify-center">
+        {/* Navegação Central com Ícones Dinâmicos */}
+        <nav className="flex lg:flex-col gap-2 w-full items-center justify-around lg:justify-center relative">
+          
+          {/* Indicadores (Sempre visível) */}
           <button
             type="button"
             className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 group relative ${
@@ -69,15 +83,16 @@ function Layout({ session }: LayoutProps) {
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-bold' 
                 : 'text-slate-400 hover:bg-slate-800 hover:text-white'
             }`}
-            onClick={() => navigate('/')}
+            onClick={() => handleNavigation('/')}
             title="Dashboard de Indicadores"
           >
             <BarChart3 className="w-5 h-5 transition-transform group-hover:scale-110" />
-            <span className="absolute bottom-full lg:bottom-auto lg:left-full mb-2 lg:mb-0 lg:ml-3 px-3 py-1 bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+            <span className="hidden lg:block absolute left-full ml-3 px-3 py-1 bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
               Indicadores
             </span>
           </button>
 
+          {/* Coleta de Campo (Sempre visível) */}
           <button
             type="button"
             className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 group relative ${
@@ -85,15 +100,16 @@ function Layout({ session }: LayoutProps) {
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-bold' 
                 : 'text-slate-400 hover:bg-slate-800 hover:text-white'
             }`}
-            onClick={() => navigate('/coleta')}
+            onClick={() => handleNavigation('/coleta')}
             title="Ficha de Coleta do Censo"
           >
             <ClipboardList className="w-5 h-5 transition-transform group-hover:scale-110" />
-            <span className="absolute bottom-full lg:bottom-auto lg:left-full mb-2 lg:mb-0 lg:ml-3 px-3 py-1 bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+            <span className="hidden lg:block absolute left-full ml-3 px-3 py-1 bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
               Coleta de Campo
             </span>
           </button>
 
+          {/* Modo Telão (Visível no Desktop / Dentro do 'Mais' no Mobile se necessário, ou direto) */}
           <button
             type="button"
             className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 group relative ${
@@ -101,49 +117,100 @@ function Layout({ session }: LayoutProps) {
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-bold' 
                 : 'text-slate-400 hover:bg-slate-800 hover:text-white'
             }`}
-            onClick={() => navigate('/telao')}
+            onClick={() => handleNavigation('/telao')}
             title="Modo Telão (Projeção)"
           >
             <Tv2 className="w-5 h-5 transition-transform group-hover:scale-110" />
-            <span className="absolute bottom-full lg:bottom-auto lg:left-full mb-2 lg:mb-0 lg:ml-3 px-3 py-1 bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+            <span className="hidden lg:block absolute left-full ml-3 px-3 py-1 bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
               Modo Telão
             </span>
           </button>
 
-          <button
-            type="button"
-            className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 group relative ${
-              isActive('/auditoria') 
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-bold' 
-                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-            }`}
-            onClick={() => navigate('/auditoria')}
-            title="Painel Docente & Auditoria"
-          >
-            <FolderCheck className="w-5 h-5 transition-transform group-hover:scale-110" />
-            <span className="absolute bottom-full lg:bottom-auto lg:left-full mb-2 lg:mb-0 lg:ml-3 px-3 py-1 bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
-              Painel Docente
-            </span>
-          </button>
+          {/* Botões extras no Mobile agrupados no menu "Mais" para não lotar a tela */}
+          <div className="lg:hidden relative">
+            <button
+              type="button"
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 ${
+                showMoreMenu || isActive('/auditoria') || isActive('/perfil')
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-bold' 
+                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
+              onClick={() => setShowMoreMenu(!showMoreMenu)}
+              title="Mais Opções"
+            >
+              <MoreHorizontal className="w-5 h-5" />
+            </button>
 
-          <button
-            type="button"
-            className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 group relative ${
-              isActive('/perfil') 
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-bold' 
-                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-            }`}
-            onClick={() => navigate('/perfil')}
-            title="Meu Perfil"
-          >
-            <User className="w-5 h-5 transition-transform group-hover:scale-110" />
-            <span className="absolute bottom-full lg:bottom-auto lg:left-full mb-2 lg:mb-0 lg:ml-3 px-3 py-1 bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
-              Meu Perfil
-            </span>
-          </button>
+            {/* Menu Pop-up flutuante para telas pequenas quando clica em Mais */}
+            {showMoreMenu && (
+              <div className="absolute bottom-16 right-0 bg-slate-900 border border-slate-700 rounded-2xl p-2 shadow-2xl flex flex-col gap-2 min-w-[180px] z-50 animate-in fade-in zoom-in-95">
+                <button
+                  type="button"
+                  onClick={() => handleNavigation('/auditoria')}
+                  className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold text-left transition ${
+                    isActive('/auditoria') ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
+                  }`}
+                >
+                  <FolderCheck className="w-4 h-4" /> Painel Docente
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleNavigation('/perfil')}
+                  className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold text-left transition ${
+                    isActive('/perfil') ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
+                  }`}
+                >
+                  <User className="w-4 h-4" /> Meu Perfil
+                </button>
+                <hr className="border-slate-800 my-1" />
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold text-left text-rose-400 hover:bg-rose-500/10 transition"
+                >
+                  <LogOut className="w-4 h-4" /> Encerrar Sessão
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Ícones Individuais visíveis diretamente no Desktop */}
+          <div className="hidden lg:contents">
+            <button
+              type="button"
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 group relative ${
+                isActive('/auditoria') 
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-bold' 
+                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
+              onClick={() => handleNavigation('/auditoria')}
+              title="Painel Docente & Auditoria"
+            >
+              <FolderCheck className="w-5 h-5 transition-transform group-hover:scale-110" />
+              <span className="absolute left-full ml-3 px-3 py-1 bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                Painel Docente
+              </span>
+            </button>
+
+            <button
+              type="button"
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 group relative ${
+                isActive('/perfil') 
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-bold' 
+                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
+              onClick={() => handleNavigation('/perfil')}
+              title="Meu Perfil"
+            >
+              <User className="w-5 h-5 transition-transform group-hover:scale-110" />
+              <span className="absolute left-full ml-3 px-3 py-1 bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                Meu Perfil
+              </span>
+            </button>
+          </div>
         </nav>
 
-        {/* Rodapé da Navbar: Botão de Logout */}
+        {/* Rodapé da Navbar Desktop: Botão de Logout */}
         <div className="mt-auto pt-2 hidden lg:block">
           <button 
             type="button"
@@ -159,14 +226,14 @@ function Layout({ session }: LayoutProps) {
         </div>
       </aside>
 
-      {/* Conteúdo Central Responsivo e Perfeitamente Centralizado */}
-      <main className="flex-1 overflow-y-auto bg-slate-50 p-6 lg:p-10 relative flex flex-col items-center">
-        <div className="w-full max-w-6xl mx-auto">
+      {/* Conteúdo Central Responsivo, Centralizado e com espaçamento inferior extra no mobile para a dock não cobrir conteúdo */}
+      <main className="flex-1 overflow-y-auto bg-slate-50 p-6 lg:p-10 pb-28 lg:pb-10 relative flex flex-col items-center">
+        <div className="w-full max-w-6xl mx-auto flex flex-col items-center">
           <Routes>
             <Route
               path="/"
               element={
-                <div className="space-y-6 animate-in fade-in duration-500 w-full">
+                <div className="space-y-6 animate-in fade-in duration-500 w-full max-w-7xl">
                   <div className="flex justify-between items-center mb-2">
                     <h1 className="text-2xl font-black text-slate-800">Estatísticas do Censo CEEP</h1>
                     <span className="bg-blue-50 text-blue-700 text-xs font-black uppercase tracking-wider px-3.5 py-1.5 rounded-full border border-blue-200 shadow-sm flex items-center gap-1.5">
