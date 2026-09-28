@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ==========================================================================
-   RESET E ESTILOS BASE (Compatibilidade Tailwind v3/v4 & Login)
+   RESET E TEMA BASE (CLEAN LIGHT DESIGN) - ACESSIBILIDADE WCAG AA
    ========================================================================== */
 
 @layer base {
@@ -10,7 +10,8 @@
     ::before,
     ::after {
         box-sizing: border-box;
-        border-color: #e2e8f0;
+        border-color: #cbd5e1;
+        /* Slate 300 - Borda visível */
     }
 
     html,
@@ -20,14 +21,15 @@
         width: 100%;
         min-height: 100vh;
         font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        background-color: #0f172a;
-        /* Fundo escuro padrão para evitar o fundo preto sem estilo */
-        color: #f8fafc;
+        background-color: #f8fafc;
+        /* Slate 50 */
+        color: #0f172a;
+        /* Slate 900 - Contraste 15.8:1 contra o fundo */
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
     }
 
-    /* Estilização padrão para Inputs e Botões (Garante visual no Login) */
+    /* Inputs e formulários com alto contraste de texto e foco */
     input[type="text"],
     input[type="email"],
     input[type="password"],
@@ -35,13 +37,23 @@
     textarea {
         width: 100%;
         padding: 0.75rem 1rem;
-        border-radius: 8px;
-        border: 1px solid #334155;
-        background-color: #1e293b;
-        color: #ffffff;
+        border-radius: 12px;
+        border: 1px solid #94a3b8;
+        /* Slate 400 - Borda nítida */
+        background-color: #ffffff;
+        color: #0f172a;
+        /* Slate 900 - Texto escuro e legível */
         font-size: 0.95rem;
         outline: none;
-        transition: border-color 0.2s, box-shadow 0.2s;
+        transition: all 0.2s ease;
+    }
+
+    input[type="text"]::placeholder,
+    input[type="email"]::placeholder,
+    input[type="password"]::placeholder,
+    textarea::placeholder {
+        color: #64748b;
+        /* Slate 500 - Contraste de placeholder 4.6:1 */
     }
 
     input[type="text"]:focus,
@@ -49,60 +61,115 @@
     input[type="password"]:focus,
     select:focus,
     textarea:focus {
-        border-color: #2563eb;
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+        border-color: #1d4ed8;
+        /* Blue 700 - Destaque de foco */
+        box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.2);
     }
 
     button {
         cursor: pointer;
         font-weight: 600;
-        border-radius: 8px;
+        border-radius: 12px;
         transition: all 0.2s ease;
     }
 }
 
 /* ==========================================================================
-   LAYOUT ÁGORA - Estrutura Principal do Dashboard e Painéis
+   LAYOUT ÁGORA OS — DOCK LATERAL FLUTUANTE LIGHT
    ========================================================================== */
 
 .agora-layout {
     display: flex;
     width: 100vw;
-    min-height: 100vh;
+    height: 100vh;
     background-color: #f1f5f9;
-    color: #1e293b;
-    overflow-x: hidden;
+    /* Slate 100 */
+    color: #0f172a;
+    /* Slate 900 */
+    overflow: hidden;
+    position: relative;
 }
 
-/* Sidebar Flutuante */
+/* Container que faz a Sidebar Flutuar */
+.agora-sidebar-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    padding: 1.5rem 0 1.5rem 1.5rem;
+    z-index: 50;
+}
+
+/* Sidebar Flutuante (Nav Pill / Dock White) */
 .agora-sidebar {
-    width: 80px;
-    min-width: 80px;
-    background-color: #0f172a;
+    width: 76px;
+    min-width: 76px;
+    height: 100%;
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    /* Slate 300 */
+    border-radius: 30px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     align-items: center;
     padding: 1.5rem 0;
-    box-shadow: 4px 0 10px rgba(0, 0, 0, 0.15);
-    z-index: 50;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
 }
 
 .agora-sidebar-nav {
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
+    gap: 0.75rem;
     align-items: center;
+    width: 100%;
+    padding: 0 0.5rem;
 }
 
+/* Botões do Menu Flutuante Light */
 .agora-nav-btn {
     width: 48px;
     height: 48px;
-    border-radius: 12px;
+    border-radius: 16px;
     border: none;
     background-color: transparent;
-    color: #94a3b8;
+    color: #334155;
+    /* Slate 700 - Contraste 9.4:1 sobre o fundo branco */
     font-size: 1.25rem;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.agora-nav-btn:hover {
+    background-color: #e2e8f0;
+    /* Slate 200 */
+    color: #0f172a;
+    /* Slate 900 */
+    transform: translateY(-2px);
+}
+
+.agora-nav-btn.active {
+    background-color: #1d4ed8;
+    /* Blue 700 */
+    color: #ffffff;
+    /* Texto Branco no botão ativo - Contraste 4.8:1 */
+    box-shadow: 0 8px 16px -4px rgba(29, 78, 216, 0.35);
+    transform: scale(1.05);
+}
+
+.agora-logout-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    border: 1px solid #fca5a5;
+    /* Red 300 */
+    background-color: #fef2f2;
+    /* Red 50 */
+    color: #991b1b;
+    /* Red 800 - Contraste 7.1:1 sobre fundo Red 50 */
+    font-size: 1.1rem;
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
@@ -110,70 +177,74 @@
     justify-content: center;
 }
 
-.agora-nav-btn:hover {
-    background-color: #1e293b;
-    color: #f8fafc;
-}
-
-.agora-nav-btn.active {
-    background-color: #2563eb;
-    color: #ffffff;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
-}
-
-.agora-logout-btn {
-    width: 44px;
-    height: 44px;
-    border-radius: 10px;
-    border: none;
-    background-color: #1e293b;
-    color: #f87171;
-    font-size: 1.1rem;
-    cursor: pointer;
-    transition: background-color 0.2s, color 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
 .agora-logout-btn:hover {
     background-color: #991b1b;
+    /* Red 800 */
     color: #ffffff;
+    border-color: #991b1b;
 }
 
-/* Área de Conteúdo Central */
+/* Área de Conteúdo Principal */
 .agora-content {
     flex: 1;
-    padding: 2.5rem;
+    height: 100vh;
+    padding: 2rem 2.5rem;
     overflow-y: auto;
-    max-width: calc(100vw - 80px);
+    max-width: calc(100vw - 100px);
 }
 
 .agora-page-title {
-    font-size: 1.75rem;
-    font-weight: 800;
+    font-size: 1.85rem;
+    font-weight: 900;
     color: #0f172a;
-    letter-spacing: -0.025em;
-    margin-top: 0;
+    /* Slate 900 */
+    letter-spacing: -0.03em;
+    margin: 0;
 }
 
-/* Cards do Design System */
+/* ==========================================================================
+   CARDS CLEAN LIGHT
+   ========================================================================== */
+
 .agora-card {
     background-color: #ffffff;
-    color: #1e293b;
-    border-radius: 16px;
-    padding: 1.75rem;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    color: #0f172a;
+    /* Slate 900 */
+    border-radius: 24px;
+    padding: 2rem;
+    border: 1px solid #cbd5e1;
+    /* Slate 300 */
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
 }
 
-.agora-dark-card {
-    background-color: #0f172a;
-    color: #ffffff;
-    border-radius: 16px;
-    padding: 1.75rem;
+/* Banner de Destaque Superior Clean Blue/Light */
+.agora-light-card {
+    background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
+    /* Blue 50 */
+    color: #0f172a;
+    /* Slate 900 */
+    border-radius: 24px;
+    padding: 2rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.25);
+    box-shadow: 0 10px 25px -5px rgba(29, 78, 216, 0.08);
+    border: 1px solid #bfdbfe;
+    /* Blue 200 */
+    position: relative;
+    overflow: hidden;
+}
+
+.agora-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.agora-content::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+.agora-content::-webkit-scrollbar-thumb {
+    background: #94a3b8;
+    /* Slate 400 */
+    border-radius: 4px;
 }
