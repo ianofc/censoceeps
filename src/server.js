@@ -6,9 +6,12 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
+
+// Oculta o cabeçalho X-Powered-By para mitigar a divulgação de versão do servidor
+app.disable('x-powered-by');
+
 const port = Number(process.env.PORT || 3000);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
 const buildDir = path.resolve(__dirname, '..', 'dist');
 
 app.use(express.json());
@@ -26,7 +29,7 @@ app.get('/config.js', (req, res) => {
 // Servir os arquivos compilados da pasta dist
 app.use(express.static(buildDir));
 
-// Fallback para SPA
+// Fallback para SPA (Single Page Application)
 app.get('*', (_, res) => {
   res.sendFile(path.join(buildDir, 'index.html'));
 });
