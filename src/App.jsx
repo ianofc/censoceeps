@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import { supabase } from './lib/supabase';
+import { supabase } from './lib/supabaseClient';
 import { Login } from './pages/Login';
-import { AdinhaAssistant } from './components/AdinhaAssistant';
+import { Home } from './pages/Home';
+import { AnalyticsDashboard } from './components/AnalyticsDashboard';
+import { TeacherDashboard } from './components/TeacherDashboard';
+import { PublicDisplay } from './pages/PublicDisplay';
 
 export default function App() {
     const [session, setSession] = useState(null);
@@ -38,6 +41,7 @@ export default function App() {
                 .single();
             setRole(data?.role || 'aluno');
         } catch (err) {
+            console.warn('Erro ao obter perfil do usuário, usando padrão:', err);
             setRole('aluno');
         } finally {
             setLoading(false);
@@ -49,7 +53,7 @@ export default function App() {
     if (loading) {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#f0f4f8' }}>
-                <p style={{ fontWeight: 'bold', color: '#1e2548' }}>A carregar Ágora OS...</p>
+                <p style={{ fontWeight: 'bold', color: '#1e2548' }}>Carregando Censo CEEP...</p>
             </div>
         );
     }
@@ -60,22 +64,25 @@ export default function App() {
 
     return (
         <div className="agora-layout">
-            {/* Sidebar Lateral Estilo Ágora */}
+            {/* Sidebar Lateral Flutuante — Design Ágora */}
             <aside className="agora-sidebar">
                 <div>
-                    <div style={{
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: '50%',
-                        background: 'linear-gradient(135deg, #2563eb, #1e2548)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#fff',
-                        fontWeight: 'bold',
-                        fontSize: '1.2rem',
-                        marginBottom: '2rem'
-                    }}>
+                    <div
+                        title="Censo CEEP — Projeto Ada Lovelace"
+                        style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '50%',
+                            background: 'linear-gradient(135deg, #2563eb, #1e2548)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#fff',
+                            fontWeight: 'bold',
+                            fontSize: '1.2rem',
+                            marginBottom: '2rem'
+                        }}
+                    >
                         🏛️
                     </div>
 
@@ -83,23 +90,30 @@ export default function App() {
                         <button
                             className={`agora-nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
                             onClick={() => setActiveTab('dashboard')}
-                            title="Dashboard ao Vivo"
+                            title="Dashboard Geral (Indicadores)"
                         >
                             📊
                         </button>
                         <button
-                            className={`agora-nav-btn ${activeTab === 'auditoria' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('auditoria')}
-                            title="Auditoria Oficial"
+                            className={`agora-nav-btn ${activeTab === 'coleta' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('coleta')}
+                            title="Ficha de Coleta de Campo"
                         >
                             📋
                         </button>
                         <button
-                            className={`agora-nav-btn ${activeTab === 'midias' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('midias')}
-                            title="Estúdio de Mídias"
+                            className={`agora-nav-btn ${activeTab === 'telao' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('telao')}
+                            title="Modo Telão (Projeção)"
                         >
-                            🎨
+                            📺
+                        </button>
+                        <button
+                            className={`agora-nav-btn ${activeTab === 'auditoria' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('auditoria')}
+                            title="Painel Docente / Auditoria"
+                        >
+                            📁
                         </button>
                         <button
                             className={`agora-nav-btn ${activeTab === 'perfil' ? 'active' : ''}`}
@@ -118,30 +132,26 @@ export default function App() {
                 </div>
             </aside>
 
-            {/* Área Central da Aplicação */}
+            {/* Conteúdo Principal — Layout Ágora */}
             <main className="agora-content">
                 {activeTab === 'dashboard' && (
                     <div>
-                        <h1 className="agora-page-title" style={{ marginBottom: '1.5rem' }}>Dashboard ao Vivo</h1>
+                        <h1 className="agora-page-title" style={{ marginBottom: '1.5rem' }}>Estatísticas do Censo CEEP</h1>
 
-                        {/* Termômetro Escuro Superior */}
+                        {/* Card Escuro Superior Estilo Ágora (Visão Geral de Amostras) */}
                         <div className="agora-dark-card" style={{ marginBottom: '1.5rem' }}>
                             <div>
                                 <span style={{ fontSize: '0.8rem', color: '#f97316', fontWeight: 'bold', textTransform: 'uppercase' }}>
-                                    🔥 Termômetro da Democracia
+                                    🔥 Monitoramento de Amostras
                                 </span>
                                 <div style={{ display: 'flex', gap: '2rem', marginTop: '1rem' }}>
                                     <div>
-                                        <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block' }}>ELEITORADO BASE</span>
-                                        <strong style={{ fontSize: '1.75rem' }}>38</strong>
+                                        <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block' }}>COMUNIDADE ESCOLAR</span>
+                                        <strong style={{ fontSize: '1.75rem' }}>CEEP Seabra</strong>
                                     </div>
                                     <div>
-                                        <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block' }}>CÉDULAS REGISTADAS</span>
-                                        <strong style={{ fontSize: '1.75rem', color: '#22c55e' }}>35</strong>
-                                    </div>
-                                    <div>
-                                        <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block' }}>COMPARECIMENTO</span>
-                                        <strong style={{ fontSize: '1.75rem', color: '#3b82f6' }}>92.1%</strong>
+                                        <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block' }}>PESQUISA</span>
+                                        <strong style={{ fontSize: '1.75rem', color: '#3b82f6' }}>Ada Lovelace</strong>
                                     </div>
                                 </div>
                             </div>
@@ -153,41 +163,30 @@ export default function App() {
                                 minWidth: '220px'
                             }}>
                                 <span style={{ fontSize: '0.75rem', color: '#eab308', fontWeight: 'bold' }}>
-                                    🏆 TOP 5 ZONAS (ENGAJAMENTO)
+                                    🏆 ESTATUTO / METODOLOGIA
                                 </span>
                                 <div style={{ marginTop: '0.5rem', fontSize: '0.85rem' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>1º 3º ADM AM</span><strong>100%</strong></div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem' }}><span>2º 3º ADM BM</span><strong>96.8%</strong></div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Classificação:</span><strong>IBGE</strong></div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem' }}><span>Análise:</span><strong>Gênero & Raça</strong></div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Subcards Brancos de Informação */}
-                        <div className="agora-card">
-                            <h3>Status da Coleta de Dados</h3>
-                            <p style={{ marginTop: '0.5rem', color: '#64748b' }}>
-                                Conectado ao Supabase Realtime. Atualizações de entrevistas em tempo real ativas.
-                            </p>
-                        </div>
+                        {/* Componente dos Gráficos e Analytics */}
+                        <AnalyticsDashboard />
                     </div>
+                )}
+
+                {activeTab === 'coleta' && (
+                    <Home userId={session.user.id} />
+                )}
+
+                {activeTab === 'telao' && (
+                    <PublicDisplay />
                 )}
 
                 {activeTab === 'auditoria' && (
-                    <div>
-                        <h1 className="agora-page-title" style={{ marginBottom: '1.5rem' }}>Auditoria Oficial</h1>
-                        <div className="agora-card">
-                            <p>Módulo de relatórios e exportação CSV/PDF de entrevistas do Censo CEEP.</p>
-                        </div>
-                    </div>
-                )}
-
-                {activeTab === 'midias' && (
-                    <div>
-                        <h1 className="agora-page-title" style={{ marginBottom: '1.5rem' }}>Estúdio de Mídias</h1>
-                        <div className="agora-card">
-                            <p>Módulo de impressão de relatórios e identificadores visuais.</p>
-                        </div>
-                    </div>
+                    <TeacherDashboard />
                 )}
 
                 {activeTab === 'perfil' && (
@@ -195,18 +194,34 @@ export default function App() {
                         <h1 className="agora-page-title" style={{ marginBottom: '1.5rem' }}>Meu Perfil</h1>
                         <div className="agora-card" style={{ maxWidth: '480px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-                                <div style={{ width: '60px', height: '60px', borderRadius: '50%', backgroundColor: '#2563eb' }} />
+                                <div style={{
+                                    width: '60px',
+                                    height: '60px',
+                                    borderRadius: '50%',
+                                    backgroundColor: '#2563eb',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: '#fff',
+                                    fontSize: '1.5rem',
+                                    fontWeight: 'bold'
+                                }}>
+                                    {session.user.email ? session.user.email[0].toUpperCase() : 'U'}
+                                </div>
                                 <div>
-                                    <h3>{session.user.email}</h3>
-                                    <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Função: {role}</span>
+                                    <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{session.user.email}</h3>
+                                    <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Função: {role.toUpperCase()}</span>
                                 </div>
                             </div>
+                            <hr style={{ border: 'none', borderTop: '1px solid #e2e8f0', margin: '1rem 0' }} />
+                            <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0 }}>
+                                Centro Estadual de Educação Profissional de Seabra — CEEP<br />
+                                Projeto Ada Lovelace
+                            </p>
                         </div>
                     </div>
                 )}
             </main>
-
-            <AdinhaAssistant />
         </div>
     );
 }
