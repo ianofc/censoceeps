@@ -1,122 +1,87 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
 
-* {
-    box-sizing: border-box;
+/* ==========================================================================
+   Configurações Globais e Tema (Padrão classroom-vote / Ágora)
+   ========================================================================== */
+
+:root {
+    color-scheme: dark;
+}
+
+html,
+body {
+    background-color: #0b0f17;
+    color: #f3f4f6;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    min-height: 100vh;
     margin: 0;
     padding: 0;
-    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
 }
 
-body {
-    background-color: #f0f4f8;
-    color: #1a202c;
-    min-height: 100vh;
+/* Customização da Barra de Rolagem */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
 }
 
-/* Layout Principal com Sidebar */
-.agora-layout {
-    display: flex;
-    min-height: 100vh;
-    padding: 1rem;
-    gap: 1.5rem;
+::-webkit-scrollbar-track {
+    background: #0b0f17;
 }
 
-/* Sidebar Flutuante */
-.agora-sidebar {
-    width: 72px;
-    background: #ffffff;
-    border-radius: 20px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 1.25rem 0.5rem;
-    justify-content: space-between;
+::-webkit-scrollbar-thumb {
+    background: #1e293b;
+    border-radius: 4px;
+    border: 1px solid #232d3f;
 }
 
-.agora-sidebar-logo {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    margin-bottom: 2rem;
+::-webkit-scrollbar-thumb:hover {
+    background: #334155;
 }
 
-.agora-sidebar-nav {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    width: 100%;
-    align-items: center;
+/* ==========================================================================
+   Classes Utilitárias e Componentes
+   ========================================================================== */
+
+@layer components {
+
+    /* Cards e Contêineres */
+    .agora-card {
+        @apply bg-[#161d2a] border border-[#232d3f] rounded-xl p-5 shadow-lg transition-all duration-200;
+    }
+
+    .agora-card-hover {
+        @apply hover:border-amber-500/50 hover:shadow-amber-500/10 hover:-translate-y-0.5;
+    }
+
+    /* Botões Padronizados */
+    .btn-agora-primary {
+        @apply bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-4 py-2.5 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-amber-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+    }
+
+    .btn-agora-secondary {
+        @apply bg-[#232d3f] hover:bg-[#2e3b52] text-gray-200 border border-slate-700 px-4 py-2.5 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 active:scale-95;
+    }
+
+    .btn-agora-danger {
+        @apply bg-red-950/40 hover:bg-red-900/50 text-red-300 border border-red-500/40 px-4 py-2.5 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 active:scale-95;
+    }
+
+    /* Campos de Entrada */
+    .agora-input {
+        @apply bg-[#0b0f17] border border-[#232d3f] rounded-lg px-4 py-2.5 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all duration-200 w-full;
+    }
+
+    /* Títulos */
+    .agora-title {
+        @apply text-amber-500 font-extrabold tracking-wide uppercase;
+    }
 }
 
-.agora-nav-btn {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
-    border: none;
-    background: transparent;
-    color: #64748b;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-}
-
-.agora-nav-btn.active,
-.agora-nav-btn:hover {
-    background: #2563eb;
-    color: #ffffff;
-}
-
-.agora-sidebar-footer {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    align-items: center;
-}
-
-.agora-logout-btn {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
-    border: none;
-    background: #fef2f2;
-    color: #ef4444;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* Área de Conteúdo Conteúdo Principal */
-.agora-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-}
-
-.agora-page-title {
-    font-size: 1.75rem;
-    font-weight: 800;
-    color: #0f172a;
-}
-
-/* Cards Genéricos */
-.agora-card {
-    background: #ffffff;
-    border-radius: 16px;
-    padding: 1.5rem;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
-}
-
-/* Termômetro Escuro do Dashboard */
-.agora-dark-card {
-    background: #1e2548;
-    color: #ffffff;
-    border-radius: 20px;
-    padding: 2rem;
-    display: flex;
-    justify-content: space-between;
+/* Seleção de Texto (Acessível e com alto contraste) */
+::selection {
+    background-color: #f59e0b;
+    color: #0b0f17;
 }
