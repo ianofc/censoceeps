@@ -10,6 +10,8 @@ import { TeacherDashboard } from './components/TeacherDashboard';
 import { PublicDisplay } from './pages/PublicDisplay';
 import { NotFound } from './pages/NotFound';
 import { AdinhaAssistant } from './components/AdinhaAssistant';
+import MeuPerfil from './pages/MeuPerfil';
+import About from './pages/About';
 
 import { 
   BarChart3, 
@@ -20,7 +22,8 @@ import {
   LogOut, 
   Flame,
   Award,
-  MoreHorizontal
+  MoreHorizontal,
+  Info
 } from 'lucide-react';
 
 const adinhaAvatar = new URL('./assets/imgs/AdaLovelace.png', import.meta.url).href;
@@ -40,7 +43,6 @@ function Layout({ session }: LayoutProps) {
 
   const isActive = (path: string) => location.pathname === path;
 
-  // Fecha o menu "Mais" ao navegar
   const handleNavigation = (path: string) => {
     setShowMoreMenu(false);
     navigate(path);
@@ -49,14 +51,9 @@ function Layout({ session }: LayoutProps) {
   return (
     <div className="flex flex-col lg:flex-row h-screen bg-slate-100 overflow-hidden font-sans relative">
       
-      {/* 
-        NAVBAR / DOCK FLUTUANTE RESPONSIVA:
-        - Mobile: Barra Fixa na Parte Inferior (Bottom Bar) com tamanho dinâmico e menu "Mais"
-        - Desktop: Barra Lateral Flutuante com bordas arredondadas à esquerda
-      */}
+      {/* SIDEBAR / DOCK FLUTUANTE RESPONSIVA */}
       <aside className="fixed bottom-0 left-0 right-0 z-40 m-3 lg:m-auto lg:ml-6 lg:static bg-slate-900/95 backdrop-blur-md border border-slate-800/80 rounded-3xl flex lg:flex-col items-center justify-between p-3 shadow-2xl shrink-0">
         
-        {/* Topo Desktop: Ícone da Adinha (Zios do Censo) */}
         <div className="hidden lg:flex flex-col items-center gap-1 mb-2">
           <button
             type="button"
@@ -72,13 +69,11 @@ function Layout({ session }: LayoutProps) {
           </button>
         </div>
 
-        {/* Navegação Central com Ícones Dinâmicos */}
         <nav className="flex lg:flex-col gap-2 w-full items-center justify-around lg:justify-center relative">
           
-          {/* Indicadores (Sempre visível) */}
           <button
             type="button"
-            className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 group relative ${
+            className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 group relative cursor-pointer border-0 ${
               isActive('/') 
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-bold' 
                 : 'text-slate-400 hover:bg-slate-800 hover:text-white'
@@ -92,10 +87,9 @@ function Layout({ session }: LayoutProps) {
             </span>
           </button>
 
-          {/* Coleta de Campo (Sempre visível) */}
           <button
             type="button"
-            className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 group relative ${
+            className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 group relative cursor-pointer border-0 ${
               isActive('/coleta') 
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-bold' 
                 : 'text-slate-400 hover:bg-slate-800 hover:text-white'
@@ -109,10 +103,9 @@ function Layout({ session }: LayoutProps) {
             </span>
           </button>
 
-          {/* Modo Telão (Visível no Desktop / Dentro do 'Mais' no Mobile se necessário, ou direto) */}
           <button
             type="button"
-            className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 group relative ${
+            className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 group relative cursor-pointer border-0 ${
               isActive('/telao') 
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-bold' 
                 : 'text-slate-400 hover:bg-slate-800 hover:text-white'
@@ -126,12 +119,27 @@ function Layout({ session }: LayoutProps) {
             </span>
           </button>
 
-          {/* Botões extras no Mobile agrupados no menu "Mais" para não lotar a tela */}
+          <button
+            type="button"
+            className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 group relative cursor-pointer border-0 ${
+              isActive('/sobre') 
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-bold' 
+                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            }`}
+            onClick={() => handleNavigation('/sobre')}
+            title="Sobre o Projeto"
+          >
+            <Info className="w-5 h-5 transition-transform group-hover:scale-110" />
+            <span className="hidden lg:block absolute left-full ml-3 px-3 py-1 bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+              Sobre o Projeto
+            </span>
+          </button>
+
           <div className="lg:hidden relative">
             <button
               type="button"
-              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 ${
-                showMoreMenu || isActive('/auditoria') || isActive('/perfil')
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 cursor-pointer border-0 ${
+                showMoreMenu || isActive('/auditoria') || isActive('/perfil') || isActive('/sobre')
                   ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-bold' 
                   : 'text-slate-400 hover:bg-slate-800 hover:text-white'
               }`}
@@ -141,13 +149,12 @@ function Layout({ session }: LayoutProps) {
               <MoreHorizontal className="w-5 h-5" />
             </button>
 
-            {/* Menu Pop-up flutuante para telas pequenas quando clica em Mais */}
             {showMoreMenu && (
               <div className="absolute bottom-16 right-0 bg-slate-900 border border-slate-700 rounded-2xl p-2 shadow-2xl flex flex-col gap-2 min-w-[180px] z-50 animate-in fade-in zoom-in-95">
                 <button
                   type="button"
                   onClick={() => handleNavigation('/auditoria')}
-                  className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold text-left transition ${
+                  className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold text-left transition cursor-pointer border-0 ${
                     isActive('/auditoria') ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
                   }`}
                 >
@@ -156,17 +163,26 @@ function Layout({ session }: LayoutProps) {
                 <button
                   type="button"
                   onClick={() => handleNavigation('/perfil')}
-                  className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold text-left transition ${
+                  className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold text-left transition cursor-pointer border-0 ${
                     isActive('/perfil') ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
                   }`}
                 >
                   <User className="w-4 h-4" /> Meu Perfil
                 </button>
+                <button
+                  type="button"
+                  onClick={() => handleNavigation('/sobre')}
+                  className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold text-left transition cursor-pointer border-0 ${
+                    isActive('/sobre') ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
+                  }`}
+                >
+                  <Info className="w-4 h-4" /> Sobre o Projeto
+                </button>
                 <hr className="border-slate-800 my-1" />
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold text-left text-rose-400 hover:bg-rose-500/10 transition"
+                  className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold text-left text-rose-400 hover:bg-rose-500/10 transition cursor-pointer border-0 bg-transparent"
                 >
                   <LogOut className="w-4 h-4" /> Encerrar Sessão
                 </button>
@@ -174,11 +190,10 @@ function Layout({ session }: LayoutProps) {
             )}
           </div>
 
-          {/* Ícones Individuais visíveis diretamente no Desktop */}
           <div className="hidden lg:contents">
             <button
               type="button"
-              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 group relative ${
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 group relative cursor-pointer border-0 ${
                 isActive('/auditoria') 
                   ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-bold' 
                   : 'text-slate-400 hover:bg-slate-800 hover:text-white'
@@ -194,7 +209,7 @@ function Layout({ session }: LayoutProps) {
 
             <button
               type="button"
-              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 group relative ${
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 group relative cursor-pointer border-0 ${
                 isActive('/perfil') 
                   ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-bold' 
                   : 'text-slate-400 hover:bg-slate-800 hover:text-white'
@@ -210,12 +225,11 @@ function Layout({ session }: LayoutProps) {
           </div>
         </nav>
 
-        {/* Rodapé da Navbar Desktop: Botão de Logout */}
         <div className="mt-auto pt-2 hidden lg:block">
           <button 
             type="button"
             onClick={handleLogout} 
-            className="w-11 h-11 rounded-2xl bg-rose-500/10 hover:bg-rose-600 text-rose-400 hover:text-white flex items-center justify-center transition duration-200 group relative border-0"
+            className="w-11 h-11 rounded-2xl bg-rose-500/10 hover:bg-rose-600 text-rose-400 hover:text-white flex items-center justify-center transition duration-200 group relative border-0 cursor-pointer"
             title="Sair do Sistema"
           >
             <LogOut className="w-5 h-5" />
@@ -226,7 +240,6 @@ function Layout({ session }: LayoutProps) {
         </div>
       </aside>
 
-      {/* Conteúdo Central Responsivo, Centralizado e com espaçamento inferior extra no mobile para a dock não cobrir conteúdo */}
       <main className="flex-1 overflow-y-auto bg-slate-50 p-6 lg:p-10 pb-28 lg:pb-10 relative flex flex-col items-center">
         <div className="w-full max-w-6xl mx-auto flex flex-col items-center">
           <Routes>
@@ -290,7 +303,6 @@ function Layout({ session }: LayoutProps) {
               }
             />
 
-            {/* Telas centralizadas com layout profissional */}
             <Route 
               path="/coleta" 
               element={
@@ -304,41 +316,13 @@ function Layout({ session }: LayoutProps) {
             
             <Route path="/telao" element={<PublicDisplay />} />
             <Route path="/auditoria" element={<TeacherDashboard />} />
-            
-            <Route
-              path="/perfil"
-              element={
-                <div className="w-full flex flex-col items-center animate-in fade-in duration-500">
-                  <div className="w-full max-w-xl space-y-6">
-                    <h1 className="text-2xl font-black text-slate-800 text-center">Meu Perfil de Pesquisador</h1>
-                    <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm w-full">
-                      <div className="flex items-center gap-4 mb-6">
-                        <div className="w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center text-white font-black text-2xl shadow-md shadow-blue-500/30">
-                          {session?.user?.email ? session.user.email[0].toUpperCase() : 'U'}
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-slate-800 text-lg">{session?.user?.email}</h3>
-                          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-100 px-2.5 py-1 rounded-md">
-                            Coletor de Campo
-                          </span>
-                        </div>
-                      </div>
-                      <hr className="border-slate-100 my-4" />
-                      <p className="text-xs text-slate-500 leading-relaxed text-center">
-                        Centro Estadual de Educação Profissional de Seabra — CEEP<br />
-                        Projeto de Pesquisa Científica Ada Lovelace
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              }
-            />
+            <Route path="/perfil" element={<MeuPerfil escolaNome="CEEP Seabra — Censo CEEP" />} />
+            <Route path="/sobre" element={<About escolaNome="CEEP Seabra" />} />
             
             <Route path="*" element={<NotFound />} />
           </Routes>
         </div>
 
-        {/* Assistente Zios (Adinha) integrado globalmente */}
         <AdinhaAssistant />
       </main>
     </div>

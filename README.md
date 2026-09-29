@@ -1,10 +1,10 @@
-# 🌿 Censo CEEPS — Plataforma de Entrevistas da Comunidade Escolar
+# 🌿 Censo CEEP — Plataforma de Inteligência e Pesquisa da Comunidade Escolar
 
 <div align="center">
 
-**Aplicação full stack para entrevistas anônimas sobre cor, raça, ancestralidade e pertencimento na comunidade escolar.**
+**Aplicação Web Full Stack de alta performance para mapeamento anônimo e descentralizado de dados demográficos, cor, raça, ancestralidade e vivências étnico-raciais na comunidade escolar.**
 
-![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js&logoColor=white) ![Express](https://img.shields.io/badge/Express-4-000000?logo=express&logoColor=white) ![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white) ![Chart.js](https://img.shields.io/badge/Chart.js-4-FF6384?logo=chart.js&logoColor=white)
+![React](https://img.shields.io/badge/React-18+-61DAFB?logo=react&logoColor=black) ![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?logo=typescript&logoColor=white) ![Vite](https://img.shields.io/badge/Vite-5.0+-646CFF?logo=vite&logoColor=white) ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.0+-38B2AC?logo=tailwind-css&logoColor=white) ![Supabase](https://img.shields.io/badge/Supabase-Database_%26_Auth-3ECF8E?logo=supabase&logoColor=white)
 
 </div>
 
@@ -12,135 +12,79 @@
 
 ## 📖 Sumário
 
-- [Visão geral](#-visão-geral)
-- [Versão 2](#-versão-2)
-- [Funcionalidades](#-funcionalidades)
-- [Arquitetura](#-arquitetura)
-- [Modelo de dados](#-modelo-de-dados)
-- [Como executar](#-como-executar)
-- [Credenciais iniciais](#-credenciais-iniciais)
-- [API](#-api)
-- [Segurança e privacidade](#-segurança-e-privacidade)
+- [Visão Geral e Metodologia](#-visão-geral-e-metodologia)
+- [Arquitetura de Dados e Tecnologias](#-arquitetura-de-dados-e-tecnologias)
+- [Funcionalidades e Módulos](#-funcionalidades-e-módulos)
+- [Assistente IA Metodológica (Adinha)](#-assistente-ia-metodológica-adinha)
+- [Estrutura de Pastas e Componentes](#-estruturas-de-pastas-e-componentes)
+- [Configuração e Execução](#-como-executar)
+- [Segurança, LGPD e Privacidade](#-segurança-e-lgpd-e-privacidade)
 
-## 🌟 Visão geral
+---
 
-O **Censo CEEPS** apoia entrevistas com estudantes, docentes, servidores e demais profissionais da escola. O questionário digitaliza perguntas sobre autodeclaração de cor ou raça, ancestralidade e diálogo étnico-racial sem solicitar nome, matrícula ou contato da pessoa entrevistada.
+## 🌟 Visão Geral e Metodologia
 
-A aplicação usa as categorias de cor ou raça do IBGE, organiza a coleta por turmas e setores e apresenta os resultados em um dashboard para apoiar projetos pedagógicos e planejamento institucional.
+O **Censo CEEP** é o núcleo tecnológico do **Projeto de Pesquisa Científica Ada Lovelace**, desenvolvido no Centro Estadual de Educação Profissional de Seabra (CEEP Seabra). A plataforma digitaliza o processo de coleta de dados de campo voltados a relações étnico-raciais, gênero, raça e pertencimento.
 
-> Utilize a ferramenta conforme as regras de consentimento da instituição, a LGPD e as orientações da rede de ensino.
+A aplicação adota rigorosamente as diretrizes e classificações oficiais do **IBGE** para autodeclaração de cor ou raça (*Branca, Preta, Parda, Amarela e Indígena*), estruturando a coleta de forma totalmente sigilosa e desvinculada de identificadores individuais diretos.
 
-## ✨ Versão 2
+---
 
-- Interface responsiva e fluxo separado de autenticação, coleta e análise.
-- JWT para sessões e bcrypt para senhas.
-- Entrevistas para estudantes e funcionários.
-- Dashboard com indicadores, gráficos e filtro por vínculo.
-- Exportação CSV.
-- Cadastro de turmas, setores e usuários administrativos.
-- SQLite com schema, constraints, foreign keys e índices.
+## 🏗️ Arquitetura de Dados e Tecnologias
 
-## 🚀 Funcionalidades
+A stack tecnológica foi concebida sob os princípios de modularidade, tipagem estrita e design *Light Clean* (Ágora OS):
 
-### Entrevistadores
+* **Frontend:** React 18, TypeScript, Vite, Tailwind CSS (v3 clássico) e Lucide React.
+* **Backend & Persistência:** Supabase (PostgreSQL relacional, Row Level Security, autenticação gerenciada e APIs REST/Realtime).
+* **Inteligência Artificial Integrada:** Assistente especializada "Adinha" com arquitetura híbrida (Informativa/Metodológica + Consulta Analítica Agregada ao Banco).
 
-- Login por e-mail e senha.
-- Seleção de vínculo, turma/setor e faixa etária.
-- Autodeclaração: Branca, Preta, Parda, Amarela, Indígena ou Prefiro não responder.
-- Registro opcional de ancestralidade, povo/etnia indígena e ambientes de conversa.
+---
 
-### Gestão e relatórios
+## 🚀 Funcionalidades e Módulos
 
-- Total de entrevistas e percentual agregado de pessoas pretas ou pardas.
-- Distribuição por cor ou raça, vínculo, turma e setor.
-- Exportação CSV para tabulação offline.
-- Cadastro de turmas, setores e novos entrevistadores por administrador.
+### 1. Coleta de Campo Inteligente (`InterviewForm.tsx`)
+* **Bloco 1 (Identificação):** Vínculo institucional (Estudante coletor vs. Gestor/Professor orientador) e grupo escolar (turmas e setores).
+* **Bloco 2 (Autodeclaração IBGE):** Seleção de cor/raça com suporte dinâmico a etnias indígenas.
+* **Bloco 3 (Vivências e Ancestralidade):** Mapeamento de ambientes de diálogo (*Familiar, Escolar, Rodas de Amigos*), incidência de preconceito e relatos opcionais sigilosos.
 
-## 🏗️ Arquitetura
+### 2. Painel Social e Perfil Editável (`MeuPerfil.tsx`)
+* Interface estilo rede social customizável com alternância entre modo leitura e edição (botão com ícone de lápis).
+* Contagem real de coletas puxada diretamente do banco de dados (distinguindo o papel de estudantes coletores e professores gestores).
 
-```text
-censoceeps/
-├── sql/schema.sql
-├── src/db.js
-├── src/server.js
-├── src/public/index.html
-├── src/public/app.js
-├── src/public/styles.css
-├── .env.example
-├── package.json
-└── README.md
-```
+### 3. Dashboard Analítico e Indicadores (`AnalyticsDashboard.tsx`)
+* Gráficos dinâmicos de distribuição por cor/raça, faixas etárias, gênero e incidências georreferenciadas/setoriais.
+* Termômetro de coletas em tempo real integrado ao Supabase.
 
-Frontend em HTML/CSS/JavaScript com Chart.js. Backend em Node.js/Express. Persistência em SQLite.
+---
 
-## 🗄️ Modelo de dados
+## 🤖 Assistente IA Metodológica (Adinha)
 
-- `usuarios`: identidade e permissões dos usuários do sistema.
-- `grupos_escolares`: turmas e setores ativos.
-- `entrevistas`: respostas anônimas associadas ao entrevistador e ao grupo escolar.
+A mascote **Adinha** atua como uma orientadora científica estruturada em **8 Núcleos de Conhecimento**:
+1. **Projeto e Objetivos:** Explicação institucional do Censo e da pesquisa Ada Lovelace.
+2. **Cor e Raça (Autodeclaração):** Orienta sobre as categorias do IBGE, reforçando que o chatbot *jamais* determina a raça do participante.
+3. **Conceitos Fundamentais:** Definições didáticas de racismo estrutural, preconceito, discriminação, colorismo e ações afirmativas.
+4. **Situações Práticas:** Contextualização de vivências cotidianas sem diagnósticos jurídicos automáticos.
+5. **Auxílio no Preenchimento:** Esclarecimento neutro de termos sem indução de respostas.
+6. **Privacidade e LGPD:** Transparência sobre anonimização, consentimento e sigilo.
+7. **Acolhimento Institucional:** Respeito empático e indicação de canais de apoio pedagógico da escola.
+8. **Consultas Analíticas Agregadas:** Acesso via API a métricas consolidadas (ex: *"Quantas pessoas participaram?"*).
 
-A tabela de entrevistas não possui nome, matrícula, telefone ou e-mail do entrevistado. `ambientes_conversa` é armazenado como JSON em texto.
+---
 
-## 💻 Como executar
+## 💻 Como Executar
 
 ```bash
-git clone https://github.com/ianofc/censoceeps.git
+# Clone o repositório
+git clone [https://github.com/ianofc/censoceeps.git](https://github.com/ianofc/censoceeps.git)
+
+# Entre no diretório
 cd censoceeps
-cp .env.example .env
+
+# Instale as dependências
 npm install
-npm start
-```
 
-Acesse `http://localhost:3000`. Para desenvolvimento: `npm run dev`.
+# Configure as variáveis de ambiente (.env)
+cp .env.example .env
 
-O arquivo `database.db` é criado automaticamente na primeira execução.
-
-## 🔑 Credenciais iniciais
-
-```text
-E-mail: admin@escola.com
-Senha: 123456
-```
-
-Altere as credenciais no `.env` antes de usar em produção.
-
-## 🔌 API
-
-| Método | Rota | Acesso | Finalidade |
-|---|---|---|---|
-| POST | `/api/login` | Público | Autenticar usuário |
-| GET | `/api/me` | JWT | Consultar sessão |
-| GET | `/api/grupos` | JWT | Listar turmas e setores |
-| POST | `/api/entrevistas` | JWT | Registrar entrevista |
-| GET | `/api/dashboard` | JWT | Indicadores e séries |
-| GET | `/api/export.csv` | JWT | Exportar CSV |
-| POST | `/api/grupos` | Administrador | Criar grupo escolar |
-| POST | `/api/admin/usuarios` | Administrador | Criar usuário |
-
-Rotas privadas usam `Authorization: Bearer <token>`.
-
-## 🔐 Segurança e privacidade
-
-- Senhas com hash bcrypt.
-- JWT nas rotas privadas.
-- Autorização específica para administradores.
-- Consultas parametrizadas.
-- Foreign keys, constraints e índices.
-- Nenhum identificador direto do entrevistado.
-- Em produção, use HTTPS, segredo JWT forte, backups protegidos e política de retenção institucional.
-
-## ⚙️ Variáveis de ambiente
-
-```env
-PORT=3000
-JWT_SECRET=troque-esta-chave-em-producao
-DEFAULT_ADMIN_EMAIL=admin@escola.com
-DEFAULT_ADMIN_PASSWORD=123456
-```
-
-## 📜 Scripts
-
-- `npm start`: inicia o servidor.
-- `npm run dev`: executa com `node --watch`.
-
-<div align="center">Desenvolvido para apoiar práticas escolares de escuta, respeito e educação antirracista.</div>
+# Execute o servidor de desenvolvimento
+npm run dev

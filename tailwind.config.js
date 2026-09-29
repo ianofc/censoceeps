@@ -1,16 +1,21 @@
-// tailwind.config.js
-module.exports = {
+/** @type {import('tailwindcss').Config} */
+export default {
+    content: [
+        "./index.html",
+        "./src/**/*.{js,ts,jsx,tsx}",
+    ],
     darkMode: 'class',
     theme: {
         extend: {
             colors: {
-                bgApp: '#0b0f17',       // Fundo escuro profundo
-                cardBg: '#161d2a',      // Fundo dos cards e painéis
-                cardBorder: '#232d3f',  // Bordas sutis dos cards
-                goldAccent: '#f59e0b',  // Amarelo/Dourado dos destaques e títulos
+                bgApp: '#f8fafc',      // Fundo Slate 50 (Light Clean)
+                cardBg: '#ffffff',     // Fundo branco dos cards e painéis
+                cardBorder: '#cbd5e1', // Borda Slate 300 nítida
+                brandBlue: '#1d4ed8',  // Azul institucional CEEP / Blue 700
+                goldAccent: '#f59e0b', // Amarelo/Dourado de destaques
                 goldHover: '#d97706',
-                textMain: '#f3f4f6',    // Texto claro principal
-                textMuted: '#9ca3af',   // Texto secundário
+                textMain: '#0f172a',   // Texto principal escuro (Slate 900)
+                textMuted: '#64748b',  // Texto secundário (Slate 500)
             },
         },
     },
