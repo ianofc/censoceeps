@@ -13,7 +13,6 @@
     ::after {
         box-sizing: border-box;
         border-color: #cbd5e1;
-        /* Slate 300 - Borda visível */
     }
 
     html,
@@ -24,14 +23,11 @@
         min-height: 100vh;
         font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         background-color: #f8fafc;
-        /* Slate 50 */
         color: #0f172a;
-        /* Slate 900 - Contraste 15.8:1 contra o fundo */
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
     }
 
-    /* Inputs e formulários com alto contraste de texto e foco */
     input[type="text"],
     input[type="email"],
     input[type="password"],
@@ -41,10 +37,8 @@
         padding: 0.75rem 1rem;
         border-radius: 12px;
         border: 1px solid #94a3b8;
-        /* Slate 400 - Borda nítida */
         background-color: #ffffff;
         color: #0f172a;
-        /* Slate 900 - Texto escuro e legível */
         font-size: 0.95rem;
         outline: none;
         transition: all 0.2s ease;
@@ -55,7 +49,6 @@
     input[type="password"]::placeholder,
     textarea::placeholder {
         color: #64748b;
-        /* Slate 500 - Contraste de placeholder 4.6:1 */
     }
 
     input[type="text"]:focus,
@@ -64,7 +57,6 @@
     select:focus,
     textarea:focus {
         border-color: #1d4ed8;
-        /* Blue 700 - Destaque de foco */
         box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.2);
     }
 
@@ -85,14 +77,11 @@
     width: 100vw;
     height: 100vh;
     background-color: #f1f5f9;
-    /* Slate 100 */
     color: #0f172a;
-    /* Slate 900 */
     overflow: hidden;
     position: relative;
 }
 
-/* Container que faz a Sidebar Flutuar */
 .agora-sidebar-wrapper {
     display: flex;
     flex-direction: column;
@@ -101,14 +90,12 @@
     z-index: 50;
 }
 
-/* Sidebar Flutuante (Nav Pill / Dock White) */
 .agora-sidebar {
     width: 76px;
     min-width: 76px;
     height: 100%;
     background-color: #ffffff;
     border: 1px solid #cbd5e1;
-    /* Slate 300 */
     border-radius: 30px;
     display: flex;
     flex-direction: column;
@@ -127,7 +114,6 @@
     padding: 0 0.5rem;
 }
 
-/* Botões do Menu Flutuante Light */
 .agora-nav-btn {
     width: 48px;
     height: 48px;
@@ -135,7 +121,6 @@
     border: none;
     background-color: transparent;
     color: #334155;
-    /* Slate 700 - Contraste 9.4:1 sobre o fundo branco */
     font-size: 1.25rem;
     cursor: pointer;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -146,17 +131,13 @@
 
 .agora-nav-btn:hover {
     background-color: #e2e8f0;
-    /* Slate 200 */
     color: #0f172a;
-    /* Slate 900 */
     transform: translateY(-2px);
 }
 
 .agora-nav-btn.active {
     background-color: #1d4ed8;
-    /* Blue 700 */
     color: #ffffff;
-    /* Texto Branco no botão ativo - Contraste 4.8:1 */
     box-shadow: 0 8px 16px -4px rgba(29, 78, 216, 0.35);
     transform: scale(1.05);
 }
@@ -166,11 +147,8 @@
     height: 44px;
     border-radius: 14px;
     border: 1px solid #fca5a5;
-    /* Red 300 */
     background-color: #fef2f2;
-    /* Red 50 */
     color: #991b1b;
-    /* Red 800 - Contraste 7.1:1 sobre fundo Red 50 */
     font-size: 1.1rem;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -181,12 +159,10 @@
 
 .agora-logout-btn:hover {
     background-color: #991b1b;
-    /* Red 800 */
     color: #ffffff;
     border-color: #991b1b;
 }
 
-/* Área de Conteúdo Principal */
 .agora-content {
     flex: 1;
     height: 100vh;
@@ -199,32 +175,22 @@
     font-size: 1.85rem;
     font-weight: 900;
     color: #0f172a;
-    /* Slate 900 */
     letter-spacing: -0.03em;
     margin: 0;
 }
 
-/* ==========================================================================
-   CARDS CLEAN LIGHT
-   ========================================================================== */
-
 .agora-card {
     background-color: #ffffff;
     color: #0f172a;
-    /* Slate 900 */
     border-radius: 24px;
     padding: 2rem;
     border: 1px solid #cbd5e1;
-    /* Slate 300 */
     box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
 }
 
-/* Banner de Destaque Superior Clean Blue/Light */
 .agora-light-card {
     background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
-    /* Blue 50 */
     color: #0f172a;
-    /* Slate 900 */
     border-radius: 24px;
     padding: 2rem;
     display: flex;
@@ -232,7 +198,6 @@
     align-items: center;
     box-shadow: 0 10px 25px -5px rgba(29, 78, 216, 0.08);
     border: 1px solid #bfdbfe;
-    /* Blue 200 */
     position: relative;
     overflow: hidden;
 }
@@ -247,6 +212,5 @@
 
 .agora-content::-webkit-scrollbar-thumb {
     background: #94a3b8;
-    /* Slate 400 */
     border-radius: 4px;
 }

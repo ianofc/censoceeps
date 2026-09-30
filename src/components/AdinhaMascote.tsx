@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 
-// Importação segura dos assets da Adinha
-const adinhaCorrendo = new URL('../assets/imgs/adinhascorrendo.png', import.meta.url).href;
-const adinhaAndando = new URL('../assets/imgs/adinhasandando.png', import.meta.url).href;
+// Importação segura dos assets da Adinha com os nomes corretos da pasta
+const adinhaCorrendo = new URL('../assets/imgs/adinhacorrendo.png', import.meta.url).href;
+const adinhaAndando = new URL('../assets/imgs/adinhaandando.png', import.meta.url).href;
 const adinhaVencedora = new URL('../assets/imgs/adinhavencedora.png', import.meta.url).href;
 const adinhaPerfil = new URL('../assets/imgs/adinhapefil.png', import.meta.url).href;
 const adinhaIdeia = new URL('../assets/imgs/adinhaideia.png', import.meta.url).href;
@@ -18,6 +18,8 @@ interface AdinhaMascoteProps {
 }
 
 export const AdinhaMascote: React.FC<AdinhaMascoteProps> = ({ pose, className = "w-24 h-24", animatePulse = true }) => {
+  const [imgError, setImgError] = useState(false);
+
   const getPoseSrc = () => {
     switch (pose) {
       case 'correndo': return adinhaCorrendo;
@@ -31,11 +33,20 @@ export const AdinhaMascote: React.FC<AdinhaMascoteProps> = ({ pose, className = 
     }
   };
 
+  if (imgError) {
+    return (
+      <div className={`flex items-center justify-center bg-blue-600 text-white rounded-2xl font-black ${className}`}>
+        🤖
+      </div>
+    );
+  }
+
   return (
     <div className={`relative flex items-center justify-center ${animatePulse ? 'animate-bounce' : ''}`}>
       <img 
         src={getPoseSrc()} 
         alt={`Adinha ${pose}`} 
+        onError={() => setImgError(true)}
         className={`${className} object-contain drop-shadow-xl`}
       />
     </div>

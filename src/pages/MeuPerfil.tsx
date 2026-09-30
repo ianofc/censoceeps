@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { useUserSession } from "../hooks/useUserSession";
 import { ShieldCheck, BookOpen, Camera, Save, Award, Sparkles, Edit3, X, CheckCircle2, ClipboardList } from "lucide-react";
 
 interface MeuPerfilProps {
@@ -7,20 +8,35 @@ interface MeuPerfilProps {
 }
 
 export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
+  const { profile, loading: sessionLoading } = useUserSession();
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [coletasCount, setColetasCount] = useState(0);
   
-  // Estado do Perfil Customizável (Rede Social / Censo CEEP)
+  // Estado do Perfil sincronizado com a sessão ativa do usuário
   const [perfil, setPerfil] = useState({
-    nome: "Ian Santos",
-    email: "ian@ceep.edu.br",
+    nome: "",
+    email: "",
     tipo: "PROFESSOR" as "ESTUDANTE" | "PROFESSOR",
-    turma_ou_cargo: "Professor de Computação, Física e Química / Manna Team",
-    bio: "Explorador da tecnologia, robótica e educação pública transformadora na Chapada Diamantina.",
+    turma_ou_cargo: "Professor(a) & Orientador(a) do Projeto",
+    bio: "Explorador(a) da tecnologia, robótica e educação pública transformadora na Chapada Diamantina.",
     avatar_url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80",
     banner_url: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=80"
   });
+
+  // Atualiza o estado local assim que o hook recupera os dados da sessão usando optional chaining
+  useEffect(() => {
+    if (profile?.name) {
+      setPerfil(prev => ({
+        ...prev,
+        nome: profile.name,
+        email: profile.email,
+        avatar_url: profile.genero === 'feminino' 
+          ? "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80" 
+          : "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80"
+      }));
+    }
+  }, [profile]);
 
   useEffect(() => {
     // Busca a contagem real de coletas/registros realizados no Supabase
@@ -45,7 +61,7 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
     e.preventDefault();
     setSaving(true);
     try {
-      // Simulação de salvamento das alterações no Supabase
+      // Simulação de salvamento das alterações
       await new Promise(resolve => setTimeout(resolve, 800));
       alert("Perfil atualizado com sucesso!");
       setIsEditing(false);
@@ -56,6 +72,14 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
       setSaving(false);
     }
   };
+
+  if (sessionLoading) {
+    return (
+      <div className="w-full h-64 flex items-center justify-center">
+        <span className="text-xs font-bold text-slate-500 animate-pulse">Carregando perfil do usuário ativo...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300 max-w-4xl mx-auto pb-12">

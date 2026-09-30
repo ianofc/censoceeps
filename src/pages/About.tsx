@@ -1,5 +1,6 @@
 import React from 'react';
-import { BookOpen, ShieldCheck, Cpu, Award, Sparkles } from 'lucide-react';
+import { BookOpen, ShieldCheck, Cpu, Award, Sparkles, Scale, Download } from 'lucide-react';
+import cartilhaPdf from '../assets/docs/Cartilha_Censo_Escolar_Ada_Lovelace_CEEP_Seabra.PDF';
 
 interface AboutProps {
   readonly escolaNome?: string;
@@ -20,8 +21,69 @@ export const About: React.FC<AboutProps> = ({ escolaNome = "CEEP Seabra" }) => {
             Sobre o Censo CEEP
           </h1>
           <p className="text-sm md:text-base text-blue-100 font-medium leading-relaxed">
-            Plataforma tecnológica desenvolvida no {escolaNome} para mapeamento de dados demográficos, vivências étnico-raciais e pertencimento na comunidade escolar com total sigilo e rigor metodológico.
+            Plataforma tecnológica desenvolvida no {escolaNome} para mapeamento de dados demográficos, vivências e percepção social na comunidade escolar com total sigilo e rigor metodológico.
           </p>
+
+          <div className="pt-2">
+            <a 
+              href={cartilhaPdf} 
+              download="Cartilha_Censo_Escolar_Ada_Lovelace_CEEP_Seabra.PDF"
+              className="inline-flex items-center gap-2 px-5 py-3 bg-white text-blue-700 hover:bg-blue-50 text-xs font-black uppercase tracking-wider rounded-2xl shadow-lg transition-all cursor-pointer"
+            >
+              <Download className="w-4 h-4" /> Baixar Cartilha Oficial (PDF)
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {/* MANIFESTO INSTITUCIONAL: CIÊNCIA, LEI E CONVIVÊNCIA */}
+      <div className="agora-card space-y-6">
+        <div className="border-b border-slate-200 pb-4 flex items-center gap-3">
+          <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center border border-blue-100 shadow-sm shrink-0">
+            <Scale className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-lg font-black text-slate-800">Princípios e Fundamentos Metodológicos</h2>
+            <p className="text-xs text-slate-500 font-medium">Equíbrio, altivez cívica e respeito estrito à Constituição Federal de 1988.</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs text-slate-600 leading-relaxed">
+          <div className="space-y-3 bg-slate-50/80 p-5 rounded-2xl border border-slate-100">
+            <h3 className="font-black text-slate-800 text-sm flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-blue-600"></span> O Espírito Analítico
+            </h3>
+            <p>
+              Inspirado no legado de Ada Lovelace — que enxergava o mundo através da lógica, dos padrões e da busca intransigente pela verdade factual —, o censo recusa visões panfletárias. Nosso papel científico é radiografar com exatidão estatística a realidade, transformando dados empíricos em conhecimento útil para a melhoria do clima institucional.
+            </p>
+          </div>
+
+          <div className="space-y-3 bg-slate-50/80 p-5 rounded-2xl border border-slate-100">
+            <h3 className="font-black text-slate-800 text-sm flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-indigo-600"></span> O Pacto Republicano
+            </h3>
+            <p>
+              Sob a égide da Constituição de 1988, todos os cidadãos possuem igual dignidade perante a lei, independentemente de raça, cor, gênero ou condição social. O projeto valoriza a autonomia e a responsabilidade individual, educando os jovens para a altivez cívica e para o uso altivo e legal dos direitos e deveres.
+            </p>
+          </div>
+
+          <div className="space-y-3 bg-slate-50/80 p-5 rounded-2xl border border-slate-100">
+            <h3 className="font-black text-slate-800 text-sm flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-amber-600"></span> Urbanidade e Respeito Mútuo
+            </h3>
+            <p>
+              A convivência coletiva exige civilidade e decoro em via de mão dupla. Seja no trato profissional entre servidores e alunos ou na preservação de espaços comuns e privativos, o respeito aos limites alheios combate-se com diálogo franco, orientação pedagógica constante e exigência de urbanidade para todos.
+            </p>
+          </div>
+
+          <div className="space-y-3 bg-slate-50/80 p-5 rounded-2xl border border-slate-100">
+            <h3 className="font-black text-slate-800 text-sm flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-600"></span> Para Além dos Muros
+            </h3>
+            <p>
+              O que se pratica no CEEP reflete-se na sociedade da Chapada Diamantina. O projeto fornece à gestão evidências sólidas para subsidiar decisões administrativas, unindo esforços na construção de uma escola mais segura, ordeira, justa e profundamente humana.
+            </p>
+          </div>
         </div>
       </div>
 
@@ -33,7 +95,7 @@ export const About: React.FC<AboutProps> = ({ escolaNome = "CEEP Seabra" }) => {
           </div>
           <h3 className="text-base font-black text-slate-800">Sigilo e LGPD</h3>
           <p className="text-xs text-slate-600 leading-relaxed">
-            Coleta 100% anônima baseada em autodeclaração, sem armazenamento de identificadores diretos dos participantes.
+            Coleta anônima baseada em autodeclaração e proteção estrita à privacidade dos participantes.
           </p>
         </div>
 
@@ -43,7 +105,7 @@ export const About: React.FC<AboutProps> = ({ escolaNome = "CEEP Seabra" }) => {
           </div>
           <h3 className="text-base font-black text-slate-800">Arquitetura Híbrida</h3>
           <p className="text-xs text-slate-600 leading-relaxed">
-            Integração avançada com Supabase e IA (Adinha) orientada por 8 núcleos de conhecimento metodológico e estatístico.
+            Integração avançada com Supabase e IA orientada por núcleos de conhecimento metodológico e estatístico.
           </p>
         </div>
 
@@ -53,16 +115,16 @@ export const About: React.FC<AboutProps> = ({ escolaNome = "CEEP Seabra" }) => {
           </div>
           <h3 className="text-base font-black text-slate-800">Diretrizes do IBGE</h3>
           <p className="text-xs text-slate-600 leading-relaxed">
-            Padronização oficial nas categorias de cor ou raça, respeitando a autonomia individual na autodeclaração.
+            Padronização oficial nas categorias censitárias, respeitando a liberdade e a individualidade.
           </p>
         </div>
       </div>
 
-      {/* DETALHAMENTO DOS 8 NÚCLEOS DA ADINHA */}
+      {/* DETALHAMENTO DOS NÚCLEOS DA ADINHA */}
       <div className="agora-card space-y-6">
         <div className="border-b border-slate-200 pb-4">
           <h2 className="text-lg font-black text-slate-800 flex items-center gap-2">
-            <BookOpen className="w-5 h-5 text-blue-600" /> Os 8 Núcleos de Orientação da Assistente Adinha
+            <BookOpen className="w-5 h-5 text-blue-600" /> Núcleos de Orientação da Assistente Adinha
           </h2>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
             A mascote do projeto atua como orientadora metodológica, dividindo sua base em frentes conceituais e analíticas:
@@ -77,12 +139,12 @@ export const About: React.FC<AboutProps> = ({ escolaNome = "CEEP Seabra" }) => {
 
           <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-1">
             <strong className="text-slate-800 font-bold block">2. Cor, Raça e Autodeclaração</strong>
-            <span className="text-slate-600">Esclarece as categorias do IBGE sem jamais tentar definir a raça de terceiros.</span>
+            <span className="text-slate-600">Esclarece as categorias do IBGE respeitando a autonomia individual.</span>
           </div>
 
           <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-1">
             <strong className="text-slate-800 font-bold block">3. Conceitos Fundamentais</strong>
-            <span className="text-slate-600">Aborda racismo estrutural, preconceito, discriminação, colorismo e etnicidade.</span>
+            <span className="text-slate-600">Aborda cidadania, respeito institucional, leis e convivência ética.</span>
           </div>
 
           <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-1">
@@ -92,7 +154,7 @@ export const About: React.FC<AboutProps> = ({ escolaNome = "CEEP Seabra" }) => {
 
           <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-1">
             <strong className="text-slate-800 font-bold block">5. Ajuda no Preenchimento</strong>
-            <span className="text-slate-600">Orienta sobre o significado dos itens do formulário sem induzir respostas.</span>
+            <span className="text-slate-600">Orienta sobre o significado dos itens do formulário com total imparcialidade.</span>
           </div>
 
           <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-1">
@@ -102,7 +164,7 @@ export const About: React.FC<AboutProps> = ({ escolaNome = "CEEP Seabra" }) => {
 
           <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-1">
             <strong className="text-slate-800 font-bold block">7. Acolhimento Institucional</strong>
-            <span className="text-slate-600">Apóia com empatia e indica os canais pedagógicos de suporte da escola.</span>
+            <span className="text-slate-600">Apóia com ética e indica os canais pedagógicos de suporte da escola.</span>
           </div>
 
           <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-1">
