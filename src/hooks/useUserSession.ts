@@ -57,7 +57,8 @@ export function useUserSession() {
             }
         }
 
-        fetchRealUserSession();
+        // Adicionado 'void' para sinalizar explicitamente a intenção da promise flutuante
+        void fetchRealUserSession();
     }, []);
 
     return { profile, loading };
