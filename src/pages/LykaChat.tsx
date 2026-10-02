@@ -57,6 +57,7 @@ interface Message {
   is_teacher_alert: boolean; created_at: string;
   conversation_key?: string | null;
   reply_to_id?: number | null; reply_to_text?: string | null; reply_to_author?: string | null;
+  media_url?: string | null; media_type?: string | null;
 }
 interface Pessoa { id: string; nome_completo: string; turma_ou_cargo: string; papel: string; avatar_url: string; }
 interface Conversation {
@@ -137,6 +138,15 @@ function MsgBubble({ msg, isMe, showAvatar, showName, onReply, onDelete }: {
             </span>
           )}
           <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{msg.message}</p>
+          {msg.media_url && msg.media_type === "image" && (
+            <img src={msg.media_url} alt="Mídia" style={{ width: "100%", borderRadius: 12, marginTop: 6, marginBottom: 4 }} />
+          )}
+          {msg.media_url && msg.media_type === "video" && (
+            <video src={msg.media_url} controls style={{ width: "100%", borderRadius: 12, marginTop: 6, marginBottom: 4 }} />
+          )}
+          {msg.media_url && msg.media_type === "audio" && (
+            <audio src={msg.media_url} controls style={{ width: "100%", marginTop: 6, marginBottom: 4, height: 36 }} />
+          )}
           <span style={{ display: "block", fontSize: 9, marginTop: 3, textAlign: "right", color: isMe ? "rgba(255,255,255,0.55)" : "#94a3b8" }}>
             {fmtTime(msg.created_at)}{isMe && " ✓"}
           </span>
@@ -276,6 +286,9 @@ export function LykaChat() {
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [profileModal, setProfileModal] = useState<Pessoa | null>(null);
   const [lastMsgs, setLastMsgs] = useState<Record<string, { text: string; time: string; unread: number }>>({});
+  const [pinned, setPinned] = useState<string[]>([]);
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<string>("");
 
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -305,6 +318,11 @@ export function LykaChat() {
         });
         setConversations(convs);
       });
+      
+    // Load pinned
+    try {
+      setPinned(JSON.parse(localStorage.getItem(`lyka_pinned_${profile.id}`) || '[]'));
+    } catch {}
   }, [profile.id]);
 
   // Load last messages for sidebar preview + unread counts
@@ -439,6 +457,8 @@ export function LykaChat() {
     const ins: Record<string, unknown> = {
       user_id: profile.id || "anon", author_name: profile.nomeCompleto || "Pesquisador(a)",
       message: text, is_teacher_alert: isTeacher,
+      media_url: mediaPreview || null,
+      media_type: mediaFile ? (mediaFile.type.startsWith("image/") ? "image" : mediaFile.type.startsWith("video/") ? "video" : "audio") : null,
     };
     if (activeConv.convKey) ins.conversation_key = activeConv.convKey;
     if (replyTo) {
@@ -452,9 +472,13 @@ export function LykaChat() {
       conversation_key: activeConv.convKey,
       reply_to_id: replyTo?.id, reply_to_text: replyTo?.message.slice(0, 80),
       reply_to_author: replyTo?.author_name.split(" ")[0],
+      media_url: mediaPreview || null,
+      media_type: mediaFile ? (mediaFile.type.startsWith("image/") ? "image" : mediaFile.type.startsWith("video/") ? "video" : "audio") : null,
     };
     setMessages(prev => [...prev, opt]);
     setReplyTo(null);
+    setMediaFile(null);
+    setMediaPreview("");
     setTimeout(() => scrollToBottom(), 50);
     const { error } = await supabase.from("lyka_messages").insert([ins]);
     if (error) { setMessages(prev => prev.filter(m => m.id !== opt.id)); setNewMessage(text); }
@@ -476,7 +500,33 @@ export function LykaChat() {
     else grouped.push({ date: lbl, msgs: [msg] });
   });
 
-  const filteredConvs = conversations.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+  const togglePin = (e: React.MouseEvent, cid: string) => {
+    e.stopPropagation();
+    setPinned(prev => {
+      let next = [...prev];
+      if (next.includes(cid)) next = next.filter(x => x !== cid);
+      else {
+        if (next.length >= 3) { alert("Você pode fixar no máximo 3 conversas."); return next; }
+        next.push(cid);
+      }
+      localStorage.setItem(`lyka_pinned_${profile.id}`, JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const sortedConvs = [...conversations].sort((a, b) => {
+    const pA = pinned.includes(a.id);
+    const pB = pinned.includes(b.id);
+    if (pA && !pB) return -1;
+    if (!pA && pB) return 1;
+
+    const tA = lastMsgs[a.convKey ?? "group"]?.time || "1970-01-01T00:00:00Z";
+    const tB = lastMsgs[b.convKey ?? "group"]?.time || "1970-01-01T00:00:00Z";
+    if (tA !== tB) return tB.localeCompare(tA);
+    return a.name.localeCompare(b.name);
+  });
+
+  const filteredConvs = sortedConvs.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
   const totalUnread = Object.values(lastMsgs).reduce((s, v) => s + (v.unread || 0), 0);
   const p = profile;
 
@@ -528,10 +578,17 @@ export function LykaChat() {
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 4 }}>
-                  <p style={{ color: unread > 0 ? "#fff" : "rgba(255,255,255,0.75)", fontWeight: unread > 0 ? 800 : 600, fontSize: 13, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {conv.name}
-                  </p>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
+                    <p style={{ color: unread > 0 ? "#fff" : "rgba(255,255,255,0.75)", fontWeight: unread > 0 ? 800 : 600, fontSize: 13, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {conv.name}
+                    </p>
+                    {pinned.includes(conv.id) && <span style={{ fontSize: 10 }}>📌</span>}
+                  </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                    <button type="button" onClick={(e) => togglePin(e, conv.id)}
+                      style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, opacity: 0.5, padding: 0 }} title="Fixar">
+                      {pinned.includes(conv.id) ? "📍" : "📌"}
+                    </button>
                     {last?.time && <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>{timeAgo(last.time)}</span>}
                     {unread > 0 && (
                       <span style={{ background: "#7c3aed", color: "#fff", fontSize: 9, fontWeight: 900, padding: "2px 6px", borderRadius: 99 }}>{unread}</span>
@@ -691,14 +748,25 @@ export function LykaChat() {
             )}
           </div>
 
-          {/* Reply banner */}
-          {replyTo && (
+          {/* Reply and Media banner */}
+          {(replyTo || mediaPreview) && (
             <div style={{ padding: "8px 14px", background: "#f8fafc", borderTop: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-              <div style={{ flex: 1, borderLeft: "3px solid #7c3aed", paddingLeft: 10 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed", display: "block" }}>{replyTo.author_name.split(" ")[0]}</span>
-                <span style={{ fontSize: 12, color: "#64748b", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{replyTo.message.slice(0, 80)}</span>
-              </div>
-              <button type="button" onClick={() => setReplyTo(null)}
+              {replyTo && (
+                <div style={{ flex: 1, borderLeft: "3px solid #7c3aed", paddingLeft: 10 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed", display: "block" }}>{replyTo.author_name.split(" ")[0]}</span>
+                  <span style={{ fontSize: 12, color: "#64748b", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{replyTo.message.slice(0, 80)}</span>
+                </div>
+              )}
+              {mediaPreview && (
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  {mediaFile?.type.startsWith("image/") ? (
+                    <img src={mediaPreview} alt="preview" style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 6 }} />
+                  ) : (
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "#3b82f6" }}>Arquivo Anexado</span>
+                  )}
+                </div>
+              )}
+              <button type="button" onClick={() => { setReplyTo(null); setMediaFile(null); setMediaPreview(""); }}
                 style={{ width: 24, height: 24, borderRadius: 6, border: "none", background: "#e2e8f0", color: "#64748b", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <X style={{ width: 12, height: 12 }} />
               </button>
@@ -708,7 +776,19 @@ export function LykaChat() {
           {/* Input */}
           <div style={{ padding: "10px 12px", borderTop: "1px solid #e2e8f0", flexShrink: 0, background: "#fff" }}>
             <form onSubmit={e => void handleSend(e)} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <Avatar name={p.nomeCompleto || "EU"} size={32} url={p.avatarUrl || ""} />
+              <label style={{ cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: 10, background: "#f1f5f9", color: "#64748b", flexShrink: 0, transition: "background 0.2s" }}>
+                📎
+                <input type="file" style={{ display: "none" }} accept="image/*,video/*,audio/*"
+                  onChange={e => {
+                    const f = e.target.files?.[0];
+                    if (f) {
+                      setMediaFile(f);
+                      const url = URL.createObjectURL(f);
+                      setMediaPreview(url);
+                    }
+                  }}
+                />
+              </label>
               <input ref={inputRef} type="text" value={newMessage} onChange={handleInputChange}
                 onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) void handleSend(e as unknown as React.FormEvent); }}
                 placeholder={replyTo ? "Responder..." : activeConv.isGroup ? "Mensagem para a turma..." : "Mensagem privada..."}
