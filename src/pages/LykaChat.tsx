@@ -3,7 +3,7 @@ import { supabase } from "../lib/supabaseClient";
 import { useUserSession } from "../hooks/useUserSession";
 import {
   Send, Wifi, WifiOff, ChevronDown, ArrowLeft, Search,
-  Radio, CornerUpLeft, Trash2, X, Heart, ExternalLink
+  Radio, CornerUpLeft, Trash2, X, Heart, ExternalLink, Mic, Square
 } from "lucide-react";
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
@@ -289,7 +289,12 @@ export function LykaChat() {
   const [pinned, setPinned] = useState<string[]>([]);
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [mediaPreview, setMediaPreview] = useState<string>("");
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
 
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<BlobPart[]>([]);
+  const recordIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -484,6 +489,38 @@ export function LykaChat() {
     if (error) { setMessages(prev => prev.filter(m => m.id !== opt.id)); setNewMessage(text); }
     setSending(false);
     inputRef.current?.focus();
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioFile = new File([audioBlob], "audio_message.webm", { type: 'audio/webm' });
+        setMediaFile(audioFile);
+        setMediaPreview(URL.createObjectURL(audioBlob));
+        stream.getTracks().forEach(track => track.stop());
+      };
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      if (recordIntervalRef.current) clearInterval(recordIntervalRef.current);
+      recordIntervalRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000);
+    } catch (err) {
+      alert("Erro ao acessar microfone. Verifique as permissões.");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      if (recordIntervalRef.current) clearInterval(recordIntervalRef.current);
+    }
   };
 
   const handleDeleteMsg = async (id: number) => {
@@ -775,33 +812,49 @@ export function LykaChat() {
 
           {/* Input */}
           <div style={{ padding: "10px 12px", borderTop: "1px solid #e2e8f0", flexShrink: 0, background: "#fff" }}>
-            <form onSubmit={e => void handleSend(e)} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <label style={{ cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: 10, background: "#f1f5f9", color: "#64748b", flexShrink: 0, transition: "background 0.2s" }}>
-                📎
-                <input type="file" style={{ display: "none" }} accept="image/*,video/*,audio/*"
-                  onChange={e => {
-                    const f = e.target.files?.[0];
-                    if (f) {
-                      setMediaFile(f);
-                      const url = URL.createObjectURL(f);
-                      setMediaPreview(url);
-                    }
-                  }}
+            {isRecording ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "4px 8px" }}>
+                <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#ef4444", animation: "lykaPulse 1.5s infinite" }} />
+                <span style={{ color: "#ef4444", fontWeight: 800, fontSize: 13, flex: 1 }}>
+                  Gravando... {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}
+                </span>
+                <button type="button" onClick={stopRecording}
+                  style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 12, border: "none", background: "#ef4444", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", boxShadow: "0 4px 12px rgba(239,68,68,0.3)" }}>
+                  <Square style={{ width: 14, height: 14, fill: "#fff" }} /> Parar e Anexar
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={e => void handleSend(e)} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <label style={{ cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: 10, background: "#f1f5f9", color: "#64748b", flexShrink: 0, transition: "background 0.2s" }} title="Anexar arquivo">
+                  📎
+                  <input type="file" style={{ display: "none" }} accept="image/*,video/*,audio/*"
+                    onChange={e => {
+                      const f = e.target.files?.[0];
+                      if (f) {
+                        setMediaFile(f);
+                        setMediaPreview(URL.createObjectURL(f));
+                      }
+                    }}
+                  />
+                </label>
+                <button type="button" onClick={startRecording} title="Gravar áudio"
+                  style={{ width: 36, height: 36, borderRadius: 10, border: "none", background: "#f1f5f9", color: "#64748b", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.2s" }}>
+                  <Mic style={{ width: 18, height: 18 }} />
+                </button>
+                <input ref={inputRef} type="text" value={newMessage} onChange={handleInputChange}
+                  onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) void handleSend(e as unknown as React.FormEvent); }}
+                  placeholder={replyTo ? "Responder..." : activeConv.isGroup ? "Mensagem para a turma..." : "Mensagem privada..."}
+                  autoComplete="off"
+                  style={{ flex: 1, padding: "10px 14px", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 14, fontSize: 13, fontWeight: 500, outline: "none", fontFamily: "inherit", color: "#0f172a", transition: "border-color 0.2s" }}
+                  onFocus={e => (e.target.style.borderColor = "#7c3aed")}
+                  onBlur={e => (e.target.style.borderColor = "#e2e8f0")}
                 />
-              </label>
-              <input ref={inputRef} type="text" value={newMessage} onChange={handleInputChange}
-                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) void handleSend(e as unknown as React.FormEvent); }}
-                placeholder={replyTo ? "Responder..." : activeConv.isGroup ? "Mensagem para a turma..." : "Mensagem privada..."}
-                autoComplete="off"
-                style={{ flex: 1, padding: "10px 14px", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 14, fontSize: 13, fontWeight: 500, outline: "none", fontFamily: "inherit", color: "#0f172a", transition: "border-color 0.2s" }}
-                onFocus={e => (e.target.style.borderColor = "#7c3aed")}
-                onBlur={e => (e.target.style.borderColor = "#e2e8f0")}
-              />
-              <button type="submit" disabled={sending || !newMessage.trim()}
-                style={{ width: 40, height: 40, borderRadius: 12, border: "none", background: sending || !newMessage.trim() ? "rgba(124,58,237,0.3)" : "linear-gradient(135deg,#7c3aed,#4338ca)", color: "#fff", cursor: sending || !newMessage.trim() ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: newMessage.trim() ? "0 4px 12px rgba(124,58,237,0.4)" : "none", transition: "all 0.2s" }}>
-                <Send style={{ width: 16, height: 16 }} />
-              </button>
-            </form>
+                <button type="submit" disabled={sending || (!newMessage.trim() && !mediaFile)}
+                  style={{ width: 40, height: 40, borderRadius: 12, border: "none", background: sending || (!newMessage.trim() && !mediaFile) ? "rgba(124,58,237,0.3)" : "linear-gradient(135deg,#7c3aed,#4338ca)", color: "#fff", cursor: sending || (!newMessage.trim() && !mediaFile) ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: (newMessage.trim() || mediaFile) ? "0 4px 12px rgba(124,58,237,0.4)" : "none", transition: "all 0.2s" }}>
+                  <Send style={{ width: 16, height: 16 }} />
+                </button>
+              </form>
+            )}
           </div>
         </>
       )}
@@ -813,6 +866,7 @@ export function LykaChat() {
       <style>{`
         @keyframes lykaSpin { to { transform: rotate(360deg); } }
         @keyframes lykaBounce { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-5px);} }
+        @keyframes lykaPulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.5;transform:scale(1.2);} }
         @media(max-width:640px){
           .layka-sidebar{ display: ${mobileView === "list" ? "flex" : "none"} !important; width: 100% !important; }
           .layka-chat{ display: ${mobileView === "chat" ? "flex" : "none"} !important; }
