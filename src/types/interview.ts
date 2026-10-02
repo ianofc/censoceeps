@@ -63,6 +63,8 @@ export interface InterviewFormPayload {
     readonly origem_familia?: OrigemFamiliaTipo;
     readonly locais_ocorrencia?: readonly string[];
     readonly formas_ocorrencia?: readonly string[];
+    readonly cor_raca_influencia?: string;
+    readonly espacos_influencia?: readonly string[];
 
     // Propriedades legadas/unificadas para compatibilidade
     readonly id?: string;

@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import './index.css';
-import { supabase } from './lib/supabaseClient';
+import { supabase } from '../lib/supabaseClient';
 
-import { Login } from './pages/Login';
-import { Home } from './pages/Home';
-import { AnalyticsDashboard } from './components/AnalyticsDashboard';
-import { TeacherDashboard } from './components/TeacherDashboard';
-import { PublicDisplay } from './pages/PublicDisplay';
-import { NotFound } from './pages/NotFound';
-import { AdinhaAssistant } from './components/AdinhaAssistant';
-import { AdinhaMascote } from './components/AdinhaMascote';
-import MeuPerfil from './pages/MeuPerfil';
-import About from './pages/About';
+import { Login } from './Login';
+import { Home } from './Home';
+import { AnalyticsDashboard } from '../components/AnalyticsDashboard';
+import { TeacherDashboard } from '../components/TeacherDashboard';
+import { PublicDisplay } from './PublicDisplay';
+import { NotFound } from './NotFound';
+import { AdinhaAssistant } from '../components/AdinhaAssistant';
+import { AdinhaMascote } from '../components/AdinhaMascote';
+import MeuPerfil from './MeuPerfil';
+import About from './About';
 
 import { 
   BarChart3, 
@@ -27,7 +27,7 @@ import {
   Info
 } from 'lucide-react';
 
-const adinhaAvatar = new URL('./assets/imgs/AdaLovelace.png', import.meta.url).href;
+const adinhaAvatar = new URL('../assets/imgs/AdaLovelace.png', import.meta.url).href;
 
 interface LayoutProps {
   readonly session: any;
@@ -63,7 +63,7 @@ function Layout({ session }: LayoutProps) {
             className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 p-0.5 shadow-md shadow-blue-500/20 ring-2 ring-white/20 transition-transform hover:scale-105 cursor-pointer flex items-center justify-center border-0"
           >
             <img 
-              src={adinhasFrenteFallback => adinhaAvatar} 
+              src={adinhaAvatar} 
               alt="Ada Lovelace" 
               className="w-full h-full rounded-2xl object-cover" 
             />
@@ -309,7 +309,7 @@ function Layout({ session }: LayoutProps) {
               element={
                 <div className="w-full flex flex-col items-center animate-in fade-in duration-500">
                   <div className="w-full max-w-4xl">
-                    <Home userId={session?.user?.id} />
+                    <Home />
                   </div>
                 </div>
               } 

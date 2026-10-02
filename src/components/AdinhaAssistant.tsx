@@ -2,18 +2,17 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, Send, Sparkles } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 
-// Importação correta de todas as expressões oficiais da Adinha
-const adinhasFrente = new URL('../assets/imgs/adinhafrente.png', import.meta.url).href;
-const adinhaApaixonada = new URL('../assets/imgs/adinhaexpressaoapaixonada-1.png', import.meta.url).href;
-const adinhaConfusa = new URL('../assets/imgs/adinhaexpressaoconfusa.png', import.meta.url).href;
-const adinhaCuriosa = new URL('../assets/imgs/adinhaexpressaocuriosa.png', import.meta.url).href;
-const adinhaEmpolgada = new URL('../assets/imgs/adinhaexpressaoempolgada.png', import.meta.url).href;
-const adinhaFeliz = new URL('../assets/imgs/adinhaexpressaofeliz.png', import.meta.url).href;
-const adinhaIrritada = new URL('../assets/imgs/adinhaexpressaoirritada.png', import.meta.url).href;
-const adinhaPensativa = new URL('../assets/imgs/adinhaexpressaopensativa.png', import.meta.url).href;
-const adinhaSurpresa = new URL('../assets/imgs/adinhaexpressaosurpresa.png', import.meta.url).href;
-const adinhaIdeia = new URL('../assets/imgs/adinhaideia.png', import.meta.url).href;
-const adinhaLendo = new URL('../assets/imgs/adinhalendo.png', import.meta.url).href;
+import adinhasFrente from '../assets/imgs/adinhafrente.png';
+import adinhaApaixonada from '../assets/imgs/adinhaexpressaoapaixonada-1.png';
+import adinhaConfusa from '../assets/imgs/adinhaexpressaoconfusa.png';
+import adinhaCuriosa from '../assets/imgs/adinhaexpressaocuriosa.png';
+import adinhaEmpolgada from '../assets/imgs/adinhaexpressaoempolgada.png';
+import adinhaFeliz from '../assets/imgs/adinhaexpressaofeliz.png';
+import adinhaIrritada from '../assets/imgs/adinhaexpressaoirritada.png';
+import adinhaPensativa from '../assets/imgs/adinhaexpressaopensativa.png';
+import adinhaSurpresa from '../assets/imgs/adinhaexpressaosurpresa.png';
+import adinhaIdeia from '../assets/imgs/adinhaideia.png';
+import adinhaLendo from '../assets/imgs/adinhalendo.png';
 
 type AdinhaPose = 
   | 'frente' 
@@ -71,7 +70,7 @@ export const AdinhaAssistant: React.FC = () => {
     }
   };
 
-  const handleSend = async (e: React.FormEvent) => {
+  const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
 
@@ -133,14 +132,14 @@ export const AdinhaAssistant: React.FC = () => {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 font-sans">
+    <div className="fixed bottom-24 right-4 md:bottom-6 md:right-6 z-50 font-sans">
       
       {/* BOTÃO FLUTUANTE DA MASCOTE */}
       {!isOpen && (
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="group relative w-16 h-16 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 p-1 shadow-2xl shadow-blue-500/40 hover:scale-110 transition-transform cursor-pointer border-0 flex items-center justify-center"
+          className="group relative w-14 h-14 md:w-16 md:h-16 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 p-1 shadow-2xl shadow-blue-500/40 hover:scale-110 transition-transform cursor-pointer border-0 flex items-center justify-center"
           title="Falar com a Adinha"
         >
           <div className="w-full h-full rounded-full overflow-hidden bg-white flex items-center justify-center">
@@ -160,7 +159,7 @@ export const AdinhaAssistant: React.FC = () => {
 
       {/* JANELA DO CHAT REFINADA */}
       {isOpen && (
-        <div className="w-[92vw] sm:w-[400px] h-[540px] bg-white border border-slate-200 rounded-[32px] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
+        <div className="w-[92vw] sm:w-[400px] h-[500px] md:h-[540px] bg-white border border-slate-200 rounded-[32px] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 absolute bottom-0 right-0 md:static">
           
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-white flex items-center justify-between shrink-0 shadow-sm">
             <div className="flex items-center gap-3">

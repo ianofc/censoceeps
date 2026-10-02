@@ -26,6 +26,15 @@ export function useUserSession() {
     useEffect(() => {
         async function fetchRealUserSession() {
             try {
+                // VERIFICAÇÃO DE USUÁRIO DE TESTE (MOCK)
+                const testUserStr = localStorage.getItem('ceep_test_user');
+                if (testUserStr) {
+                    const testUser = JSON.parse(testUserStr);
+                    setProfile(testUser);
+                    setLoading(false);
+                    return; // Sai cedo, não bate no Supabase
+                }
+
                 const { data: { session } } = await supabase.auth.getSession();
 
                 if (session?.user) {

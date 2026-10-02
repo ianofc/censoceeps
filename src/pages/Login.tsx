@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { Landmark, Lock, Mail, ArrowRight, Loader2, Sparkles } from 'lucide-react';
+import { Landmark, Lock, Mail, ArrowRight, Loader2, Sparkles, WifiOff } from 'lucide-react';
 
-// Resolução correta e exata do nome do arquivo AdaLovelace.png na pasta assets/imgs
 const adinhaprogramando = new URL('../assets/imgs/adinhaprogramando.png', import.meta.url).href;
 const logoCenso = new URL('../assets/imgs/AdaLovelace.png', import.meta.url).href;
 const bgImage = new URL('../assets/imgs/adalovelacebackground.png', import.meta.url).href;
@@ -23,12 +22,33 @@ export function Login({ onLoginSuccess }: LoginProps) {
     setErrorMsg(null);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      if (!navigator.onLine) {
+        // Modo Offline: Verifica se já existe um login salvo localmente
+        const cachedSession = localStorage.getItem('ceep_offline_session');
+        const cachedEmail = localStorage.getItem('ceep_offline_email');
+
+        if (cachedSession && cachedEmail === email.trim().toLowerCase()) {
+          // Permite o acesso offline simulando sucesso
+          onLoginSuccess();
+          return;
+        } else {
+          throw new Error("Sem conexão com a internet e nenhuma sessão anterior salva para este e-mail neste aparelho. Faça login online ao menos uma vez.");
+        }
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
+
+      // Salva sessão localmente para permitir acesso offline futuro
+      if (data.session) {
+        localStorage.setItem('ceep_offline_session', JSON.stringify(data.session));
+        localStorage.setItem('ceep_offline_email', email.trim().toLowerCase());
+      }
+
       onLoginSuccess();
     } catch (err: any) {
       setErrorMsg(err.message || 'Erro ao realizar login. Verifique suas credenciais.');
@@ -97,15 +117,22 @@ export function Login({ onLoginSuccess }: LoginProps) {
         {/* LADO DIREITO: Formulário de Autenticação */}
         <div className="p-8 sm:p-10 flex flex-col justify-center space-y-6 bg-white">
           <div>
-            <div className="flex items-center gap-3 mb-2">
-              <img 
-                src={logoCenso} 
-                alt="Logo Censo CEEP" 
-                className="w-10 h-10 rounded-full border border-slate-200 object-cover shadow-sm bg-slate-50" 
-              />
-              <span className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
-                Acesso Restrito
-              </span>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-3">
+                <img 
+                  src={logoCenso} 
+                  alt="Logo Censo CEEP" 
+                  className="w-10 h-10 rounded-full border border-slate-200 object-cover shadow-sm bg-slate-50" 
+                />
+                <span className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
+                  Acesso Restrito
+                </span>
+              </div>
+              {!navigator.onLine && (
+                <span className="flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
+                  <WifiOff className="w-3 h-3" /> Modo Offline
+                </span>
+              )}
             </div>
             <h1 className="text-2xl font-black text-slate-800 tracking-tight">Entrar no Sistema</h1>
             <p className="text-xs font-semibold text-slate-500 mt-1">
@@ -114,7 +141,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
           </div>
 
           {errorMsg && (
-            <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-bold animate-in shake">
+            <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-bold">
               {errorMsg}
             </div>
           )}
@@ -133,7 +160,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
                   placeholder="pesquisador@ceep.edu.br"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 transition duration-200"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 transition duration-200 outline-none"
                 />
               </div>
             </div>
@@ -151,7 +178,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 transition duration-200"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 transition duration-200 outline-none"
                 />
               </div>
             </div>
@@ -159,7 +186,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition duration-200 shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 text-sm disabled:opacity-50 mt-2"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition duration-200 shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 text-sm disabled:opacity-50 mt-2 cursor-pointer border-0"
             >
               {loading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -171,7 +198,50 @@ export function Login({ onLoginSuccess }: LoginProps) {
             </button>
           </form>
 
-          <p className="text-[11px] text-center text-slate-400 font-medium">
+          {/* PAINEL DE USUÁRIOS DE TESTE */}
+          <div className="mt-6 pt-6 border-t border-slate-100">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center justify-center gap-2">
+              <Sparkles className="w-3.5 h-3.5" /> Acesso de Teste (Dev)
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => {
+                  localStorage.setItem('ceep_test_user', JSON.stringify({
+                    id: 'mock-gestor-123',
+                    nomeCompleto: 'Gestor de Teste',
+                    email: 'gestor@ceep.edu.br',
+                    papel: 'gestor',
+                    turmaOuCargo: 'Diretoria',
+                    genero: 'masculino',
+                    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'
+                  }));
+                  onLoginSuccess();
+                }}
+                className="py-2 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition-colors border border-indigo-200"
+              >
+                Entrar como Gestor
+              </button>
+              <button
+                onClick={() => {
+                  localStorage.setItem('ceep_test_user', JSON.stringify({
+                    id: 'mock-pesquisador-123',
+                    nomeCompleto: 'Pesquisador Aluno',
+                    email: 'pesquisador@ceep.edu.br',
+                    papel: 'entrevistador_aluno',
+                    turmaOuCargo: '3º Ano Informática',
+                    genero: 'feminino',
+                    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mia'
+                  }));
+                  onLoginSuccess();
+                }}
+                className="py-2 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold transition-colors border border-emerald-200"
+              >
+                Entrar como Pesquisador
+              </button>
+            </div>
+          </div>
+
+          <p className="text-[11px] text-center text-slate-400 font-medium mt-4">
             Centro Estadual de Educação Profissional de Seabra — CEEP<br />
             Grupo de Pesquisa Científica Ada Lovelace
           </p>

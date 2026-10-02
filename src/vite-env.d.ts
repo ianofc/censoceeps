@@ -1,5 +1,14 @@
 /// <reference types="vite/client" />
 
+declare module '*.pdf' {
+    const src: string;
+    export default src;
+}
+
+declare module '*.PDF' {
+    const src: string;
+    export default src;
+}
 
 declare module '*.mp4' {
     const src: string;

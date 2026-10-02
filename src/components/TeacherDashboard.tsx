@@ -1,25 +1,43 @@
 import React, { useEffect, useState } from 'react';
-import { InterviewData } from '../types/interview';
+import { supabase } from '../lib/supabaseClient';
+import { tasPdfGenerator } from '../utils/tasPdfGenerator';
+import { DownloadCloud } from 'lucide-react';
+import { useUserSession } from '../hooks/useUserSession';
 
 export const TeacherDashboard: React.FC = () => {
-  const [interviews, setInterviews] = useState<InterviewData[]>([]);
+  const [interviews, setInterviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { profile } = useUserSession();
 
   useEffect(() => {
-    fetch('/api/interview')
-      .then((res) => res.json())
-      .then((data) => {
-        setInterviews(data);
+    supabase.from('entrevistas').select('*')
+      .then(({ data }) => {
+        setInterviews(data || []);
         setLoading(false);
       });
   }, []);
 
-  if (loading) return <div className="p-6 text-center">Carregando painel de acompanhamento...</div>;
+  const handleGeneratePDF = () => {
+    tasPdfGenerator.generateCensoReport(interviews, profile?.nomeCompleto || "Gestor de Dados", "CEEP Seabra - Bahia");
+  };
+
+  if (loading) return <div className="p-6 text-center">Carregando painel de acompanhamento e inicializando TAS...</div>;
 
   return (
-    <div className="max-w-6xl mx-auto p-6 bg-white rounded shadow">
-      <h1 className="text-2xl font-bold mb-2">Acompanhamento de Coletas — Iniciação Científica</h1>
-      <p className="text-gray-600 mb-6">Visão geral dos registros realizados no censo escolar.</p>
+    <div className="max-w-6xl mx-auto p-6 bg-white rounded-3xl shadow-xl border border-slate-100">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-black text-slate-900 mb-1">Acompanhamento e Auditoria</h1>
+          <p className="text-slate-500 font-medium text-sm">Visão geral dos registros realizados no censo escolar.</p>
+        </div>
+        <button
+          onClick={handleGeneratePDF}
+          className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-2.5 px-5 rounded-xl shadow-lg shadow-indigo-500/30 transition-all hover:-translate-y-0.5"
+        >
+          <DownloadCloud className="w-5 h-5" />
+          Gerar Relatório (TAS)
+        </button>
+      </div>
 
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
