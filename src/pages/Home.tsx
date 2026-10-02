@@ -22,6 +22,9 @@ interface CensoItem {
   cor_raca: string;
   origem_familia: string;
   sofreu_preconceito: string;
+  relato_sofreu?: string;
+  presenciou_preconceito?: string;
+  relato_presenciou?: string;
   created_at: string;
   synced?: boolean;
 }
@@ -59,6 +62,9 @@ export function Home() {
   const [corRaca, setCorRaca] = useState('Parda');
   const [origemFamilia, setOrigemFamilia] = useState('Mista / Diversa');
   const [sofreuPreconceito, setSofreuPreconceito] = useState('Não');
+  const [relatoSofreu, setRelatoSofreu] = useState('');
+  const [presenciouPreconceito, setPresenciouPreconceito] = useState('Não');
+  const [relatoPresenciou, setRelatoPresenciou] = useState('');
 
   useEffect(() => {
     const handleOnline = () => {
@@ -165,6 +171,9 @@ export function Home() {
       cor_raca: corRaca,
       origem_familia: origemFamilia,
       sofreu_preconceito: sofreuPreconceito,
+      relato_sofreu: relatoSofreu,
+      presenciou_preconceito: presenciouPreconceito,
+      relato_presenciou: relatoPresenciou,
       created_at: new Date().toISOString(),
       synced: false
     };
@@ -207,6 +216,9 @@ export function Home() {
     setGenero('');
     setSerie('');
     setTurma('');
+    setRelatoSofreu('');
+    setPresenciouPreconceito('Não');
+    setRelatoPresenciou('');
   };
 
 
@@ -275,7 +287,7 @@ export function Home() {
             <button
               type="button"
               onClick={() => setShowModalColeta(true)}
-              className="bg-gradient-to-r from-cyan-600 to-teal-500 hover:from-cyan-700 hover:to-teal-600 text-white font-bold px-6 py-3.5 rounded-2xl shadow-lg shadow-teal-500/20 flex items-center gap-2 text-xs transition cursor-pointer border-0 shrink-0"
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold px-6 py-3.5 rounded-2xl shadow-lg shadow-blue-500/20 flex items-center gap-2 text-xs transition cursor-pointer border-0 shrink-0"
             >
               <Plus className="w-4 h-4" /> Nova Ficha de Coleta
             </button>
@@ -468,30 +480,34 @@ export function Home() {
                       >
                         <option value="ESTUDANTE_REGULAR">Estudante (Regular)</option>
                         <option value="ESTUDANTE_TECNICO">Estudante (Técnico)</option>
-                        <option value="PROFESSOR">Professor(a)</option>
+                        <option value="FUNCIONARIO">Funcionário(a)</option>
                       </select>
                     </div>
 
-                    <div>
-                      <label htmlFor="modal-serie" className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Série / Ano</label>
-                      <input
-                        id="modal-serie"
-                        type="text"
-                        required
-                        placeholder="Ex: 3º Ano Técnico"
-                        value={serie}
-                        onChange={(e) => setSerie(e.target.value)}
-                        className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white outline-none"
-                      />
-                    </div>
+                    {vinculo !== 'FUNCIONARIO' && (
+                      <div>
+                        <label htmlFor="modal-serie" className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Série / Ano</label>
+                        <input
+                          id="modal-serie"
+                          type="text"
+                          required
+                          placeholder="Ex: 3º Ano Técnico"
+                          value={serie}
+                          onChange={(e) => setSerie(e.target.value)}
+                          className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white outline-none"
+                        />
+                      </div>
+                    )}
 
-                    <div>
-                      <label htmlFor="modal-turma" className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Turma</label>
+                    <div className={vinculo === 'FUNCIONARIO' ? 'col-span-1 sm:col-span-2' : ''}>
+                      <label htmlFor="modal-turma" className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                        {vinculo === 'FUNCIONARIO' ? 'Setor' : 'Turma'}
+                      </label>
                       <input
                         id="modal-turma"
                         type="text"
                         required
-                        placeholder="Ex: Informática A"
+                        placeholder={vinculo === 'FUNCIONARIO' ? 'Ex: Coordenação, Portaria, Limpeza...' : 'Ex: Informática A'}
                         value={turma}
                         onChange={(e) => setTurma(e.target.value)}
                         className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white outline-none"
@@ -567,18 +583,70 @@ export function Home() {
 
                 <div className="space-y-4 bg-slate-50 dark:bg-slate-800/40 p-5 rounded-2xl border border-slate-200 dark:border-slate-700">
                   <h3 className="text-xs font-black uppercase text-blue-600 dark:text-blue-400 tracking-wider">Bloco 4: Percepção Social</h3>
-                  <div>
-                    <label htmlFor="modal-preconceito" className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Já sofreu preconceito?</label>
-                    <select
-                      id="modal-preconceito"
-                      value={sofreuPreconceito}
-                      onChange={(e) => setSofreuPreconceito(e.target.value)}
-                      className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white outline-none"
-                    >
-                      <option value="Não">Não</option>
-                      <option value="Sim">Sim</option>
-                      <option value="Prefiro não responder">Prefiro não responder</option>
-                    </select>
+                  <div className="space-y-4">
+                    <div>
+                      <label htmlFor="modal-preconceito" className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                        Já sofreu preconceito, discriminação ou violência?
+                      </label>
+                      <select
+                        id="modal-preconceito"
+                        value={sofreuPreconceito}
+                        onChange={(e) => setSofreuPreconceito(e.target.value)}
+                        className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white outline-none"
+                      >
+                        <option value="Não">Não</option>
+                        <option value="Sim">Sim</option>
+                        <option value="Prefiro não responder">Prefiro não responder</option>
+                      </select>
+                    </div>
+
+                    {sofreuPreconceito === 'Sim' && (
+                      <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                        <label htmlFor="modal-relato-sofreu" className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                          Relato do ocorrido (Opcional)
+                        </label>
+                        <textarea
+                          id="modal-relato-sofreu"
+                          rows={3}
+                          placeholder="Como aconteceu? Sinta-se à vontade para relatar..."
+                          value={relatoSofreu}
+                          onChange={(e) => setRelatoSofreu(e.target.value)}
+                          className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-white outline-none resize-none"
+                        />
+                      </div>
+                    )}
+
+                    <div className="pt-2 border-t border-slate-200 dark:border-slate-700/50">
+                      <label htmlFor="modal-presenciou" className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1 mt-2">
+                        Já presenciou preconceito, discriminação ou violência com outra pessoa?
+                      </label>
+                      <select
+                        id="modal-presenciou"
+                        value={presenciouPreconceito}
+                        onChange={(e) => setPresenciouPreconceito(e.target.value)}
+                        className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white outline-none"
+                      >
+                        <option value="Não">Não</option>
+                        <option value="Sim">Sim</option>
+                        <option value="Prefiro não responder">Prefiro não responder</option>
+                      </select>
+                    </div>
+
+                    {presenciouPreconceito === 'Sim' && (
+                      <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                        <label htmlFor="modal-relato-presenciou" className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                          Relato do que presenciou (Opcional)
+                        </label>
+                        <textarea
+                          id="modal-relato-presenciou"
+                          rows={3}
+                          placeholder="O que você observou? Sinta-se à vontade para relatar..."
+                          value={relatoPresenciou}
+                          onChange={(e) => setRelatoPresenciou(e.target.value)}
+                          className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-white outline-none resize-none"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
 
