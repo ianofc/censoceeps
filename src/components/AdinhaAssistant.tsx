@@ -146,7 +146,7 @@ export const AdinhaAssistant: React.FC = () => {
   };
 
   return (
-    <div className="fixed bottom-24 right-4 md:bottom-6 md:right-6 z-50 font-sans">
+    <div className="fixed top-1/2 right-4 md:right-6 -translate-y-1/2 z-50 font-sans flex flex-col items-end">
       
       {/* BOTÃO FLUTUANTE DA MASCOTE */}
       {!isOpen && (
@@ -173,7 +173,7 @@ export const AdinhaAssistant: React.FC = () => {
 
       {/* JANELA DO CHAT REFINADA */}
       {isOpen && (
-        <div className="w-[92vw] sm:w-[400px] h-[500px] md:h-[540px] bg-white border border-slate-200 rounded-[32px] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 absolute bottom-0 right-0 md:static">
+        <div className="w-[92vw] sm:w-[400px] h-[500px] md:h-[540px] bg-white border border-slate-200 rounded-[32px] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 fixed md:absolute top-1/2 left-1/2 md:left-auto md:top-1/2 -translate-x-1/2 md:translate-x-0 -translate-y-1/2 md:-translate-y-1/2 md:right-full md:mr-4 origin-center md:origin-right z-[60]">
           
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-white flex items-center justify-between shrink-0 shadow-sm">
             <div className="flex items-center gap-3">
