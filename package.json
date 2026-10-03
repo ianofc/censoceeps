@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npx tsc --noEmit && vite build",
-    "lint": "npx tsc --noEmit",
+    "build": "tsc --noEmit && vite build",
+    "lint": "tsc --noEmit",
     "preview": "vite preview",
-    "check": "npx tsc --noEmit && vite build",
+    "check": "tsc --noEmit && vite build",
     "test": "vitest",
     "cy:open": "cypress open",
     "cy:run": "cypress run"
