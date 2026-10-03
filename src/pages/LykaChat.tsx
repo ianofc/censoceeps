@@ -521,8 +521,13 @@ export function LykaChat() {
     setMediaFile(null);
     setMediaPreview("");
     setTimeout(() => scrollToBottom(), 50);
-    const { error } = await supabase.from("lyka_messages").insert([ins]);
-    if (error) { setMessages(prev => prev.filter(m => m.id !== opt.id)); setNewMessage(text); }
+    const { data, error } = await supabase.from("lyka_messages").insert([ins]).select();
+    if (error) { 
+      setMessages(prev => prev.filter(m => m.id !== opt.id)); 
+      setNewMessage(text); 
+    } else if (data && data[0]) {
+      setMessages(prev => prev.map(m => m.id === opt.id ? { ...m, id: data[0].id } : m));
+    }
     setSending(false);
     inputRef.current?.focus();
   };
