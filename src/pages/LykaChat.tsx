@@ -3,7 +3,7 @@ import { supabase } from "../lib/supabaseClient";
 import { useUserSession } from "../hooks/useUserSession";
 import {
   Send, Wifi, WifiOff, ChevronDown, ArrowLeft, Search,
-  Radio, CornerUpLeft, Trash2, X, Heart, ExternalLink, Mic, Square
+  Radio, CornerUpLeft, Trash2, X, Heart, ExternalLink, Mic, Square, Edit2, XCircle
 } from "lucide-react";
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
@@ -95,9 +95,9 @@ function GroupAvatar({ size = 40 }: { size?: number }) {
 }
 
 // ─── Message Bubble ───────────────────────────────────────────────────────────
-function MsgBubble({ msg, isMe, showAvatar, showName, onReply, onDelete }: {
+function MsgBubble({ msg, isMe, showAvatar, showName, onReply, onDelete, onEdit }: {
   msg: Message; isMe: boolean; showAvatar: boolean; showName: boolean;
-  onReply: (m: Message) => void; onDelete: (id: number) => void;
+  onReply: (m: Message) => void; onDelete: (id: number) => void; onEdit: (m: Message) => void;
 }) {
   const [hover, setHover] = useState(false);
   return (
@@ -163,10 +163,16 @@ function MsgBubble({ msg, isMe, showAvatar, showName, onReply, onDelete }: {
             <CornerUpLeft style={{ width: 13, height: 13 }} />
           </button>
           {isMe && (
-            <button type="button" onClick={() => onDelete(msg.id)} title="Excluir"
-              style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid #fee2e2", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#ef4444", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
-              <Trash2 style={{ width: 12, height: 12 }} />
-            </button>
+            <>
+              <button type="button" onClick={() => onEdit(msg)} title="Editar"
+                style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
+                <Edit2 style={{ width: 12, height: 12 }} />
+              </button>
+              <button type="button" onClick={() => onDelete(msg.id)} title="Excluir"
+                style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid #fee2e2", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#ef4444", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
+                <Trash2 style={{ width: 12, height: 12 }} />
+              </button>
+            </>
           )}
         </div>
       )}
@@ -284,6 +290,7 @@ export function LykaChat() {
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const [editingMsg, setEditingMsg] = useState<Message | null>(null);
   const [profileModal, setProfileModal] = useState<Pessoa | null>(null);
   const [lastMsgs, setLastMsgs] = useState<Record<string, { text: string; time: string; unread: number }>>({});
   const [pinned, setPinned] = useState<string[]>([]);
@@ -432,7 +439,7 @@ export function LykaChat() {
 
   const openConv = (conv: Conversation) => {
     setActiveConv(conv);
-    setScrollUnread(0); setTypingUsers([]); setReplyTo(null);
+    setScrollUnread(0); setTypingUsers([]); setReplyTo(null); setEditingMsg(null);
     setMobileView("chat");
     const key = conv.convKey ?? "group";
     lastReadRef.current[key] = new Date().toISOString();
@@ -455,15 +462,45 @@ export function LykaChat() {
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     const text = newMessage.trim();
-    if (!text || sending || !activeConv) return;
+    if ((!text && !mediaFile) || sending || !activeConv) return;
     broadcastTyping(false);
-    setSending(true); setNewMessage("");
+    setSending(true);
+
+    if (editingMsg) {
+      const { error } = await supabase.from("lyka_messages").update({ message: text }).eq("id", editingMsg.id);
+      if (!error) {
+        setMessages(prev => prev.map(m => m.id === editingMsg.id ? { ...m, message: text } : m));
+      }
+      setEditingMsg(null);
+      setNewMessage("");
+      setSending(false);
+      return;
+    }
+
+    setNewMessage("");
+    
+    let finalMediaUrl = mediaPreview || null;
+    const finalMediaType = mediaFile ? (mediaFile.type.startsWith("image/") ? "image" : mediaFile.type.startsWith("video/") ? "video" : "audio") : null;
+
+    if (mediaFile) {
+      const ext = mediaFile.name ? mediaFile.name.split('.').pop() : (mediaFile.type.includes('audio') ? 'webm' : 'bin');
+      const fileName = `${profile.id}_${Date.now()}.${ext}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage.from("lyka_media").upload(fileName, mediaFile, { upsert: false });
+      if (uploadError) {
+        alert("Erro ao fazer upload da mídia. Desative o RLS ou configure o Storage.");
+        setSending(false);
+        setNewMessage(text);
+        return;
+      }
+      const { data: pubData } = supabase.storage.from("lyka_media").getPublicUrl(fileName);
+      finalMediaUrl = pubData.publicUrl;
+    }
+
     const isTeacher = profile.papel === "gestor" || (profile.turmaOuCargo || "").toLowerCase().includes("professor");
     const ins: Record<string, unknown> = {
       user_id: profile.id || "anon", author_name: profile.nomeCompleto || "Pesquisador(a)",
       message: text, is_teacher_alert: isTeacher,
-      media_url: mediaPreview || null,
-      media_type: mediaFile ? (mediaFile.type.startsWith("image/") ? "image" : mediaFile.type.startsWith("video/") ? "video" : "audio") : null,
+      media_url: finalMediaUrl, media_type: finalMediaType,
     };
     if (activeConv.convKey) ins.conversation_key = activeConv.convKey;
     if (replyTo) {
@@ -477,8 +514,7 @@ export function LykaChat() {
       conversation_key: activeConv.convKey,
       reply_to_id: replyTo?.id, reply_to_text: replyTo?.message.slice(0, 80),
       reply_to_author: replyTo?.author_name.split(" ")[0],
-      media_url: mediaPreview || null,
-      media_type: mediaFile ? (mediaFile.type.startsWith("image/") ? "image" : mediaFile.type.startsWith("video/") ? "video" : "audio") : null,
+      media_url: finalMediaUrl, media_type: finalMediaType,
     };
     setMessages(prev => [...prev, opt]);
     setReplyTo(null);
@@ -526,6 +562,13 @@ export function LykaChat() {
   const handleDeleteMsg = async (id: number) => {
     await supabase.from("lyka_messages").delete().eq("id", id);
     setMessages(prev => prev.filter(m => m.id !== id));
+  };
+
+  const handleEditInit = (msg: Message) => {
+    setEditingMsg(msg);
+    setNewMessage(msg.message);
+    setReplyTo(null);
+    inputRef.current?.focus();
   };
 
   // Group messages by date
@@ -754,7 +797,7 @@ export function LykaChat() {
                         const showAv = !mine && (!prev || prev.user_id !== msg.user_id);
                         return (
                           <MsgBubble key={msg.id} msg={msg} isMe={mine} showAvatar={showAv} showName={showAv}
-                            onReply={setReplyTo} onDelete={handleDeleteMsg} />
+                            onReply={setReplyTo} onDelete={handleDeleteMsg} onEdit={handleEditInit} />
                         );
                       })}
                     </div>
@@ -785,13 +828,19 @@ export function LykaChat() {
             )}
           </div>
 
-          {/* Reply and Media banner */}
-          {(replyTo || mediaPreview) && (
+          {/* Reply, Media, and Edit banner */}
+          {(replyTo || mediaPreview || editingMsg) && (
             <div style={{ padding: "8px 14px", background: "#f8fafc", borderTop: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
               {replyTo && (
                 <div style={{ flex: 1, borderLeft: "3px solid #7c3aed", paddingLeft: 10 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed", display: "block" }}>{replyTo.author_name.split(" ")[0]}</span>
                   <span style={{ fontSize: 12, color: "#64748b", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{replyTo.message.slice(0, 80)}</span>
+                </div>
+              )}
+              {editingMsg && (
+                <div style={{ flex: 1, borderLeft: "3px solid #f59e0b", paddingLeft: 10 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#f59e0b", display: "block" }}>Editando mensagem</span>
+                  <span style={{ fontSize: 12, color: "#64748b", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{editingMsg.message.slice(0, 80)}</span>
                 </div>
               )}
               {mediaPreview && (
@@ -803,7 +852,7 @@ export function LykaChat() {
                   )}
                 </div>
               )}
-              <button type="button" onClick={() => { setReplyTo(null); setMediaFile(null); setMediaPreview(""); }}
+              <button type="button" onClick={() => { setReplyTo(null); setMediaFile(null); setMediaPreview(""); setEditingMsg(null); setNewMessage(""); }}
                 style={{ width: 24, height: 24, borderRadius: 6, border: "none", background: "#e2e8f0", color: "#64748b", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <X style={{ width: 12, height: 12 }} />
               </button>
@@ -843,7 +892,7 @@ export function LykaChat() {
                 </button>
                 <input ref={inputRef} type="text" value={newMessage} onChange={handleInputChange}
                   onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) void handleSend(e as unknown as React.FormEvent); }}
-                  placeholder={replyTo ? "Responder..." : activeConv.isGroup ? "Mensagem para a turma..." : "Mensagem privada..."}
+                  placeholder={editingMsg ? "Editando mensagem..." : replyTo ? "Responder..." : activeConv.isGroup ? "Mensagem para a turma..." : "Mensagem privada..."}
                   autoComplete="off"
                   style={{ flex: 1, padding: "10px 14px", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 14, fontSize: 13, fontWeight: 500, outline: "none", fontFamily: "inherit", color: "#0f172a", transition: "border-color 0.2s" }}
                   onFocus={e => (e.target.style.borderColor = "#7c3aed")}
