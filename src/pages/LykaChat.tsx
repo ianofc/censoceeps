@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabaseClient";
-import { useUserSession } from "../hooks/useUserSession";
-import {
   Send, Wifi, WifiOff, ChevronDown, ArrowLeft, Search,
-  Radio, CornerUpLeft, Trash2, X, Heart, ExternalLink, Mic, Square, Edit2, XCircle, MoreVertical
+  Radio, CornerUpLeft, Trash2, X, Heart, ExternalLink, Mic, Square, Edit2, XCircle, MoreVertical, Palette, Smile
 } from "lucide-react";
+import EmojiPicker from 'emoji-picker-react';
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
 function LaikaIcon({ size = 20, color = "currentColor" }: { size?: number; color?: string }) {
@@ -96,13 +95,10 @@ function GroupAvatar({ size = 40 }: { size?: number }) {
 
 // ─── Message Bubble ───────────────────────────────────────────────────────────
 function MsgBubble({ msg, isMe, showAvatar, showName, onReply, onDelete, onEdit }: {
-  msg: Message; isMe: boolean; showAvatar: boolean; showName: boolean;
-  onReply: (m: Message) => void; onDelete: (id: number) => void; onEdit: (m: Message) => void;
 }) {
   const [showOptions, setShowOptions] = useState(false);
   return (
-    <div onMouseEnter={() => setShowOptions(true)} onMouseLeave={() => setShowOptions(false)} className="group"
-      style={{ display: "flex", gap: 8, flexDirection: isMe ? "row-reverse" : "row", alignItems: "flex-end", position: "relative" }}>
+    <div style={{ display: "flex", gap: 8, flexDirection: isMe ? "row-reverse" : "row", alignItems: "flex-end" }}>
       {!isMe && (
         <div style={{ width: 30, flexShrink: 0, display: "flex", alignItems: "flex-end" }}>
           {showAvatar && <Avatar name={msg.author_name} size={28} />}
@@ -125,7 +121,7 @@ function MsgBubble({ msg, isMe, showAvatar, showName, onReply, onDelete, onEdit 
         )}
         <div style={{
           padding: "9px 13px", borderRadius: 18, fontSize: 13, fontWeight: 500, lineHeight: 1.55,
-          boxShadow: "0 1px 4px rgba(0,0,0,0.07)", wordBreak: "break-word",
+          boxShadow: "0 1px 4px rgba(0,0,0,0.07)", wordBreak: "break-word", position: "relative",
           ...(isMe
             ? { background: "linear-gradient(135deg,#6d28d9,#4338ca)", color: "#fff", borderBottomRightRadius: 4 }
             : msg.is_teacher_alert
@@ -139,7 +135,7 @@ function MsgBubble({ msg, isMe, showAvatar, showName, onReply, onDelete, onEdit 
           )}
           <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{msg.message}</p>
           {msg.media_url && msg.media_type === "image" && (
-            <img src={msg.media_url} alt="Mídia" style={{ width: "100%", borderRadius: 12, marginTop: 6, marginBottom: 4 }} />
+            <img src={msg.media_url} alt="Mídia" style={{ width: "100%", maxHeight: 250, objectFit: "contain", borderRadius: 12, marginTop: 6, marginBottom: 4, background: "rgba(0,0,0,0.05)" }} />
           )}
           {msg.media_url && msg.media_type === "video" && (
             <video src={msg.media_url} controls style={{ width: "100%", borderRadius: 12, marginTop: 6, marginBottom: 4 }} />
@@ -147,45 +143,44 @@ function MsgBubble({ msg, isMe, showAvatar, showName, onReply, onDelete, onEdit 
           {msg.media_url && msg.media_type === "audio" && (
             <audio src={msg.media_url} controls style={{ width: "100%", marginTop: 6, marginBottom: 4, height: 36 }} />
           )}
-          <span style={{ display: "block", fontSize: 9, marginTop: 3, textAlign: "right", color: isMe ? "rgba(255,255,255,0.55)" : "#94a3b8" }}>
-            {fmtTime(msg.created_at)}{isMe && " ✓"}
-          </span>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, marginTop: 4 }}>
+            <span style={{ fontSize: 9, color: isMe ? "rgba(255,255,255,0.7)" : "#94a3b8" }}>
+              {fmtTime(msg.created_at)}{isMe && " ✓"}
+            </span>
+            <button type="button" onClick={() => setShowOptions(!showOptions)}
+              style={{ background: "transparent", border: "none", padding: 2, cursor: "pointer", color: isMe ? "rgba(255,255,255,0.8)" : "#cbd5e1", display: "flex", alignItems: "center" }}>
+              <MoreVertical style={{ width: 14, height: 14 }} />
+            </button>
+          </div>
+
+          {/* Menu de Opções */}
+          {showOptions && (
+            <div style={{
+              position: "absolute", top: "100%", ...(isMe ? { right: 0 } : { left: 0 }),
+              marginTop: 4, display: "flex", alignItems: "center", gap: 4,
+              background: "#fff", padding: "6px 8px", borderRadius: 12,
+              boxShadow: "0 4px 15px rgba(0,0,0,0.15)", border: "1px solid #e2e8f0", zIndex: 50
+            }}>
+              <button type="button" onClick={() => { onReply(msg); setShowOptions(false); }} title="Responder"
+                style={{ width: 28, height: 28, borderRadius: 8, border: "none", background: "#f8fafc", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b" }}>
+                <CornerUpLeft style={{ width: 14, height: 14 }} />
+              </button>
+              {isMe && (
+                <>
+                  <button type="button" onClick={() => { onEdit(msg); setShowOptions(false); }} title="Editar"
+                    style={{ width: 28, height: 28, borderRadius: 8, border: "none", background: "#f8fafc", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#f59e0b" }}>
+                    <Edit2 style={{ width: 14, height: 14 }} />
+                  </button>
+                  <button type="button" onClick={() => { onDelete(msg.id); setShowOptions(false); }} title="Excluir"
+                    style={{ width: 28, height: 28, borderRadius: 8, border: "none", background: "#fee2e2", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#ef4444" }}>
+                    <Trash2 style={{ width: 14, height: 14 }} />
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
-      
-      {/* Botão de Opções (Sempre visível no mobile, ou visível no hover) */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: 3,
-        flexDirection: isMe ? "row" : "row-reverse",
-        opacity: showOptions ? 1 : 0,
-        transition: "opacity 0.2s",
-        position: "absolute", bottom: 0, ...(isMe ? { right: "100%", marginRight: 6 } : { left: "100%", marginLeft: 6 }),
-      }} className="md:opacity-0 md:group-hover:opacity-100 opacity-100">
-        <button type="button" onClick={() => onReply(msg)} title="Responder"
-          style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
-          <CornerUpLeft style={{ width: 13, height: 13 }} />
-        </button>
-        {isMe && (
-          <>
-            <button type="button" onClick={() => onEdit(msg)} title="Editar"
-              style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
-              <Edit2 style={{ width: 12, height: 12 }} />
-            </button>
-            <button type="button" onClick={() => onDelete(msg.id)} title="Excluir"
-              style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid #fee2e2", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#ef4444", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
-              <Trash2 style={{ width: 12, height: 12 }} />
-            </button>
-          </>
-        )}
-      </div>
-      
-      {/* 3 pontinhos para indicar que tem opções no mobile */}
-      {!showOptions && (
-        <button type="button" onClick={() => setShowOptions(!showOptions)}
-          style={{ background: "none", border: "none", padding: 4, cursor: "pointer", color: "#cbd5e1" }}>
-          <MoreVertical style={{ width: 16, height: 16 }} />
-        </button>
-      )}
     </div>
   );
 }
@@ -308,6 +303,25 @@ export function LykaChat() {
   const [mediaPreview, setMediaPreview] = useState<string>("");
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [chatBgIndex, setChatBgIndex] = useState(() => {
+    return parseInt(localStorage.getItem(`lyka_bg_${profile?.id || 'default'}`) || "0");
+  });
+
+  const CHAT_BACKGROUNDS = [
+    "linear-gradient(180deg,#f1f5f9,#f8fafc)", // 0 Default
+    "url('https://www.transparenttextures.com/patterns/cubes.png'), linear-gradient(180deg,#dbeafe,#eff6ff)", // 1 Blue Pattern
+    "url('https://www.transparenttextures.com/patterns/always-grey.png'), linear-gradient(180deg,#fce7f3,#fdf2f8)", // 2 Pink Pattern
+    "url('https://www.transparenttextures.com/patterns/connected.png'), linear-gradient(180deg,#d1fae5,#ecfdf5)", // 3 Green Pattern
+    "linear-gradient(135deg, #1e293b, #0f172a)" // 4 Dark Mode
+  ];
+
+  const toggleBackground = () => {
+    const nextIndex = (chatBgIndex + 1) % CHAT_BACKGROUNDS.length;
+    setChatBgIndex(nextIndex);
+    if (profile?.id) localStorage.setItem(`lyka_bg_${profile.id}`, nextIndex.toString());
+  };
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<BlobPart[]>([]);
@@ -530,6 +544,7 @@ export function LykaChat() {
     setReplyTo(null);
     setMediaFile(null);
     setMediaPreview("");
+    setShowEmojiPicker(false);
     setTimeout(() => scrollToBottom(), 50);
     const { data, error } = await supabase.from("lyka_messages").insert([ins]).select();
     if (error) { 
@@ -774,13 +789,17 @@ export function LykaChat() {
                   <Radio style={{ width: 11, height: 11 }} /> Ao vivo
                 </span>
               )}
+              <button type="button" onClick={toggleBackground} title="Mudar Fundo da Conversa"
+                style={{ background: "rgba(255,255,255,0.1)", border: "none", padding: "6px", borderRadius: "50%", cursor: "pointer", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Palette style={{ width: 14, height: 14 }} />
+              </button>
             </div>
           </div>
 
           {/* Messages */}
           <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
             <div ref={scrollRef} onScroll={handleScroll}
-              style={{ height: "100%", overflowY: "auto", padding: "16px 14px 8px", background: "linear-gradient(180deg,#f1f5f9,#f8fafc)", scrollbarWidth: "thin", scrollbarColor: "#e2e8f0 transparent" }}>
+              style={{ height: "100%", overflowY: "auto", padding: "16px 14px 8px", background: CHAT_BACKGROUNDS[chatBgIndex], scrollbarWidth: "thin", scrollbarColor: "#e2e8f0 transparent", transition: "background 0.3s" }}>
               {fetchingMsgs ? (
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
                   <div style={{ width: 32, height: 32, border: "3px solid #e0e7ff", borderTopColor: "#7c3aed", borderRadius: "50%", animation: "lykaSpin 0.8s linear infinite" }} />
@@ -901,6 +920,10 @@ export function LykaChat() {
                     }}
                   />
                 </label>
+                <button type="button" onClick={() => setShowEmojiPicker(!showEmojiPicker)} title="Emojis"
+                  style={{ width: 36, height: 36, borderRadius: 10, border: "none", background: showEmojiPicker ? "#e2e8f0" : "#f1f5f9", color: showEmojiPicker ? "#3b82f6" : "#64748b", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.2s" }}>
+                  <Smile style={{ width: 18, height: 18 }} />
+                </button>
                 <button type="button" onClick={startRecording} title="Gravar áudio"
                   style={{ width: 36, height: 36, borderRadius: 10, border: "none", background: "#f1f5f9", color: "#64748b", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.2s" }}>
                   <Mic style={{ width: 18, height: 18 }} />
@@ -918,6 +941,12 @@ export function LykaChat() {
                   <Send style={{ width: 16, height: 16 }} />
                 </button>
               </form>
+            )}
+            
+            {showEmojiPicker && (
+              <div style={{ position: "absolute", bottom: 70, left: 16, zIndex: 100, boxShadow: "0 10px 25px rgba(0,0,0,0.1)", borderRadius: 12 }}>
+                <EmojiPicker onEmojiClick={(emojiData) => setNewMessage(prev => prev + emojiData.emoji)} />
+              </div>
             )}
           </div>
         </>
