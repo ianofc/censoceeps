@@ -13,9 +13,16 @@ function validarFicha(ficha: any) {
   return { valido: true, erro: null };
 }
 
-function salvarFicha(ficha: any, isOnline: boolean) {
+type ResultadoSalvar = {
+  valido: boolean;
+  erro: string | null;
+  sucesso?: boolean;
+  mensagem?: string;
+};
+
+function salvarFicha(ficha: any, isOnline: boolean): ResultadoSalvar {
   const validacao = validarFicha(ficha);
-  if (!validacao.valido) return validacao;
+  if (!validacao.valido) return { ...validacao, sucesso: false };
 
   if (!isOnline) {
     // Simula salvar no localStorage

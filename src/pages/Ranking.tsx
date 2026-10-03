@@ -103,10 +103,14 @@ function PodiumCard({ player, rank }: { player: Player; rank: 1|2|3 }) {
   const isFirst = rank === 1;
 
   return (
-    <div style={{
-      display:"flex", flexDirection:"column", alignItems:"center",
-      justifyContent:"flex-end", flex:1,
-    }}>
+    <div 
+      style={{
+        display:"flex", flexDirection:"column", alignItems:"center",
+        justifyContent:"flex-end", flex:1, transition: "transform 0.2s",
+      }}
+      onMouseEnter={e => e.currentTarget.style.transform = "translateY(-4px)"}
+      onMouseLeave={e => e.currentTarget.style.transform = "translateY(0)"}
+    >
       {/* Avatar + crown */}
       <div style={{ position:"relative", marginBottom:8 }}>
         {isFirst && (
@@ -188,20 +192,35 @@ function RankRow({ player, rank, isMe }: { player: Player; rank: number; isMe: b
   const rankColor = rankColors[rank] || "#94a3b8";
 
   return (
-    <div style={{
-      background: isMe
-        ? "linear-gradient(90deg,rgba(124,58,237,0.06),rgba(67,56,202,0.04))"
-        : "#fff",
-      border: isMe ? "1.5px solid #ddd6fe" : "1px solid #f1f5f9",
-      borderRadius: 20, padding: "14px 18px",
-      display: "flex", alignItems: "center", gap: 14,
-      transition: "all 0.2s", position: "relative",
-      boxShadow: rank <= 3
-        ? `0 4px 20px ${rankColor}22`
-        : isMe
-        ? "0 2px 12px rgba(124,58,237,0.08)"
-        : "0 1px 4px rgba(0,0,0,0.03)",
-    }}>
+    <div 
+      style={{
+        background: isMe
+          ? "linear-gradient(90deg,rgba(124,58,237,0.06),rgba(67,56,202,0.04))"
+          : "#fff",
+        border: isMe ? "1.5px solid #ddd6fe" : "1px solid #f1f5f9",
+        borderRadius: 20, padding: "14px 18px",
+        display: "flex", alignItems: "center", gap: 14,
+        transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)", position: "relative",
+        boxShadow: rank <= 3
+          ? `0 4px 20px ${rankColor}22`
+          : isMe
+          ? "0 2px 12px rgba(124,58,237,0.08)"
+          : "0 1px 4px rgba(0,0,0,0.03)",
+        cursor: "default"
+      }}
+      onMouseEnter={e => {
+        if (!isMe && rank > 3) {
+          e.currentTarget.style.transform = "scale(1.01)";
+          e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.06)";
+        }
+      }}
+      onMouseLeave={e => {
+        if (!isMe && rank > 3) {
+          e.currentTarget.style.transform = "scale(1)";
+          e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.03)";
+        }
+      }}
+    >
       {/* Rank number */}
       <div style={{
         width: 36, height: 36, borderRadius: 10, flexShrink: 0,

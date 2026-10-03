@@ -38,6 +38,7 @@ export const AdinhaAssistant: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [currentPose, setCurrentPose] = useState<AdinhaPose>('feliz');
+  const [isTyping, setIsTyping] = useState(false);
   
   const [messages, setMessages] = useState<readonly Message[]>([
     {
@@ -84,41 +85,54 @@ export const AdinhaAssistant: React.FC = () => {
     setMessages(prev => [...prev, userMessage]);
     setInput('');
 
+    setIsTyping(true);
+    setCurrentPose('lendo');
+
     setTimeout(async () => {
-      let reply = "Estou a analisar a sua dúvida com base nas diretrizes do Censo CEEP...";
+      let reply = "Hum, essa é uma ótima pergunta! Estou a analisar a sua dúvida com base nas diretrizes do Censo CEEP...";
       let poseResponse: AdinhaPose = 'curiosa';
       const lower = userText.toLowerCase();
 
-      if (lower.includes('objetivo') || lower.includes('quem realiza') || lower.includes('projeto')) {
-        reply = "O Censo CEEP integra o Projeto Ada Lovelace no CEEP Seabra, mapeando de forma anônima e voluntária dados demográficos e vivências para melhorias pedagógicas.";
+      if (lower.includes('objetivo') || lower.includes('quem realiza') || lower.includes('projeto') || lower.includes('serve')) {
+        reply = "O Censo CEEP é o coração do Projeto Ada Lovelace! Mapeamos dados demográficos e vivências para construir um ambiente escolar mais seguro e igualitário para todos nós.";
         poseResponse = 'empolgada';
-      } else if (lower.includes('autodeclaração') || lower.includes('moreno') || lower.includes('cor ou raça') || lower.includes('ibge')) {
-        reply = "A autodeclaração é um direito individual e exclusivo da própria pessoa, seguindo as categorias do IBGE (Branca, Preta, Parda, Amarela ou Indígena). Eu não determino raças.";
+      } else if (lower.includes('autodeclaração') || lower.includes('moreno') || lower.includes('cor') || lower.includes('raça') || lower.includes('ibge')) {
+        reply = "A autodeclaração é um direito seu! Usamos as categorias oficiais do IBGE: Branca, Preta, Parda, Amarela ou Indígena. Não existe 'certo ou errado', apenas como você se identifica.";
         poseResponse = 'pensativa';
-      } else if (lower.includes('racismo') || lower.includes('preconceito') || lower.includes('colorismo') || lower.includes('discriminação')) {
-        reply = "Racismo é um sistema estrutural de opressão; preconceito envolve julgamentos prévios e discriminação é a prática de tratamento desigual. Conceitos fundamentais em nossa pesquisa!";
-        poseResponse = 'lendo';
+      } else if (lower.includes('racismo') || lower.includes('preconceito') || lower.includes('colorismo') || lower.includes('discriminação') || lower.includes('violência')) {
+        reply = "Racismo é estrutural, preconceito é o julgamento prévio, e discriminação é a ação de excluir ou oprimir. Estamos coletando dados sobre isso justamente para combater essas violências na escola!";
+        poseResponse = 'irritada';
       } else if (lower.includes('o que significa') || lower.includes('como preencher') || lower.includes('duvida')) {
-        reply = "As perguntas captam suas percepções reais. Posso explicar a teoria por trás dos termos, mas a escolha da resposta é estritamente pessoal e voluntária.";
+        reply = "Se tiver dúvidas sobre algum termo na ficha de coleta, pode me perguntar! Meu objetivo é garantir que todas as suas respostas reflitam exatamente o que você sente.";
         poseResponse = 'ideia';
       } else if (lower.includes('lgpd') || lower.includes('privacidade') || lower.includes('sigilo') || lower.includes('anonimato')) {
-        reply = "Sua participação é totalmente sigilosa e voluntária. Os dados são anonimizados e usados exclusivamente para fins estatísticos e educacionais, em total conformidade com a LGPD.";
+        reply = "Pode ficar tranquilo(a)! A sua participação é 100% anônima e sigilosa. Todos os dados são protegidos e usados apenas para gerar estatísticas gerais, seguindo à risca a LGPD.";
         poseResponse = 'feliz';
-      } else if (lower.includes('sofreu') || lower.includes('ajuda') || lower.includes('denúncia')) {
-        reply = "Lamento muito por essa vivência. O Censo CEEP preza por um ambiente seguro e respeitoso. A instituição dispõe de canais de orientação pedagógica e apoio institucional.";
+      } else if (lower.includes('sofreu') || lower.includes('ajuda') || lower.includes('denúncia') || lower.includes('medo')) {
+        reply = "Sinto muito se você passou por isso. O CEEP preza por um ambiente seguro. Procure a coordenação pedagógica, não tenha medo de falar. Estamos aqui para te acolher!";
         poseResponse = 'apaixonada';
-      } else if (lower.includes('quantas pessoas') || lower.includes('quantos') || lower.includes('estatística') || lower.includes('percentual')) {
+      } else if (lower.includes('quantas pessoas') || lower.includes('quantos') || lower.includes('estatística') || lower.includes('percentual') || lower.includes('dados')) {
         try {
-          const { count } = await supabase.from('votes').select('*', { count: 'exact', head: true });
-          reply = `Até o momento, o Censo CEEP registrou ${count || 0} respostas válidas coletadas em campo! Veja os percentuais detalhados no Dashboard de Indicadores.`;
+          const { count } = await supabase.from('entrevistas').select('*', { count: 'exact', head: true });
+          reply = `Uau! Já registramos ${count || 0} formulários válidos coletados! Você pode ver todos os gráficos em tempo real no Ranking e Dashboard.`;
           poseResponse = 'surpresa';
         } catch {
-          reply = "O termômetro de coletas está ativo na página inicial com os dados agregados da escola.";
+          reply = "Os números estão crescendo! Você pode acompanhar o termômetro de coletas diretamente na página de Ranking.";
           poseResponse = 'curiosa';
         }
+      } else if (lower.includes('jornal') || lower.includes('mercúrio') || lower.includes('notícia') || lower.includes('feed')) {
+        reply = "Ah, O Mercúrio! É o nosso jornal com curadoria algorítmica. Ele traz notícias focadas em educação, ciência e questões sociais, ignorando polêmicas de ódio!";
+        poseResponse = 'feliz';
+      } else if (lower.includes('lyka') || lower.includes('chat') || lower.includes('conversa')) {
+        reply = "O LykaChat foi inspirado na cadelinha espacial Laika! Lá você pode trocar mensagens, fixar seus colegas favoritos, mandar áudios e se comunicar em tempo real.";
+        poseResponse = 'empolgada';
+      } else if (lower.includes('oi') || lower.includes('olá') || lower.includes('bom dia') || lower.includes('boa tarde')) {
+        reply = "Olá! É muito bom falar com você! Sou a Adinha, orientadora da pesquisa. O que gostaria de saber sobre o Censo ou sobre o Projeto Ada Lovelace?";
+        poseResponse = 'feliz';
       }
 
       setCurrentPose(poseResponse);
+      setIsTyping(false);
       
       const adinhaMessage: Message = {
         id: `adinha-${Date.now()}`,
@@ -128,7 +142,7 @@ export const AdinhaAssistant: React.FC = () => {
       };
 
       setMessages(prev => [...prev, adinhaMessage]);
-    }, 600);
+    }, 1500);
   };
 
   return (
@@ -212,23 +226,47 @@ export const AdinhaAssistant: React.FC = () => {
                 </div>
               </div>
             ))}
+            
+            {isTyping && (
+              <div className="flex items-end gap-2.5 justify-start animate-in fade-in">
+                <div className="w-9 h-9 rounded-full border border-blue-200 overflow-hidden bg-white shrink-0 shadow-sm flex items-center justify-center mb-1">
+                  <img 
+                    src={getPoseImage('lendo')} 
+                    alt="Adinha pensando" 
+                    className="w-full h-full object-cover object-top scale-100"
+                  />
+                </div>
+                <div className="bg-white border border-slate-200 p-3.5 rounded-2xl rounded-bl-none shadow-sm flex items-center gap-1.5 h-[42px]">
+                  <span className="w-2 h-2 rounded-full bg-slate-300 animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-2 h-2 rounded-full bg-slate-300 animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-2 h-2 rounded-full bg-slate-300 animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
 
-          <div className="px-4 py-2.5 bg-white border-t border-slate-100 flex gap-2 overflow-x-auto scrollbar-hide shrink-0">
+          <div className="px-4 py-3 bg-white border-t border-slate-100 flex gap-2 overflow-x-auto scrollbar-hide shrink-0 shadow-sm">
             <button 
               type="button"
               onClick={() => setInput("O que é autodeclaração?")}
-              className="px-3 py-1.5 bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-700 text-[11px] font-bold rounded-xl whitespace-nowrap transition border-0 cursor-pointer shadow-sm"
+              className="px-3.5 py-2 bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-bold rounded-full whitespace-nowrap transition border border-slate-200 cursor-pointer shadow-sm"
             >
               👤 Autodeclaração
             </button>
             <button 
               type="button"
-              onClick={() => setInput("Quantas pessoas participaram?")}
-              className="px-3 py-1.5 bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-700 text-[11px] font-bold rounded-xl whitespace-nowrap transition border-0 cursor-pointer shadow-sm"
+              onClick={() => setInput("Qual o objetivo do censo?")}
+              className="px-3.5 py-2 bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-bold rounded-full whitespace-nowrap transition border border-slate-200 cursor-pointer shadow-sm"
             >
-              📊 Estatísticas Coletadas
+              🎯 Objetivo
+            </button>
+            <button 
+              type="button"
+              onClick={() => setInput("Quantas pessoas já participaram?")}
+              className="px-3.5 py-2 bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-bold rounded-full whitespace-nowrap transition border border-slate-200 cursor-pointer shadow-sm"
+            >
+              📊 Estatísticas
             </button>
           </div>
 
