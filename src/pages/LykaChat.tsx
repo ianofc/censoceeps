@@ -3,7 +3,7 @@ import { supabase } from "../lib/supabaseClient";
 import { useUserSession } from "../hooks/useUserSession";
 import {
   Send, Wifi, WifiOff, ChevronDown, ArrowLeft, Search,
-  Radio, CornerUpLeft, Trash2, X, Heart, ExternalLink, Mic, Square, Edit2, XCircle
+  Radio, CornerUpLeft, Trash2, X, Heart, ExternalLink, Mic, Square, Edit2, XCircle, MoreVertical
 } from "lucide-react";
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
@@ -99,9 +99,9 @@ function MsgBubble({ msg, isMe, showAvatar, showName, onReply, onDelete, onEdit 
   msg: Message; isMe: boolean; showAvatar: boolean; showName: boolean;
   onReply: (m: Message) => void; onDelete: (id: number) => void; onEdit: (m: Message) => void;
 }) {
-  const [hover, setHover] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
   return (
-    <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+    <div onMouseEnter={() => setShowOptions(true)} onMouseLeave={() => setShowOptions(false)} className="group"
       style={{ display: "flex", gap: 8, flexDirection: isMe ? "row-reverse" : "row", alignItems: "flex-end", position: "relative" }}>
       {!isMe && (
         <div style={{ width: 30, flexShrink: 0, display: "flex", alignItems: "flex-end" }}>
@@ -152,29 +152,39 @@ function MsgBubble({ msg, isMe, showAvatar, showName, onReply, onDelete, onEdit 
           </span>
         </div>
       </div>
-      {hover && (
-        <div style={{
-          display: "flex", alignItems: "center", gap: 3,
-          flexDirection: isMe ? "row" : "row-reverse",
-          position: "absolute", bottom: 0, ...(isMe ? { right: "100%", marginRight: 6 } : { left: "100%", marginLeft: 6 }),
-        }}>
-          <button type="button" onClick={() => onReply(msg)} title="Responder"
-            style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
-            <CornerUpLeft style={{ width: 13, height: 13 }} />
-          </button>
-          {isMe && (
-            <>
-              <button type="button" onClick={() => onEdit(msg)} title="Editar"
-                style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
-                <Edit2 style={{ width: 12, height: 12 }} />
-              </button>
-              <button type="button" onClick={() => onDelete(msg.id)} title="Excluir"
-                style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid #fee2e2", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#ef4444", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
-                <Trash2 style={{ width: 12, height: 12 }} />
-              </button>
-            </>
-          )}
-        </div>
+      
+      {/* Botão de Opções (Sempre visível no mobile, ou visível no hover) */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 3,
+        flexDirection: isMe ? "row" : "row-reverse",
+        opacity: showOptions ? 1 : 0,
+        transition: "opacity 0.2s",
+        position: "absolute", bottom: 0, ...(isMe ? { right: "100%", marginRight: 6 } : { left: "100%", marginLeft: 6 }),
+      }} className="md:opacity-0 md:group-hover:opacity-100 opacity-100">
+        <button type="button" onClick={() => onReply(msg)} title="Responder"
+          style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
+          <CornerUpLeft style={{ width: 13, height: 13 }} />
+        </button>
+        {isMe && (
+          <>
+            <button type="button" onClick={() => onEdit(msg)} title="Editar"
+              style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
+              <Edit2 style={{ width: 12, height: 12 }} />
+            </button>
+            <button type="button" onClick={() => onDelete(msg.id)} title="Excluir"
+              style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid #fee2e2", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#ef4444", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
+              <Trash2 style={{ width: 12, height: 12 }} />
+            </button>
+          </>
+        )}
+      </div>
+      
+      {/* 3 pontinhos para indicar que tem opções no mobile */}
+      {!showOptions && (
+        <button type="button" onClick={() => setShowOptions(!showOptions)}
+          style={{ background: "none", border: "none", padding: 4, cursor: "pointer", color: "#cbd5e1" }}>
+          <MoreVertical style={{ width: 16, height: 16 }} />
+        </button>
       )}
     </div>
   );
