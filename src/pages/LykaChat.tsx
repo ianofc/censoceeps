@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { useUserSession } from "../hooks/useUserSession";
+import {
   Send, Wifi, WifiOff, ChevronDown, ArrowLeft, Search,
   Radio, CornerUpLeft, Trash2, X, Heart, ExternalLink, Mic, Square, Edit2, XCircle, MoreVertical, Palette, Smile
 } from "lucide-react";
@@ -95,6 +97,8 @@ function GroupAvatar({ size = 40 }: { size?: number }) {
 
 // ─── Message Bubble ───────────────────────────────────────────────────────────
 function MsgBubble({ msg, isMe, showAvatar, showName, onReply, onDelete, onEdit }: {
+  msg: Message; isMe: boolean; showAvatar: boolean; showName: boolean;
+  onReply: (m: Message) => void; onDelete: (id: number) => void; onEdit: (m: Message) => void;
 }) {
   const [showOptions, setShowOptions] = useState(false);
   return (
@@ -123,10 +127,10 @@ function MsgBubble({ msg, isMe, showAvatar, showName, onReply, onDelete, onEdit 
           padding: "9px 13px", borderRadius: 18, fontSize: 13, fontWeight: 500, lineHeight: 1.55,
           boxShadow: "0 1px 4px rgba(0,0,0,0.07)", wordBreak: "break-word", position: "relative",
           ...(isMe
-            ? { background: "linear-gradient(135deg,#6d28d9,#4338ca)", color: "#fff", borderBottomRightRadius: 4 }
+            ? { background: "#eeffde", color: "#000", borderBottomRightRadius: 4 }
             : msg.is_teacher_alert
             ? { background: "#fffbeb", border: "1px solid #fde68a", color: "#78350f", borderBottomLeftRadius: 4 }
-            : { background: "#fff", color: "#1e293b", borderBottomLeftRadius: 4, border: "1px solid #f1f5f9" }),
+            : { background: "#fff", color: "#000", borderBottomLeftRadius: 4, border: "1px solid #f1f5f9" }),
         }}>
           {msg.is_teacher_alert && !isMe && (
             <span style={{ display: "block", fontSize: 9, fontWeight: 900, color: "#d97706", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 3 }}>
@@ -144,11 +148,11 @@ function MsgBubble({ msg, isMe, showAvatar, showName, onReply, onDelete, onEdit 
             <audio src={msg.media_url} controls style={{ width: "100%", marginTop: 6, marginBottom: 4, height: 36 }} />
           )}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, marginTop: 4 }}>
-            <span style={{ fontSize: 9, color: isMe ? "rgba(255,255,255,0.7)" : "#94a3b8" }}>
+            <span style={{ fontSize: 10, color: isMe ? "#54b971" : "#94a3b8" }}>
               {fmtTime(msg.created_at)}{isMe && " ✓"}
             </span>
             <button type="button" onClick={() => setShowOptions(!showOptions)}
-              style={{ background: "transparent", border: "none", padding: 2, cursor: "pointer", color: isMe ? "rgba(255,255,255,0.8)" : "#cbd5e1", display: "flex", alignItems: "center" }}>
+              style={{ background: "transparent", border: "none", padding: 2, cursor: "pointer", color: isMe ? "#8bcca0" : "#cbd5e1", display: "flex", alignItems: "center" }}>
               <MoreVertical style={{ width: 14, height: 14 }} />
             </button>
           </div>
@@ -310,10 +314,10 @@ export function LykaChat() {
   });
 
   const CHAT_BACKGROUNDS = [
-    "linear-gradient(180deg,#f1f5f9,#f8fafc)", // 0 Default
-    "url('https://www.transparenttextures.com/patterns/cubes.png'), linear-gradient(180deg,#dbeafe,#eff6ff)", // 1 Blue Pattern
-    "url('https://www.transparenttextures.com/patterns/always-grey.png'), linear-gradient(180deg,#fce7f3,#fdf2f8)", // 2 Pink Pattern
-    "url('https://www.transparenttextures.com/patterns/connected.png'), linear-gradient(180deg,#d1fae5,#ecfdf5)", // 3 Green Pattern
+    "url('https://www.transparenttextures.com/patterns/food.png'), #b5d596", // 0 Telegram Green Pattern
+    "linear-gradient(180deg,#f1f5f9,#f8fafc)", // 1 Clean White
+    "url('https://www.transparenttextures.com/patterns/cubes.png'), #81a4d1", // 2 Blue Pattern
+    "url('https://www.transparenttextures.com/patterns/always-grey.png'), #fbcfe8", // 3 Pink Pattern
     "linear-gradient(135deg, #1e293b, #0f172a)" // 4 Dark Mode
   ];
 
@@ -642,15 +646,15 @@ export function LykaChat() {
 
   // ── SIDEBAR ───────────────────────────────────────────────────────────────
   const SidebarEl = (
-    <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", background: "#0f0e17", borderRight: "1px solid rgba(255,255,255,0.06)" }}>
-      <div style={{ padding: "18px 12px 12px", background: "linear-gradient(180deg,#1a1830,#0f0e17)", borderBottom: "1px solid rgba(255,255,255,0.05)", flexShrink: 0 }}>
+    <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", background: "#fff", borderRight: "1px solid #e2e8f0" }}>
+      <div style={{ padding: "18px 12px 12px", background: "#fff", borderBottom: "1px solid #e2e8f0", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,#7c3aed,#4338ca)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,#3b82f6,#2563eb)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <LaikaIcon size={20} color="#fff" />
           </div>
           <div style={{ flex: 1 }}>
-            <p style={{ color: "#fff", fontWeight: 900, fontSize: 15, margin: 0 }}>Layka Chat</p>
-            <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 10, margin: 0 }}>🐾 Em memória de Laika</p>
+            <p style={{ color: "#0f172a", fontWeight: 900, fontSize: 16, margin: 0 }}>Layka Chat</p>
+            <p style={{ color: "#64748b", fontSize: 11, margin: 0, fontWeight: 500 }}>🐾 Direct Messenger</p>
           </div>
           {totalUnread > 0 && (
             <span style={{ background: "#ef4444", color: "#fff", fontWeight: 900, fontSize: 10, padding: "2px 7px", borderRadius: 99 }}>
@@ -659,9 +663,12 @@ export function LykaChat() {
           )}
         </div>
         <div style={{ position: "relative" }}>
-          <Search style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", width: 13, height: 13, color: "rgba(255,255,255,0.3)", pointerEvents: "none" }} />
+          <Search style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", width: 14, height: 14, color: "#94a3b8", pointerEvents: "none" }} />
           <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar conversa..."
-            style={{ width: "100%", boxSizing: "border-box", paddingLeft: 30, paddingRight: 10, paddingTop: 8, paddingBottom: 8, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, color: "#fff", fontSize: 12, fontWeight: 500, outline: "none", fontFamily: "inherit" }} />
+            style={{ width: "100%", boxSizing: "border-box", paddingLeft: 30, paddingRight: 10, paddingTop: 8, paddingBottom: 8, background: "#f1f5f9", border: "1px solid transparent", borderRadius: 10, color: "#0f172a", fontSize: 13, fontWeight: 500, outline: "none", fontFamily: "inherit", transition: "border 0.2s" }} 
+            onFocus={e => (e.target.style.border = "1px solid #3b82f6")}
+            onBlur={e => (e.target.style.border = "1px solid transparent")}
+          />
         </div>
       </div>
 
@@ -676,20 +683,20 @@ export function LykaChat() {
             <button key={conv.id} type="button" onClick={() => openConv(conv)}
               style={{
                 width: "100%", padding: "10px 12px", border: "none", cursor: "pointer", textAlign: "left",
-                background: isActive ? "rgba(124,58,237,0.2)" : "transparent",
-                borderLeft: `3px solid ${isActive ? "#7c3aed" : "transparent"}`,
+                background: isActive ? "#f8fafc" : "transparent",
+                borderLeft: `3px solid ${isActive ? "#3b82f6" : "transparent"}`,
                 display: "flex", alignItems: "center", gap: 10, transition: "background 0.15s", fontFamily: "inherit",
               }}>
               <div style={{ position: "relative", flexShrink: 0 }}>
-                {conv.isGroup ? <GroupAvatar size={42} /> : <Avatar name={conv.name} size={42} url={pessoa?.avatar_url || ""} />}
+                {conv.isGroup ? <GroupAvatar size={44} /> : <Avatar name={conv.name} size={44} url={pessoa?.avatar_url || ""} />}
                 {isConnected && isActive && (
-                  <div style={{ position: "absolute", bottom: 1, right: 1, width: 10, height: 10, borderRadius: "50%", background: "#10b981", border: "2px solid #0f0e17" }} />
+                  <div style={{ position: "absolute", bottom: 1, right: 1, width: 12, height: 12, borderRadius: "50%", background: "#10b981", border: "2px solid #fff" }} />
                 )}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 4 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
-                    <p style={{ color: unread > 0 ? "#fff" : "rgba(255,255,255,0.75)", fontWeight: unread > 0 ? 800 : 600, fontSize: 13, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    <p style={{ color: unread > 0 ? "#0f172a" : "#334155", fontWeight: unread > 0 ? 800 : 600, fontSize: 14, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                       {conv.name}
                     </p>
                     {pinned.includes(conv.id) && <span style={{ fontSize: 10 }}>📌</span>}
@@ -699,13 +706,13 @@ export function LykaChat() {
                       style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, opacity: 0.5, padding: 0 }} title="Fixar">
                       {pinned.includes(conv.id) ? "📍" : "📌"}
                     </button>
-                    {last?.time && <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>{timeAgo(last.time)}</span>}
+                    {last?.time && <span style={{ fontSize: 11, color: "#94a3b8" }}>{timeAgo(last.time)}</span>}
                     {unread > 0 && (
-                      <span style={{ background: "#7c3aed", color: "#fff", fontSize: 9, fontWeight: 900, padding: "2px 6px", borderRadius: 99 }}>{unread}</span>
+                      <span style={{ background: "#ef4444", color: "#fff", fontSize: 9, fontWeight: 900, padding: "2px 6px", borderRadius: 99 }}>{unread}</span>
                     )}
                   </div>
                 </div>
-                <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, margin: "2px 0 0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontWeight: unread > 0 ? 600 : 400 }}>
+                <p style={{ color: unread > 0 ? "#475569" : "#94a3b8", fontSize: 12, margin: "2px 0 0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontWeight: unread > 0 ? 600 : 400 }}>
                   {last?.text || (conv.isGroup ? "Chat de todos · CEEP Seabra" : (pessoa?.turma_ou_cargo || "CEEP Seabra"))}
                 </p>
               </div>
@@ -715,13 +722,13 @@ export function LykaChat() {
       </div>
 
       {p.nomeCompleto && (
-        <div style={{ padding: "10px 12px", borderTop: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", gap: 10, flexShrink: 0, background: "rgba(0,0,0,0.2)" }}>
-          <Avatar name={p.nomeCompleto} size={32} url={p.avatarUrl || ""} />
+        <div style={{ padding: "12px 14px", borderTop: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: 10, flexShrink: 0, background: "#f8fafc" }}>
+          <Avatar name={p.nomeCompleto} size={36} url={p.avatarUrl || ""} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ color: "#fff", fontWeight: 700, fontSize: 12, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.nomeCompleto}</p>
-            <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 10, margin: 0 }}>{p.turmaOuCargo || "CEEP Seabra"}</p>
+            <p style={{ color: "#0f172a", fontWeight: 700, fontSize: 13, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.nomeCompleto}</p>
+            <p style={{ color: "#64748b", fontSize: 11, margin: 0 }}>{p.turmaOuCargo || "CEEP Seabra"}</p>
           </div>
-          {isConnected ? <Wifi style={{ width: 12, height: 12, color: "#10b981", flexShrink: 0 }} /> : <WifiOff style={{ width: 12, height: 12, color: "#64748b", flexShrink: 0 }} />}
+          {isConnected ? <Wifi style={{ width: 14, height: 14, color: "#10b981", flexShrink: 0 }} /> : <WifiOff style={{ width: 14, height: 14, color: "#94a3b8", flexShrink: 0 }} />}
         </div>
       )}
     </div>
@@ -732,29 +739,29 @@ export function LykaChat() {
     <div style={{ flex: 1, display: "flex", flexDirection: "column", height: "100%", background: "#f8fafc" }}>
       {!activeConv ? (
         <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: 40, background: "linear-gradient(135deg,#f8fafc,#e0e7ff)" }}>
-          <div style={{ width: 80, height: 80, borderRadius: 24, background: "linear-gradient(135deg,#7c3aed,#4338ca)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 16px 40px rgba(124,58,237,0.3)" }}>
+          <div style={{ width: 80, height: 80, borderRadius: 24, background: "linear-gradient(135deg,#3b82f6,#2563eb)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 16px 40px rgba(59,130,246,0.3)" }}>
             <LaikaIcon size={44} color="#fff" />
           </div>
           <div style={{ textAlign: "center" }}>
             <p style={{ fontWeight: 900, fontSize: 20, color: "#1e1b4b", margin: "0 0 8px" }}>Layka Chat</p>
             <p style={{ color: "#64748b", fontSize: 14, margin: "0 0 4px" }}>Selecione uma conversa para começar</p>
-            <p style={{ color: "#94a3b8", fontSize: 12, margin: 0 }}>🐾 Em memória de Laika (1957)</p>
+            <p style={{ color: "#94a3b8", fontSize: 12, margin: 0 }}>🐾 Direct Messenger</p>
           </div>
         </div>
       ) : (
         <>
           {/* Header */}
-          <div style={{ padding: "10px 14px", background: "linear-gradient(90deg,#1e1b4b,#312e81)", display: "flex", alignItems: "center", gap: 10, flexShrink: 0, boxShadow: "0 2px 12px rgba(0,0,0,0.2)" }}>
+          <div style={{ padding: "12px 16px", background: "#fff", display: "flex", alignItems: "center", gap: 10, flexShrink: 0, borderBottom: "1px solid #e2e8f0", zIndex: 10 }}>
             <button type="button" id="layka-back-btn" onClick={() => { setMobileView("list"); setActiveConv(null); }}
-              style={{ width: 32, height: 32, borderRadius: 8, border: "none", background: "rgba(255,255,255,0.1)", color: "#fff", cursor: "pointer", alignItems: "center", justifyContent: "center", flexShrink: 0, display: "none" }}>
-              <ArrowLeft style={{ width: 15, height: 15 }} />
+              style={{ width: 32, height: 32, borderRadius: 8, border: "none", background: "#eff6ff", color: "#3b82f6", cursor: "pointer", alignItems: "center", justifyContent: "center", flexShrink: 0, display: "none" }}>
+              <ArrowLeft style={{ width: 18, height: 18 }} />
             </button>
             {activeConv.isGroup
-              ? <GroupAvatar size={36} />
+              ? <GroupAvatar size={40} />
               : (
                 <button type="button" onClick={() => { const p = pessoas.find(px => px.id === activeConv.id); if(p) setProfileModal(p); }}
                   style={{ background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 }}>
-                  <Avatar name={activeConv.name} size={36} url={pessoas.find(px => px.id === activeConv.id)?.avatar_url || ""} />
+                  <Avatar name={activeConv.name} size={40} url={pessoas.find(px => px.id === activeConv.id)?.avatar_url || ""} />
                 </button>
               )
             }
@@ -763,35 +770,35 @@ export function LykaChat() {
                 <button type="button"
                   onClick={() => { const p = pessoas.find(px => px.id === activeConv.id); if(p) setProfileModal(p); }}
                   style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", gap: 5, fontFamily: "inherit" }}>
-                  <p style={{ color: "#fff", fontWeight: 800, fontSize: 14, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{activeConv.name}</p>
-                  <ExternalLink style={{ width: 11, height: 11, color: "rgba(199,210,254,0.6)", flexShrink: 0 }} />
+                  <p style={{ color: "#0f172a", fontWeight: 800, fontSize: 15, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{activeConv.name}</p>
+                  <ExternalLink style={{ width: 12, height: 12, color: "#94a3b8", flexShrink: 0 }} />
                 </button>
               ) : (
-                <p style={{ color: "#fff", fontWeight: 800, fontSize: 14, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{activeConv.name}</p>
+                <p style={{ color: "#0f172a", fontWeight: 800, fontSize: 15, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{activeConv.name}</p>
               )}
-              <p style={{ color: "rgba(199,210,254,0.7)", fontSize: 11, margin: 0, fontWeight: 500 }}>
+              <p style={{ color: "#64748b", fontSize: 12, margin: 0, fontWeight: 500 }}>
                 {typingUsers.length > 0 ? `${typingUsers.slice(0, 2).join(", ")} ${typingUsers.length === 1 ? "está" : "estão"} digitando...` : activeConv.isGroup ? `${pessoas.length} membros · Chat geral` : "🔒 Conversa privada"}
               </p>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
               {isConnected ? (
-                <span style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(255,255,255,0.1)", padding: "4px 10px", borderRadius: 99, border: "1px solid rgba(255,255,255,0.15)", fontSize: 11, fontWeight: 700, color: "#6ee7b7" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 4, background: "#f0fdf4", padding: "4px 10px", borderRadius: 99, border: "1px solid #bbf7d0", fontSize: 11, fontWeight: 700, color: "#16a34a" }}>
                   <Wifi style={{ width: 11, height: 11 }} /> Online
-                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10b981", display: "inline-block" }} />
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#16a34a", display: "inline-block" }} />
                 </span>
               ) : (
-                <span style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(255,255,255,0.05)", padding: "4px 10px", borderRadius: 99, border: "1px solid rgba(255,255,255,0.1)", fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 4, background: "#f1f5f9", padding: "4px 10px", borderRadius: 99, border: "1px solid #e2e8f0", fontSize: 11, fontWeight: 700, color: "#64748b" }}>
                   <WifiOff style={{ width: 11, height: 11 }} /> Conectando
                 </span>
               )}
               {activeConv.isGroup && (
-                <span style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(245,158,11,0.15)", padding: "4px 10px", borderRadius: 99, border: "1px solid rgba(245,158,11,0.25)", fontSize: 11, fontWeight: 700, color: "#fcd34d" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 4, background: "#fffbeb", padding: "4px 10px", borderRadius: 99, border: "1px solid #fde68a", fontSize: 11, fontWeight: 700, color: "#d97706" }}>
                   <Radio style={{ width: 11, height: 11 }} /> Ao vivo
                 </span>
               )}
               <button type="button" onClick={toggleBackground} title="Mudar Fundo da Conversa"
-                style={{ background: "rgba(255,255,255,0.1)", border: "none", padding: "6px", borderRadius: "50%", cursor: "pointer", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Palette style={{ width: 14, height: 14 }} />
+                style={{ background: "#f8fafc", border: "1px solid #e2e8f0", padding: "8px", borderRadius: "50%", cursor: "pointer", color: "#3b82f6", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Palette style={{ width: 15, height: 15 }} />
               </button>
             </div>
           </div>
@@ -894,7 +901,7 @@ export function LykaChat() {
           )}
 
           {/* Input */}
-          <div style={{ padding: "10px 12px", borderTop: "1px solid #e2e8f0", flexShrink: 0, background: "#fff" }}>
+          <div style={{ padding: "10px 12px", borderTop: "1px solid #e2e8f0", flexShrink: 0, background: "#fff", position: "relative" }}>
             {isRecording ? (
               <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "4px 8px" }}>
                 <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#ef4444", animation: "lykaPulse 1.5s infinite" }} />
@@ -937,14 +944,14 @@ export function LykaChat() {
                   onBlur={e => (e.target.style.borderColor = "#e2e8f0")}
                 />
                 <button type="submit" disabled={sending || (!newMessage.trim() && !mediaFile)}
-                  style={{ width: 40, height: 40, borderRadius: 12, border: "none", background: sending || (!newMessage.trim() && !mediaFile) ? "rgba(124,58,237,0.3)" : "linear-gradient(135deg,#7c3aed,#4338ca)", color: "#fff", cursor: sending || (!newMessage.trim() && !mediaFile) ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: (newMessage.trim() || mediaFile) ? "0 4px 12px rgba(124,58,237,0.4)" : "none", transition: "all 0.2s" }}>
+                  style={{ width: 40, height: 40, borderRadius: 12, border: "none", background: sending || (!newMessage.trim() && !mediaFile) ? "rgba(59,130,246,0.3)" : "linear-gradient(135deg,#3b82f6,#2563eb)", color: "#fff", cursor: sending || (!newMessage.trim() && !mediaFile) ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: (newMessage.trim() || mediaFile) ? "0 4px 12px rgba(59,130,246,0.4)" : "none", transition: "all 0.2s" }}>
                   <Send style={{ width: 16, height: 16 }} />
                 </button>
               </form>
             )}
             
             {showEmojiPicker && (
-              <div style={{ position: "absolute", bottom: 70, left: 16, zIndex: 100, boxShadow: "0 10px 25px rgba(0,0,0,0.1)", borderRadius: 12 }}>
+              <div style={{ position: "absolute", bottom: 60, left: 56, zIndex: 100, boxShadow: "0 10px 25px rgba(0,0,0,0.15)", borderRadius: 12 }}>
                 <EmojiPicker onEmojiClick={(emojiData) => setNewMessage(prev => prev + emojiData.emoji)} />
               </div>
             )}
