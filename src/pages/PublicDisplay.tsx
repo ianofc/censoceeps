@@ -51,7 +51,7 @@ export function PublicDisplay() {
 
       <footer className="border-t border-slate-100 pt-6 flex justify-between items-center text-xs text-slate-400 font-medium">
         <span>Pesquisa de Campo: Gênero, Raça e Pertencimento</span>
-        <span>Ágora OS — Censo CEEP</span>
+        <span>IO OS — Censo CEEP</span>
       </footer>
     </div>
   );

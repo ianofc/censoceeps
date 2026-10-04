@@ -105,7 +105,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
           {/* Rodapé da Ilustração */}
           <div className="flex items-center justify-between text-[11px] text-blue-200 font-bold border-t border-white/10 pt-4 z-10">
             <span className="flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5" /> Ágora OS
+              <Sparkles className="w-3.5 h-3.5" /> IO OS
             </span>
             <span>SISTEMA DE COLETA v2.0</span>
           </div>
@@ -198,48 +198,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
             </button>
           </form>
 
-          {/* PAINEL DE USUÁRIOS DE TESTE */}
-          <div className="mt-6 pt-6 border-t border-slate-100">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center justify-center gap-2">
-              <Sparkles className="w-3.5 h-3.5" /> Acesso de Teste (Dev)
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => {
-                  localStorage.setItem('ceep_test_user', JSON.stringify({
-                    id: 'mock-gestor-123',
-                    nomeCompleto: 'Gestor de Teste',
-                    email: 'gestor@ceep.edu.br',
-                    papel: 'gestor',
-                    turmaOuCargo: 'Diretoria',
-                    genero: 'masculino',
-                    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'
-                  }));
-                  onLoginSuccess();
-                }}
-                className="py-2 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition-colors border border-indigo-200"
-              >
-                Entrar como Gestor
-              </button>
-              <button
-                onClick={() => {
-                  localStorage.setItem('ceep_test_user', JSON.stringify({
-                    id: 'mock-pesquisador-123',
-                    nomeCompleto: 'Pesquisador Aluno',
-                    email: 'pesquisador@ceep.edu.br',
-                    papel: 'entrevistador_aluno',
-                    turmaOuCargo: '3º Ano Informática',
-                    genero: 'feminino',
-                    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mia'
-                  }));
-                  onLoginSuccess();
-                }}
-                className="py-2 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold transition-colors border border-emerald-200"
-              >
-                Entrar como Pesquisador
-              </button>
-            </div>
-          </div>
+
 
           <p className="text-[11px] text-center text-slate-400 font-medium mt-4">
             Centro Estadual de Educação Profissional de Seabra — CEEP<br />
