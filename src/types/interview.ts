@@ -66,9 +66,6 @@ export interface InterviewFormPayload {
     readonly cor_raca_influencia?: string;
     readonly espacos_influencia?: readonly string[];
     readonly mora_com?: string;
-    readonly renda_familiar?: string;
-    readonly religiao?: string;
-    readonly orientacao_sexual?: string;
     readonly acesso_internet?: string;
     readonly tempo_deslocamento?: string;
     readonly risco_evasao?: string;

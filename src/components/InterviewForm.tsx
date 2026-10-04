@@ -24,9 +24,6 @@ export const InterviewForm: React.FC<Props> = ({ userId }) => {
     cor_raca: 'Parda',
     origem_familia: 'Mista / Diversa',
     mora_com: '',
-    renda_familiar: '',
-    religiao: '',
-    orientacao_sexual: '',
     acesso_internet: '',
     tempo_deslocamento: '',
     risco_evasao: '',
@@ -88,9 +85,6 @@ export const InterviewForm: React.FC<Props> = ({ userId }) => {
           cor_raca: 'Parda',
           origem_familia: 'Mista / Diversa',
           mora_com: '',
-          renda_familiar: '',
-          religiao: '',
-          orientacao_sexual: '',
           acesso_internet: '',
           tempo_deslocamento: '',
           risco_evasao: '',
@@ -270,44 +264,6 @@ export const InterviewForm: React.FC<Props> = ({ userId }) => {
               </div>
             )}
 
-            <div>
-              <label htmlFor="orientacao-sexual" className="block text-xs font-bold text-slate-700 uppercase mb-2">Orientação Sexual</label>
-              <select 
-                id="orientacao-sexual"
-                value={formData.orientacao_sexual || ''} 
-                onChange={e => setFormData({ ...formData, orientacao_sexual: e.target.value })}
-                className="w-full p-3 border border-slate-200 rounded-xl text-sm font-semibold bg-slate-50 focus:bg-white"
-              >
-                <option value="" disabled>Selecione...</option>
-                <option value="Heterossexual">Heterossexual</option>
-                <option value="Homossexual">Homossexual (Lésbica/Gay)</option>
-                <option value="Bissexual">Bissexual</option>
-                <option value="Assexual">Assexual</option>
-                <option value="Pansexual">Pansexual</option>
-                <option value="Outra">Outra</option>
-                <option value="Prefiro não responder">Prefiro não responder</option>
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="religiao" className="block text-xs font-bold text-slate-700 uppercase mb-2">Religião / Crença</label>
-              <select 
-                id="religiao"
-                value={formData.religiao || ''} 
-                onChange={e => setFormData({ ...formData, religiao: e.target.value })}
-                className="w-full p-3 border border-slate-200 rounded-xl text-sm font-semibold bg-slate-50 focus:bg-white"
-              >
-                <option value="" disabled>Selecione...</option>
-                <option value="Católica">Católica</option>
-                <option value="Evangélica/Protestante">Evangélica / Protestante</option>
-                <option value="Espírita">Espírita</option>
-                <option value="Religiões de Matriz Africana">Religiões de Matriz Africana (Candomblé, Umbanda, etc.)</option>
-                <option value="Ateu/Agnóstico">Ateu / Agnóstico</option>
-                <option value="Sem religião">Sem religião específica</option>
-                <option value="Outra">Outra</option>
-                <option value="Prefiro não responder">Prefiro não responder</option>
-              </select>
-            </div>
           </div>
         </div>
 
@@ -381,22 +337,6 @@ export const InterviewForm: React.FC<Props> = ({ userId }) => {
               </select>
             </div>
 
-            <div>
-              <label htmlFor="renda-familiar" className="block text-xs font-bold text-slate-700 uppercase mb-2">Renda Familiar Mensal (Estimativa)</label>
-              <select 
-                id="renda-familiar"
-                value={formData.renda_familiar || ''} 
-                onChange={e => setFormData({ ...formData, renda_familiar: e.target.value })}
-                className="w-full p-3 border border-slate-200 rounded-xl text-sm font-semibold bg-slate-50 focus:bg-white"
-              >
-                <option value="" disabled>Selecione...</option>
-                <option value="Até 1 salário mínimo">Até 1 salário mínimo</option>
-                <option value="De 1 a 3 salários mínimos">De 1 a 3 salários mínimos</option>
-                <option value="De 3 a 5 salários mínimos">De 3 a 5 salários mínimos</option>
-                <option value="Mais de 5 salários mínimos">Mais de 5 salários mínimos</option>
-                <option value="Prefiro não responder">Prefiro não responder</option>
-              </select>
-            </div>
 
             <div>
               <label htmlFor="acesso-internet" className="block text-xs font-bold text-slate-700 uppercase mb-2">Acesso à internet e equipamentos</label>
