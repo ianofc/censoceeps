@@ -46,7 +46,7 @@ app.post('/api/interview', async (req, res) => {
     }
 
     const { data, error } = await supabase
-        .from('interviews')
+        .from('entrevistas')
         .insert([{
             ...req.body,
             ambientes_conversa: req.body.ambientes_conversa || [],

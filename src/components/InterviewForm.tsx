@@ -24,6 +24,12 @@ export const InterviewForm: React.FC<Props> = ({ userId }) => {
     cor_raca: 'Parda',
     origem_familia: 'Mista / Diversa',
     mora_com: '',
+    renda_familiar: '',
+    religiao: '',
+    orientacao_sexual: '',
+    acesso_internet: '',
+    tempo_deslocamento: '',
+    risco_evasao: '',
     povo_indigena: '',
     cor_raca_influencia: 'Sim',
     espacos_influencia: [],
@@ -82,6 +88,12 @@ export const InterviewForm: React.FC<Props> = ({ userId }) => {
           cor_raca: 'Parda',
           origem_familia: 'Mista / Diversa',
           mora_com: '',
+          renda_familiar: '',
+          religiao: '',
+          orientacao_sexual: '',
+          acesso_internet: '',
+          tempo_deslocamento: '',
+          risco_evasao: '',
           povo_indigena: '',
           cor_raca_influencia: 'Sim',
           espacos_influencia: [],
@@ -257,6 +269,45 @@ export const InterviewForm: React.FC<Props> = ({ userId }) => {
                 </select>
               </div>
             )}
+
+            <div>
+              <label htmlFor="orientacao-sexual" className="block text-xs font-bold text-slate-700 uppercase mb-2">Orientação Sexual</label>
+              <select 
+                id="orientacao-sexual"
+                value={formData.orientacao_sexual || ''} 
+                onChange={e => setFormData({ ...formData, orientacao_sexual: e.target.value })}
+                className="w-full p-3 border border-slate-200 rounded-xl text-sm font-semibold bg-slate-50 focus:bg-white"
+              >
+                <option value="" disabled>Selecione...</option>
+                <option value="Heterossexual">Heterossexual</option>
+                <option value="Homossexual">Homossexual (Lésbica/Gay)</option>
+                <option value="Bissexual">Bissexual</option>
+                <option value="Assexual">Assexual</option>
+                <option value="Pansexual">Pansexual</option>
+                <option value="Outra">Outra</option>
+                <option value="Prefiro não responder">Prefiro não responder</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="religiao" className="block text-xs font-bold text-slate-700 uppercase mb-2">Religião / Crença</label>
+              <select 
+                id="religiao"
+                value={formData.religiao || ''} 
+                onChange={e => setFormData({ ...formData, religiao: e.target.value })}
+                className="w-full p-3 border border-slate-200 rounded-xl text-sm font-semibold bg-slate-50 focus:bg-white"
+              >
+                <option value="" disabled>Selecione...</option>
+                <option value="Católica">Católica</option>
+                <option value="Evangélica/Protestante">Evangélica / Protestante</option>
+                <option value="Espírita">Espírita</option>
+                <option value="Religiões de Matriz Africana">Religiões de Matriz Africana (Candomblé, Umbanda, etc.)</option>
+                <option value="Ateu/Agnóstico">Ateu / Agnóstico</option>
+                <option value="Sem religião">Sem religião específica</option>
+                <option value="Outra">Outra</option>
+                <option value="Prefiro não responder">Prefiro não responder</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -313,6 +364,55 @@ export const InterviewForm: React.FC<Props> = ({ userId }) => {
                 />
               </div>
             )}
+
+            <div>
+              <label htmlFor="tempo-deslocamento" className="block text-xs font-bold text-slate-700 uppercase mb-2">Tempo de deslocamento até a escola</label>
+              <select 
+                id="tempo-deslocamento"
+                value={formData.tempo_deslocamento || ''} 
+                onChange={e => setFormData({ ...formData, tempo_deslocamento: e.target.value })}
+                className="w-full p-3 border border-slate-200 rounded-xl text-sm font-semibold bg-slate-50 focus:bg-white"
+              >
+                <option value="" disabled>Selecione...</option>
+                <option value="Menos de 15 minutos">Menos de 15 minutos</option>
+                <option value="De 15 a 30 minutos">De 15 a 30 minutos</option>
+                <option value="De 30 minutos a 1 hora">De 30 minutos a 1 hora</option>
+                <option value="Mais de 1 hora">Mais de 1 hora</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="renda-familiar" className="block text-xs font-bold text-slate-700 uppercase mb-2">Renda Familiar Mensal (Estimativa)</label>
+              <select 
+                id="renda-familiar"
+                value={formData.renda_familiar || ''} 
+                onChange={e => setFormData({ ...formData, renda_familiar: e.target.value })}
+                className="w-full p-3 border border-slate-200 rounded-xl text-sm font-semibold bg-slate-50 focus:bg-white"
+              >
+                <option value="" disabled>Selecione...</option>
+                <option value="Até 1 salário mínimo">Até 1 salário mínimo</option>
+                <option value="De 1 a 3 salários mínimos">De 1 a 3 salários mínimos</option>
+                <option value="De 3 a 5 salários mínimos">De 3 a 5 salários mínimos</option>
+                <option value="Mais de 5 salários mínimos">Mais de 5 salários mínimos</option>
+                <option value="Prefiro não responder">Prefiro não responder</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="acesso-internet" className="block text-xs font-bold text-slate-700 uppercase mb-2">Acesso à internet e equipamentos</label>
+              <select 
+                id="acesso-internet"
+                value={formData.acesso_internet || ''} 
+                onChange={e => setFormData({ ...formData, acesso_internet: e.target.value })}
+                className="w-full p-3 border border-slate-200 rounded-xl text-sm font-semibold bg-slate-50 focus:bg-white"
+              >
+                <option value="" disabled>Selecione...</option>
+                <option value="Internet rápida e computador próprio">Internet rápida e computador próprio</option>
+                <option value="Internet rápida, mas só usa celular">Internet rápida, mas só usa celular</option>
+                <option value="Internet móvel (3G/4G) limitada">Internet móvel (3G/4G) limitada</option>
+                <option value="Não tem acesso constante">Não tem acesso constante</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -390,13 +490,34 @@ export const InterviewForm: React.FC<Props> = ({ userId }) => {
             </label>
             <select 
               id="cor-raca-influencia"
-              value={formData.cor_raca_influencia} 
+              value={formData.cor_raca_influencia || ''} 
               onChange={e => setFormData({ ...formData, cor_raca_influencia: e.target.value })}
               className="w-full p-3 border border-slate-200 rounded-xl text-sm font-semibold bg-slate-50 focus:bg-white"
             >
+              <option value="" disabled>Selecione...</option>
               <option value="Sim">Sim</option>
               <option value="Não">Não</option>
               <option value="Não sei responder">Não sei responder</option>
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="risco-evasao" className="block text-xs font-bold text-slate-700 uppercase mb-2">
+              Você já pensou seriamente em desistir ou abandonar a escola?
+            </label>
+            <select 
+              id="risco-evasao"
+              value={formData.risco_evasao || ''} 
+              onChange={e => setFormData({ ...formData, risco_evasao: e.target.value })}
+              className="w-full p-3 border border-slate-200 rounded-xl text-sm font-semibold bg-slate-50 focus:bg-white"
+            >
+              <option value="" disabled>Selecione...</option>
+              <option value="Não, nunca pensei">Não, nunca pensei</option>
+              <option value="Sim, por dificuldades financeiras">Sim, por dificuldades financeiras / trabalho</option>
+              <option value="Sim, por desinteresse ou dificuldade nos estudos">Sim, por desinteresse ou dificuldade nos estudos</option>
+              <option value="Sim, por problemas de convivência/bullying">Sim, por problemas de convivência ou bullying</option>
+              <option value="Sim, por problemas familiares ou de saúde">Sim, por problemas familiares ou de saúde</option>
+              <option value="Outros motivos">Sim, por outros motivos</option>
             </select>
           </div>
 
