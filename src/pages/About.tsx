@@ -1,6 +1,6 @@
 import React from 'react';
 import { BookOpen, ShieldCheck, Cpu, Award, Sparkles, Scale, Download } from 'lucide-react';
-import cartilhaPdf from '../assets/docs/Cartilha_Censo_Escolar_Ada_Lovelace_CEEP_Seabra.PDF';
+import cartilhaPdf from '../assets/docs/Cartilha_Censo_Escolar_Ada_Lovelace_CEEP_Seabra.pdf';
 
 interface AboutProps {
   readonly escolaNome?: string;
