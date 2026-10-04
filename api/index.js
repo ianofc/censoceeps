@@ -41,18 +41,36 @@ app.post('/api/interview', async (req, res) => {
     } = req.body;
 
     // Validação mínima de campos obrigatórios
-    if (!vinculo || !grupo_escolar || !genero || !cor_raca || !interviewer_id) {
+    if (!req.body.vinculo || !req.body.interviewer_id) {
         return res.status(400).json({ error: 'Preencha todos os campos obrigatórios.' });
     }
 
     const { data, error } = await supabase
         .from('entrevistas')
         .insert([{
-            ...req.body,
-            ambientes_conversa: req.body.ambientes_conversa || [],
+            entrevistador_id: req.body.interviewer_id,
+            nome_participante: req.body.nome_participante || 'Anônimo',
+            contato_whatsapp: req.body.contato_whatsapp || null,
+            vinculo: req.body.vinculo,
+            serie: req.body.serie || null,
+            turma: req.body.turma || null,
+            cidade_natal: req.body.cidade_natal || null,
+            local_moradia: req.body.localizacao_moradia || null,
+            detalhe_localizacao: req.body.detalhe_localizacao || null,
+            cor_raca: req.body.cor_raca || null,
+            origem_familia: req.body.origem_familia || null,
+            povo_indigena: req.body.povo_indigena || null,
+            cor_raca_influencia: req.body.cor_raca_influencia || null,
             espacos_influencia: req.body.espacos_influencia || [],
+            ambientes_conversa: req.body.ambientes_conversa || [],
+            sofreu_preconceito: req.body.sofreu_preconceito || null,
             locais_ocorrencia: req.body.locais_ocorrencia || [],
-            formas_ocorrencia: req.body.formas_ocorrencia || []
+            formas_ocorrencia: req.body.formas_ocorrencia || [],
+            relato_preconceito: req.body.relato_preconceito || null,
+            mora_com: req.body.mora_com || null,
+            acesso_internet: req.body.acesso_internet || null,
+            tempo_deslocamento: req.body.tempo_deslocamento || null,
+            risco_evasao: req.body.risco_evasao || null,
         }])
         .select();
 
