@@ -14,21 +14,24 @@ export function AnalyticsDashboard() {
     moradia: {} as Record<string, number>,
   });
 
+  const [rawData, setRawData] = useState<any[]>([]);
+
   useEffect(() => {
     fetchMetrics();
   }, []);
 
   const fetchMetrics = async () => {
     try {
-      // Usando a tabela correta 'entrevistas' e as colunas reais do banco
+      // Fetch all necessary columns for CSV export
       const { data, error } = await supabase
         .from('entrevistas')
-        .select('genero, cor_raca, vinculo, acesso_internet, risco_evasao, local_moradia');
+        .select('*');
       
       if (error) throw error;
 
       if (data) {
         setTotalAmostras(data.length);
+        setRawData(data);
 
         const newStats = {
           genero: {} as Record<string, number>,
@@ -67,6 +70,41 @@ export function AnalyticsDashboard() {
     }
   };
 
+  const exportToCSV = () => {
+    if (rawData.length === 0) return;
+    
+    // Obter todos os cabeçalhos a partir das chaves do primeiro objeto
+    const headers = Object.keys(rawData[0]);
+    
+    // Formatar como CSV (tratar aspas e vírgulas)
+    const csvContent = [
+      headers.join(','),
+      ...rawData.map(row => 
+        headers.map(header => {
+          let cell = row[header];
+          if (cell === null || cell === undefined) cell = '';
+          if (Array.isArray(cell)) cell = cell.join('; ');
+          const strCell = String(cell);
+          // Escapar aspas e envolver em aspas se tiver vírgula
+          if (strCell.includes(',') || strCell.includes('"') || strCell.includes('\\n')) {
+            return `"${strCell.replace(/"/g, '""')}"`;
+          }
+          return strCell;
+        }).join(',')
+      )
+    ].join('\\n');
+
+    // Baixar o arquivo
+    const blob = new Blob(["\\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Censo_CEEP_Export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const renderProgressBar = (label: string, count: number, total: number, colorClass: string) => {
     const pct = total > 0 ? ((count / total) * 100).toFixed(1) : '0';
     return (
@@ -98,7 +136,7 @@ export function AnalyticsDashboard() {
     <div className="space-y-8 animate-in fade-in duration-500">
       
       {/* 🚀 CABEÇALHO DO DASHBOARD */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl p-6 md:p-8 text-white shadow-xl shadow-blue-900/20 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl p-6 md:p-8 text-white shadow-xl shadow-blue-900/20 relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
           <TrendingUp className="w-48 h-48" />
         </div>
@@ -108,6 +146,19 @@ export function AnalyticsDashboard() {
             Métricas ao vivo processadas diretamente do banco de dados do Censo CEEP. 
             Todos os gráficos são atualizados automaticamente com base nas entrevistas cadastradas.
           </p>
+        </div>
+        
+        <div className="relative z-10">
+          <button
+            onClick={exportToCSV}
+            disabled={rawData.length === 0}
+            className="flex items-center justify-center gap-2 bg-white text-indigo-700 font-bold py-3 px-6 rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all w-full md:w-auto disabled:opacity-50 disabled:pointer-events-none"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            Exportar CSV
+          </button>
         </div>
       </div>
 
