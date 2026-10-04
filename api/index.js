@@ -41,26 +41,18 @@ app.post('/api/interview', async (req, res) => {
     } = req.body;
 
     // Validação mínima de campos obrigatórios
-    if (!vinculo || !grupo_escolar || !faixa_etaria || !genero || !cor_raca || !interviewer_id) {
-        return res.status(400).json({ error: 'Preencha todos os campos obrigatórios do Bloco 1 e Bloco 2.' });
+    if (!vinculo || !grupo_escolar || !genero || !cor_raca || !interviewer_id) {
+        return res.status(400).json({ error: 'Preencha todos os campos obrigatórios.' });
     }
 
     const { data, error } = await supabase
         .from('interviews')
         .insert([{
-            interviewer_id,
-            vinculo,
-            grupo_escolar,
-            faixa_etaria,
-            genero,
-            cor_raca,
-            conhece_ancestralidade,
-            geracao_alcancada: geracao_alcancada || null,
-            povo_indigena: povo_indigena || null,
-            ja_conversou_sobre,
-            ambientes_conversa: ambientes_conversa || [],
-            sofreu_preconceito,
-            relato_preconceito: relato_preconceito || null
+            ...req.body,
+            ambientes_conversa: req.body.ambientes_conversa || [],
+            espacos_influencia: req.body.espacos_influencia || [],
+            locais_ocorrencia: req.body.locais_ocorrencia || [],
+            formas_ocorrencia: req.body.formas_ocorrencia || []
         }])
         .select();
 

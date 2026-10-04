@@ -23,6 +23,7 @@ export const InterviewForm: React.FC<Props> = ({ userId }) => {
     detalhe_localizacao: '',
     cor_raca: 'Parda',
     origem_familia: 'Mista / Diversa',
+    mora_com: '',
     povo_indigena: '',
     cor_raca_influencia: 'Sim',
     espacos_influencia: [],
@@ -80,6 +81,7 @@ export const InterviewForm: React.FC<Props> = ({ userId }) => {
           detalhe_localizacao: '',
           cor_raca: 'Parda',
           origem_familia: 'Mista / Diversa',
+          mora_com: '',
           povo_indigena: '',
           cor_raca_influencia: 'Sim',
           espacos_influencia: [],
@@ -233,6 +235,28 @@ export const InterviewForm: React.FC<Props> = ({ userId }) => {
                 className="w-full p-3 border border-slate-200 rounded-xl text-sm font-semibold bg-slate-50 focus:bg-white" 
               />
             </div>
+
+            {formData.vinculo?.startsWith('ESTUDANTE') && (
+              <div className="md:col-span-2 animate-in fade-in pt-2">
+                <label htmlFor="mora-com" className="block text-xs font-bold text-slate-700 uppercase mb-2">Com quem você mora atualmente?</label>
+                <select 
+                  id="mora-com"
+                  value={formData.mora_com || ''} 
+                  onChange={e => setFormData({ ...formData, mora_com: e.target.value })}
+                  className="w-full p-3 border border-slate-200 rounded-xl text-sm font-semibold bg-slate-50 focus:bg-white"
+                >
+                  <option value="" disabled>Selecione uma opção...</option>
+                  <option value="Pai e Mãe">Pai e Mãe</option>
+                  <option value="Apenas com a Mãe">Apenas com a Mãe</option>
+                  <option value="Apenas com o Pai">Apenas com o Pai</option>
+                  <option value="Avós ou outros parentes">Avós ou outros parentes</option>
+                  <option value="Cônjuge/Namorado(a)">Cônjuge / Namorado(a)</option>
+                  <option value="Amigos/Colegas">Amigos / Colegas</option>
+                  <option value="Sozinho(a)">Sozinho(a)</option>
+                  <option value="Outros">Outros</option>
+                </select>
+              </div>
+            )}
           </div>
         </div>
 
