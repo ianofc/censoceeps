@@ -50,7 +50,7 @@ function LaikaNavIcon({ size = 20 }: { readonly size?: number }) {
 const adinhaAvatar = new URL('./assets/imgs/AdaLovelace.png', import.meta.url).href;
 
 interface LayoutProps {
-  readonly session: any;
+  readonly session: unknown;
 }
 
 function Layout({ session }: LayoutProps) {
@@ -63,7 +63,7 @@ function Layout({ session }: LayoutProps) {
 
   useEffect(() => {
     const handleOnline = () => {
-      console.log('[App] Rede restabelecida. Acionando TAS Offline Sync...');
+      console.info('[App] Rede restabelecida. Acionando TAS Offline Sync...');
       if (session?.user?.id) {
         tasOfflineSync.syncOfflineData(session.user.id);
       }

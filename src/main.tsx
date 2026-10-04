@@ -14,7 +14,7 @@ if (!rootElement) {
         <App />
       </React.StrictMode>
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro na renderização do React:', error);
     rootElement.innerHTML = `
       <div style="color: #ef4444; padding: 20px; font-family: system-ui, sans-serif; background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; margin: 20px;">

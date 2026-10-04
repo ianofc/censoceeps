@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 import { Search, Trash2, ShieldCheck, UserCheck, WifiOff } from 'lucide-react';
 
 export function TeacherDashboard() {
-  const [coletas, setColetas] = useState<any[]>([]);
+  const [coletas, setColetas] = useState<unknown[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [isOfflineMode, setIsOfflineMode] = useState(false);

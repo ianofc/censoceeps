@@ -5,8 +5,8 @@ export const tasPdfGenerator = {
   /**
    * Gera um PDF oficial com base nos dados brutos e estatísticas do censo.
    */
-  generateCensoReport: (fichas: any[], pesquisadorNome: string, escolaNome: string) => {
-    console.log("[TAS Relatórios] Gerando PDF Sintético...");
+  generateCensoReport: (fichas: unknown[], pesquisadorNome: string, escolaNome: string) => {
+    console.info("[TAS Relatórios] Gerando PDF Sintético...");
     
     // Inicializa o documento PDF (formato A4)
     const doc = new jsPDF();
@@ -74,6 +74,6 @@ export const tasPdfGenerator = {
     // Salva o PDF
     const fileName = `CensoCEEP_Relatorio_${new Date().getTime()}.pdf`;
     doc.save(fileName);
-    console.log(`[TAS Relatórios] PDF '${fileName}' salvo com sucesso!`);
+    console.info(`[TAS Relatórios] PDF '${fileName}' salvo com sucesso!`);
   }
 };

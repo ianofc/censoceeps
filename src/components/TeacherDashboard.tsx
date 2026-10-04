@@ -5,7 +5,7 @@ import { DownloadCloud } from 'lucide-react';
 import { useUserSession } from '../hooks/useUserSession';
 
 export const TeacherDashboard: React.FC = () => {
-  const [interviews, setInterviews] = useState<any[]>([]);
+  const [interviews, setInterviews] = useState<unknown[]>([]);
   const [loading, setLoading] = useState(true);
   const { profile } = useUserSession();
 

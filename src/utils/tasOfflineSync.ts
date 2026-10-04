@@ -16,7 +16,7 @@ export const tasOfflineSync = {
       timestamp: new Date().toISOString()
     });
     localStorage.setItem("censo_pending_queue", JSON.stringify(drafts));
-    console.log("[TAS Offline] Ficha salva localmente no Accumbens Cache.");
+    console.info("[TAS Offline] Ficha salva localmente no Accumbens Cache.");
   },
 
   // Obtem rascunhos pendentes
@@ -29,7 +29,7 @@ export const tasOfflineSync = {
     const drafts = tasOfflineSync.getDrafts();
     if (drafts.length === 0) return;
 
-    console.log(`[TAS SARA] Despertando Sincronização: ${drafts.length} fichas pendentes encontradas.`);
+    console.info(`[TAS SARA] Despertando Sincronização: ${drafts.length} fichas pendentes encontradas.`);
 
     const successfulSyncs: string[] = [];
 
@@ -50,7 +50,7 @@ export const tasOfflineSync = {
     if (successfulSyncs.length > 0) {
       const remainingDrafts = drafts.filter(d => !successfulSyncs.includes(d.id));
       localStorage.setItem("censo_pending_queue", JSON.stringify(remainingDrafts));
-      console.log(`[TAS SARA] Sincronização concluída! ${successfulSyncs.length} fichas enviadas para o Heimdall.`);
+      console.info(`[TAS SARA] Sincronização concluída! ${successfulSyncs.length} fichas enviadas para o Heimdall.`);
     }
   }
 };

@@ -187,7 +187,7 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
       setIsEditing(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       alert("Erro ao salvar: " + (err.message || "Erro desconhecido"));
     } finally {
       setSaving(false);

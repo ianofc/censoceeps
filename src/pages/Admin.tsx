@@ -30,7 +30,7 @@ import {
 const adinhaAvatar = new URL('../assets/imgs/AdaLovelace.png', import.meta.url).href;
 
 interface LayoutProps {
-  readonly session: any;
+  readonly session: unknown;
 }
 
 function Layout({ session }: LayoutProps) {
