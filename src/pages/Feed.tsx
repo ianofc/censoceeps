@@ -200,11 +200,15 @@ function PostCard({ post, profile, onRefresh }: { post:Post; profile:any; onRefr
   };
 
   const isAutoPost = post.type === "censo_auto";
+  const isOfficial = post.type === "comunicado" || post.type === "official" || post.type === "aviso";
 
   return (
     <article style={{
-      background:"#fff", borderRadius:24, border:"1px solid #f1f5f9",
-      boxShadow:"0 2px 12px rgba(0,0,0,0.04)", overflow:"hidden",
+      background: isOfficial ? "linear-gradient(180deg, #f0fdfa 0%, #ffffff 80px)" : "#fff",
+      borderRadius:24,
+      border: isOfficial ? "1.5px solid #38bdf8" : "1px solid #f1f5f9",
+      boxShadow: isOfficial ? "0 4px 20px rgba(14,165,233,0.12)" : "0 2px 12px rgba(0,0,0,0.04)",
+      overflow:"hidden",
       transition:"box-shadow 0.2s",
     }}>
       {/* Header */}
@@ -221,6 +225,14 @@ function PostCard({ post, profile, onRefresh }: { post:Post; profile:any; onRefr
                   background:"#ede9fe", border:"1px solid #ddd6fe",
                   padding:"2px 8px", borderRadius:99,
                 }}>🎉 conquista</span>
+              )}
+              {isOfficial && (
+                <span style={{
+                  fontSize:10, fontWeight:800, color:"#0369a1",
+                  background:"#e0f2fe", border:"1px solid #bae6fd",
+                  padding:"2px 8px", borderRadius:99,
+                  display:"inline-flex", alignItems:"center", gap:3
+                }}>📌 Comunicado Oficial</span>
               )}
             </div>
           </div>
@@ -569,7 +581,7 @@ export function Feed() {
             <Avatar name={profile.nomeCompleto||"EU"} size={40} />
             <form onSubmit={e=>void handleCreatePost(e)} style={{ flex:1, display:"flex", flexDirection:"column", gap:10 }}>
               <textarea ref={textareaRef} rows={2}
-                placeholder="Compartilhe uma conquista, relato de campo ou pensamento... (Ctrl+Enter)"
+                placeholder="Compartilhe uma evidência de campo (com foto 📸), relato da entrevista ou conquista... (Ctrl+Enter)"
                 value={newPostContent}
                 onChange={e=>setNewPostContent(e.target.value)}
                 onKeyDown={e=>{ if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)) void handleCreatePost(e as any); }}
@@ -607,9 +619,9 @@ export function Feed() {
                   <button type="button" onClick={()=>setShowImageInput(v=>!v)}
                     style={{padding:"7px 12px",borderRadius:10,border:"none",cursor:"pointer",
                       background:showImageInput?"#ede9fe":"transparent",
-                      color:showImageInput?"#7c3aed":"#94a3b8",fontSize:12,fontWeight:700,
+                      color:showImageInput?"#7c3aed":"#64748b",fontSize:12,fontWeight:700,
                       display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>
-                    🖼️ Imagem
+                    📸 Anexar Foto / Evidência
                   </button>
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:6}}>
@@ -626,6 +638,22 @@ export function Feed() {
                     {posting ? (<><Zap style={{width:14,height:14}}/> Publicando...</>) : (<><Send style={{width:14,height:14}}/> Publicar</>)}
                   </button>
                 </div>
+              </div>
+              <div style={{
+                marginTop: 2,
+                padding: "8px 12px",
+                borderRadius: 12,
+                background: "#f0fdf4",
+                border: "1px solid #bbf7d0",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                fontSize: 12,
+                color: "#166534",
+                fontWeight: 600,
+              }}>
+                <span style={{ fontSize: 14 }}>📸</span>
+                <span><strong>Evidência de Campo:</strong> Sempre que realizar entrevistas, anexe uma foto para comprovar sua aplicação com a coordenação!</span>
               </div>
             </form>
           </div>
