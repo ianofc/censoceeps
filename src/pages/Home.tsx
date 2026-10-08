@@ -5,6 +5,10 @@ import { UserAvatar } from '../components/UserAvatar';
 import { ClipboardList, Send, AlertCircle, Loader2, Plus, CheckCircle, Award, Users, Heart, WifiOff, RefreshCw } from 'lucide-react';
 import { AdinhaMascote } from '../components/AdinhaMascote';
 import { AnalyticsDashboard } from '../components/AnalyticsDashboard';
+import listaAlunos from '../data/alunos.json';
+
+const normalizeStr = (s?: string) =>
+  (s || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
 interface CensoItem {
   id: string;
@@ -50,6 +54,7 @@ export function Home() {
     totalTurmas: 0
   });
   const [atividadesRecentes, setAtividadesRecentes] = useState<CensoItem[]>([]);
+  const [entrevistadosExistentes, setEntrevistadosExistentes] = useState<Map<string, string>>(new Map());
 
   const [nomeParticipante, setNomeParticipante] = useState('');
   const [contatoWhatsapp, setContatoWhatsapp] = useState('');
@@ -105,11 +110,25 @@ export function Home() {
         const pending: CensoItem[] = JSON.parse(localStorage.getItem('censo_pending_queue') || '[]');
         setPendingSyncCount(pending.length);
 
-        const [{ count: total }, { count: pessoas }, { data: recentes }] = await Promise.all([
+        const [{ count: total }, { count: pessoas }, { data: recentes }, { data: todasEntrevistas }] = await Promise.all([
           supabase.from('entrevistas').select('*', { count: 'exact', head: true }),
           supabase.from('pessoas').select('*', { count: 'exact', head: true }),
           supabase.from('entrevistas').select('*').order('created_at', { ascending: false }).limit(5),
+          supabase.from('entrevistas').select('nome_participante, interviewer_name'),
         ]);
+
+        const mapEntrevistados = new Map<string, string>();
+        (todasEntrevistas || []).forEach((row: { nome_participante?: string; interviewer_name?: string }) => {
+          if (row.nome_participante) {
+            mapEntrevistados.set(normalizeStr(row.nome_participante), row.interviewer_name || 'outro entrevistador');
+          }
+        });
+        pending.forEach((item: CensoItem) => {
+          if (item.nome_participante) {
+            mapEntrevistados.set(normalizeStr(item.nome_participante), item.interviewer_name || 'você (salvo offline)');
+          }
+        });
+        setEntrevistadosExistentes(mapEntrevistados);
 
         // Count distinct turmas
         const { data: turmasData } = await supabase.from('entrevistas').select('grupo_escolar');
@@ -127,6 +146,13 @@ export function Home() {
       } catch (err) {
         console.warn("Modo Offline ativado / Erro de conexão com Supabase:", err);
         const pending: CensoItem[] = JSON.parse(localStorage.getItem('censo_pending_queue') || '[]');
+        const mapEntrevistados = new Map<string, string>();
+        pending.forEach((item: CensoItem) => {
+          if (item.nome_participante) {
+            mapEntrevistados.set(normalizeStr(item.nome_participante), item.interviewer_name || 'você (salvo offline)');
+          }
+        });
+        setEntrevistadosExistentes(mapEntrevistados);
         setAtividadesRecentes([...pending].reverse());
         setStats(prev => ({ ...prev, totalColetas: pending.length }));
       } finally {
@@ -154,6 +180,41 @@ export function Home() {
     e.preventDefault();
     setLoading(true);
     setErrorMsg(null);
+
+    // 1. O entrevistador não pode entrevistar a si mesmo
+    if (
+      profile?.nomeCompleto &&
+      normalizeStr(nomeParticipante) === normalizeStr(profile.nomeCompleto)
+    ) {
+      setErrorMsg('O(A) entrevistador(a) não pode entrevistar a si mesmo(a). Por favor, informe o nome do participante entrevistado.');
+      setLoading(false);
+      return;
+    }
+
+    // 2. Não permitir duplicidade de participante no censo (checa memória local primeiro)
+    const jaFeito = entrevistadosExistentes.get(normalizeStr(nomeParticipante));
+    if (jaFeito) {
+      setErrorMsg(`O(A) participante "${nomeParticipante.trim()}" já foi entrevistado(a) anteriormente (por ${jaFeito}). Cada pessoa só pode ser entrevistada uma única vez.`);
+      setLoading(false);
+      return;
+    }
+
+    // 3. Checa duplicidade online no Supabase para garantir concorrência
+    try {
+      const { data: existingInterview } = await supabase
+        .from('entrevistas')
+        .select('id, interviewer_name')
+        .ilike('nome_participante', nomeParticipante.trim())
+        .maybeSingle();
+
+      if (existingInterview) {
+        setErrorMsg(`O(A) participante "${nomeParticipante.trim()}" já foi entrevistado(a) anteriormente (${existingInterview.interviewer_name ? `por ${existingInterview.interviewer_name}` : 'no sistema'}). Para manter os dados estatísticos íntegros, cada pessoa só pode ser entrevistada uma vez.`);
+        setLoading(false);
+        return;
+      }
+    } catch (checkErr) {
+      console.warn('Não foi possível checar duplicidade online, prosseguindo com verificação local:', checkErr);
+    }
 
     const novaFicha: CensoItem = {
       id: `local-${Date.now()}`,
@@ -439,11 +500,57 @@ export function Home() {
                         id="modal-nome"
                         type="text"
                         required
+                        list="lista-alunos-ceep"
                         placeholder="Nome completo..."
                         value={nomeParticipante}
-                        onChange={(e) => setNomeParticipante(e.target.value)}
-                        className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white outline-none"
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setNomeParticipante(val);
+                          const valNorm = normalizeStr(val);
+                          if (profile?.nomeCompleto && valNorm === normalizeStr(profile.nomeCompleto)) {
+                            setErrorMsg('Atenção: O(A) entrevistador(a) não pode entrevistar a si mesmo(a).');
+                          } else if (entrevistadosExistentes.has(valNorm)) {
+                            setErrorMsg(`Atenção: "${val.trim()}" já foi entrevistado(a) anteriormente (por ${entrevistadosExistentes.get(valNorm)}).`);
+                          } else {
+                            setErrorMsg(null);
+                          }
+                        }}
+                        className={`w-full p-3 bg-white dark:bg-slate-800 border rounded-xl text-sm font-semibold outline-none transition-colors ${
+                          (profile?.nomeCompleto && normalizeStr(nomeParticipante) === normalizeStr(profile.nomeCompleto)) ||
+                          entrevistadosExistentes.has(normalizeStr(nomeParticipante))
+                            ? 'border-rose-400 dark:border-rose-600 text-rose-900 dark:text-rose-100'
+                            : 'border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white'
+                        }`}
                       />
+
+                      {profile?.nomeCompleto && normalizeStr(nomeParticipante) === normalizeStr(profile.nomeCompleto) && (
+                        <div className="mt-2 p-2.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-xl flex items-center gap-2 text-rose-700 dark:text-rose-300 text-xs font-semibold animate-in fade-in">
+                          <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                          <span>Você não pode entrevistar a si mesmo(a). Por favor, informe outro participante.</span>
+                        </div>
+                      )}
+
+                      {nomeParticipante &&
+                        !(profile?.nomeCompleto && normalizeStr(nomeParticipante) === normalizeStr(profile.nomeCompleto)) &&
+                        entrevistadosExistentes.has(normalizeStr(nomeParticipante)) && (
+                        <div className="mt-2 p-2.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl flex items-center gap-2 text-amber-800 dark:text-amber-200 text-xs font-semibold animate-in fade-in">
+                          <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+                          <span>Esta pessoa já foi entrevistada por <strong>{entrevistadosExistentes.get(normalizeStr(nomeParticipante))}</strong>. Cada pessoa só pode responder 1 única vez.</span>
+                        </div>
+                      )}
+
+                      <datalist id="lista-alunos-ceep">
+                        {listaAlunos
+                          .filter((nome: string) => {
+                            const n = normalizeStr(nome);
+                            const ehEleMesmo = profile?.nomeCompleto && n === normalizeStr(profile.nomeCompleto);
+                            const jaFoiEntrevistado = entrevistadosExistentes.has(n);
+                            return !ehEleMesmo && !jaFoiEntrevistado;
+                          })
+                          .map((nome: string, idx: number) => (
+                            <option key={idx} value={nome} />
+                          ))}
+                      </datalist>
                     </div>
 
                     <div>
@@ -660,8 +767,12 @@ export function Home() {
                   </button>
                   <button
                     type="submit"
-                    disabled={loading}
-                    className="bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-3 rounded-xl text-xs font-bold flex items-center gap-2 shadow-md cursor-pointer border-0"
+                    disabled={
+                      loading ||
+                      Boolean(profile?.nomeCompleto && normalizeStr(nomeParticipante) === normalizeStr(profile.nomeCompleto)) ||
+                      Boolean(nomeParticipante && entrevistadosExistentes.has(normalizeStr(nomeParticipante)))
+                    }
+                    className="bg-cyan-600 hover:bg-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-3 rounded-xl text-xs font-bold flex items-center gap-2 shadow-md cursor-pointer border-0"
                   >
                     {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" /> Salvar Ficha do Censo</>}
                   </button>

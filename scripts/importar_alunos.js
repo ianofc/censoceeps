@@ -46,7 +46,7 @@ const listaUsuarios = [
     { nome: "THAYLA SENA ROLDAO DOS SANTOS", email: "thaylasenasantos@ceeps.com", senha: "thaylasena6192", papel: "entrevistador", turma: "1º ADM CM" },
     { nome: "YANNE KESSIA DE SOUZA ALMEIDA", email: "yannekessiaalmeida@ceeps.com", senha: "yannekessia2854", papel: "entrevistador", turma: "1º ADM CM" },
     { nome: "IAN DA SILVA ALMEIDA SANTOS", email: "iansantos@ceeps.com", senha: "ian8431", papel: "admin", turma: "Professor" },
-    { nome: "JULIANA", email: "julianasobrenome@ceeps.com", senha: "juliana5920", papel: "professor", turma: "Professor" }
+    { nome: "JULIANA DIAS", email: "julianadias@ceeps.com", senha: "juliana5920", papel: "professor", turma: "Professor" }
 ];
 
 async function processarOuAtualizarUsuario(usuario, userIdExistente) {

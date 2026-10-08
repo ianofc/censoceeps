@@ -121,6 +121,15 @@ $('#interviewForm').addEventListener('submit', async e => {
   btn.disabled = true;
   btn.textContent = 'Verificando...';
 
+  // 0. O entrevistador não pode entrevistar a si mesmo
+  const norm = s => s ? s.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') : '';
+  if (currentUser && currentUser.full_name && norm(nomeEntrevistado) === norm(currentUser.full_name)) {
+    alert('⚠️ O entrevistador não pode entrevistar a si mesmo. Por favor, insira o nome de outro participante.');
+    btn.disabled = false;
+    btn.textContent = 'Registrar Entrevista';
+    return;
+  }
+
   // 1. Verificar Duplicidade de Entrevistado
   const { data: existing } = await supabase
     .from('interviews')
