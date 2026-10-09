@@ -70,5 +70,10 @@ export function useUserSession() {
         void fetchRealUserSession();
     }, []);
 
-    return { profile, loading };
+    const isAdmin = profile.nomeCompleto.toLowerCase().includes('ian') || profile.email.toLowerCase().includes('ian');
+    const isJuliana = profile.nomeCompleto.toLowerCase().includes('juliana') || profile.email.toLowerCase().includes('juliana');
+    const isTeacher = isAdmin || isJuliana || profile.papel === 'gestor' || profile.turmaOuCargo.toLowerCase().includes('professor');
+    const isStudent = !isTeacher;
+
+    return { profile, loading, isAdmin, isTeacher, isStudent };
 }

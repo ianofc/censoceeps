@@ -50,7 +50,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
       }
 
       onLoginSuccess();
-    } catch (err: unknown) {
+    } catch (err: any) {
       setErrorMsg(err.message || 'Erro ao realizar login. Verifique suas credenciais.');
     } finally {
       setLoading(false);

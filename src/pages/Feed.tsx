@@ -200,16 +200,31 @@ function PostCard({ post, profile, onRefresh }: { post:Post; profile:any; onRefr
   };
 
   const isAutoPost = post.type === "censo_auto";
+  const isConquista = post.type === "conquista";
   const isOfficial = post.type === "comunicado" || post.type === "official" || post.type === "aviso";
+
+  let cardBg = "#fff";
+  let cardBorder = "1px solid #f1f5f9";
+  let cardShadow = "0 2px 12px rgba(0,0,0,0.04)";
+
+  if (isConquista) {
+    cardBg = "linear-gradient(180deg, #fef3c7 0%, #ffffff 80px)";
+    cardBorder = "1.5px solid #fbbf24";
+    cardShadow = "0 4px 20px rgba(251,191,36,0.15)";
+  } else if (isOfficial) {
+    cardBg = "linear-gradient(180deg, #f0fdfa 0%, #ffffff 80px)";
+    cardBorder = "1.5px solid #38bdf8";
+    cardShadow = "0 4px 20px rgba(14,165,233,0.12)";
+  }
 
   return (
     <article style={{
-      background: isOfficial ? "linear-gradient(180deg, #f0fdfa 0%, #ffffff 80px)" : "#fff",
-      borderRadius:24,
-      border: isOfficial ? "1.5px solid #38bdf8" : "1px solid #f1f5f9",
-      boxShadow: isOfficial ? "0 4px 20px rgba(14,165,233,0.12)" : "0 2px 12px rgba(0,0,0,0.04)",
-      overflow:"hidden",
-      transition:"box-shadow 0.2s",
+      background: cardBg,
+      borderRadius: 24,
+      border: cardBorder,
+      boxShadow: cardShadow,
+      overflow: "hidden",
+      transition: "box-shadow 0.2s",
     }}>
       {/* Header */}
       <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", padding:"16px 18px 12px" }}>
@@ -224,7 +239,15 @@ function PostCard({ post, profile, onRefresh }: { post:Post; profile:any; onRefr
                   fontSize:10, fontWeight:800, color:"#7c3aed",
                   background:"#ede9fe", border:"1px solid #ddd6fe",
                   padding:"2px 8px", borderRadius:99,
-                }}>🎉 conquista</span>
+                }}>🎉 nova coleta</span>
+              )}
+              {isConquista && (
+                <span style={{
+                  fontSize:10, fontWeight:800, color:"#b45309",
+                  background:"#fef3c7", border:"1px solid #fde68a",
+                  padding:"2px 8px", borderRadius:99,
+                  display:"inline-flex", alignItems:"center", gap:3
+                }}>🏆 Top Entrevistador</span>
               )}
               {isOfficial && (
                 <span style={{
@@ -275,9 +298,15 @@ function PostCard({ post, profile, onRefresh }: { post:Post; profile:any; onRefr
 
       {/* Content */}
       <div style={{ padding:"0 18px 14px" }}>
-        <p style={{ fontSize:14, color:"#1e293b", lineHeight:1.7, margin:0, whiteSpace:"pre-wrap", wordBreak:"break-word" }}>
-          {post.content}
-        </p>
+        {isConquista ? (
+          <p style={{ fontSize:16, fontWeight:800, color:"#92400e", lineHeight:1.6, margin:0, whiteSpace:"pre-wrap", wordBreak:"break-word", padding:"12px 16px", background:"#fefce8", border:"1px dashed #fde047", borderRadius:16, textAlign:"center" }}>
+            {post.content}
+          </p>
+        ) : (
+          <p style={{ fontSize:14, color:"#1e293b", lineHeight:1.7, margin:0, whiteSpace:"pre-wrap", wordBreak:"break-word" }}>
+            {post.content}
+          </p>
+        )}
         {post.image_url && (
           <img src={post.image_url} alt="imagem do post"
             style={{ width:"100%", borderRadius:16, marginTop:12, objectFit:"cover", maxHeight:400 }}

@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useUserSession } from '../hooks/useUserSession';
 import { UserAvatar } from '../components/UserAvatar';
-import { ClipboardList, Send, AlertCircle, Loader2, Plus, CheckCircle, Award, Users, Heart, WifiOff, RefreshCw } from 'lucide-react';
+import { ClipboardList, Send, AlertCircle, Loader2, Plus, CheckCircle, Award, Users, Heart, WifiOff, RefreshCw, Trophy, Sparkles, Target } from 'lucide-react';
 import { AdinhaMascote } from '../components/AdinhaMascote';
 import { AnalyticsDashboard } from '../components/AnalyticsDashboard';
+import { CelebrationScreen } from '../components/CelebrationScreen';
 import listaAlunos from '../data/alunos.json';
 
 const normalizeStr = (s?: string) =>
@@ -239,6 +240,9 @@ export function Home() {
       synced: false
     };
 
+    const novoTotal = myFichas + 1;
+    setMyFichas(novoTotal);
+
     try {
       if (!navigator.onLine) {
         throw new Error("Dispositivo offline. Salvando localmente...");
@@ -266,8 +270,13 @@ export function Home() {
       setTimeout(() => {
         setSuccess(false);
         setShowModalColeta(false);
-        window.location.reload();
-      }, 2500);
+        if (novoTotal >= 20) {
+          // Dispara celebração da Adinha Campeã com confetes e fanfare!
+          window.dispatchEvent(new CustomEvent('abrir-celebracao-meta-20', { detail: { count: novoTotal } }));
+        } else {
+          window.location.reload();
+        }
+      }, novoTotal >= 20 ? 800 : 2500);
     }
   };
 
@@ -367,6 +376,18 @@ export function Home() {
           </div>
         </div>
 
+        {/* Gamificação / Conquista - Apenas para alunos entrevistadores */}
+        {!isAdminOrTeacher && (
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm">
+            <CelebrationScreen 
+              interviewCount={myFichas} 
+              targetCount={20}
+              studentName={primeiroNome}
+              userId={profile?.id}
+            />
+          </div>
+        )}
+
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
           <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex justify-between items-center">
             <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2">
@@ -393,6 +414,121 @@ export function Home() {
             <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700 text-center">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Pesquisadores</span>
               <strong className="text-2xl font-black text-teal-600 dark:text-teal-400">{stats.totalPessoas || '—'}</strong>
+            </div>
+          </div>
+        </div>
+
+        {/* Card de Gamificação & Jornada: Meta 20 Entrevistas (Adinha Campeã) */}
+        <div className={`border rounded-3xl p-6 sm:p-8 shadow-sm space-y-4 relative overflow-hidden transition-all duration-300 ${
+          myFichas >= 20 
+            ? 'bg-gradient-to-br from-amber-500/10 via-yellow-500/10 to-purple-500/10 border-amber-400 dark:border-amber-500/50 dark:bg-slate-900' 
+            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+        }`}>
+          {/* Luz de fundo se meta batida */}
+          {myFichas >= 20 && (
+            <div className="absolute -top-16 -right-16 w-64 h-64 bg-amber-400/20 rounded-full blur-3xl pointer-events-none" />
+          )}
+
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
+            <div className="flex items-center gap-3">
+              <span className={`p-2.5 rounded-2xl flex items-center justify-center ${
+                myFichas >= 20 
+                  ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/30' 
+                  : 'bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400'
+              }`}>
+                <Trophy className="w-5 h-5" />
+              </span>
+              <div>
+                <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                  Missão Científica: Meta 20 Entrevistas
+                  {myFichas >= 20 && (
+                    <span className="text-[10px] bg-amber-400 text-slate-950 px-2 py-0.5 rounded-full font-black animate-pulse">
+                      CONCLUÍDO!
+                    </span>
+                  )}
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                  {myFichas >= 20 
+                    ? 'Você completou a meta oficial de campo do Censo Ada Lovelace!' 
+                    : `Realize 20 coletas para desbloquear o Certificado Oficial e a Adinha Campeã.`}
+                </p>
+              </div>
+            </div>
+
+            {myFichas >= 20 ? (
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent('abrir-celebracao-meta-20', { detail: { count: myFichas } }))}
+                className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-black px-5 py-2.5 rounded-2xl text-xs flex items-center gap-2 shadow-lg shadow-amber-500/25 cursor-pointer border-0 shrink-0"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>Ver Adinha Campeã & Certificado 🏆</span>
+              </button>
+            ) : (
+              <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300">
+                <Target className="w-4 h-4 text-indigo-500" />
+                <span>{myFichas} de 20 concluídas</span>
+              </div>
+            )}
+          </div>
+
+          {/* Barra de Progresso com Milestones */}
+          <div className="space-y-2">
+            <div className="flex justify-between items-center text-xs font-bold">
+              <span className="text-slate-600 dark:text-slate-400">
+                {myFichas >= 20 
+                  ? 'Progresso: 100% (Meta Superada!)' 
+                  : `Progresso da Meta: ${Math.min(100, Math.round((myFichas / 20) * 100))}%`}
+              </span>
+              <span className="text-indigo-600 dark:text-indigo-400">
+                {myFichas >= 20 
+                  ? '🏅 Top Entrevistador(a) CEEP' 
+                  : `Faltam ${Math.max(0, 20 - myFichas)} entrevista(s)`}
+              </span>
+            </div>
+
+            {/* Barra Visual */}
+            <div className="w-full h-3.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-200 dark:border-slate-700 relative">
+              <div 
+                className={`h-full rounded-full transition-all duration-700 ${
+                  myFichas >= 20 
+                    ? 'bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 shadow-md shadow-amber-500/40' 
+                    : 'bg-gradient-to-r from-blue-500 to-indigo-600'
+                }`}
+                style={{ width: `${Math.min(100, (myFichas / 20) * 100)}%` }}
+              />
+            </div>
+
+            {/* Marcos Intermediários da Adinha */}
+            <div className="grid grid-cols-4 gap-2 pt-2 text-center">
+              <div className={`p-2 rounded-xl text-[10px] font-bold border transition ${
+                myFichas >= 5 
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' 
+                  : 'bg-slate-50 dark:bg-slate-800/40 text-slate-400 border-slate-200 dark:border-slate-700'
+              }`}>
+                <span>🌱 5: Curiosa</span>
+              </div>
+              <div className={`p-2 rounded-xl text-[10px] font-bold border transition ${
+                myFichas >= 10 
+                  ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800' 
+                  : 'bg-slate-50 dark:bg-slate-800/40 text-slate-400 border-slate-200 dark:border-slate-700'
+              }`}>
+                <span>🔍 10: Metade</span>
+              </div>
+              <div className={`p-2 rounded-xl text-[10px] font-bold border transition ${
+                myFichas >= 15 
+                  ? 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800' 
+                  : 'bg-slate-50 dark:bg-slate-800/40 text-slate-400 border-slate-200 dark:border-slate-700'
+              }`}>
+                <span>⚡ 15: Reta Final</span>
+              </div>
+              <div className={`p-2 rounded-xl text-[10px] font-bold border transition ${
+                myFichas >= 20 
+                  ? 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-200 border-amber-300 dark:border-amber-700 shadow-sm' 
+                  : 'bg-slate-50 dark:bg-slate-800/40 text-slate-400 border-slate-200 dark:border-slate-700'
+              }`}>
+                <span>🏆 20: Campeã!</span>
+              </div>
             </div>
           </div>
         </div>

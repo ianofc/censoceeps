@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabaseClient";
 import {
   Save, Edit3, X, ShieldCheck, Mail, Phone, MapPin,
-  Briefcase, Camera, BookOpen, Star, Award, GraduationCap,
-  CheckCircle, UserCircle, Calendar, Hash, Trophy, Zap, Target
+  Briefcase, BookOpen, Star, Award, GraduationCap,
+  CheckCircle, UserCircle, Calendar, Hash, Trophy, Target
 } from "lucide-react";
+import BadgeList from "../components/Gamification/BadgeList";
 
 interface MeuPerfilProps {
   readonly escolaNome: string;
@@ -130,15 +131,17 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
         const userId = session.user.id;
         const userEmail = session.user.email || "";
 
-        const [{ data: pessoaData }, { count }, { count: pC }, { count: mC }, { count: lC }] = await Promise.all([
+        const [{ data: pessoaData }, { count: censoCount }, { count: entrevistasCount }, { count: pC }, { count: mC }, { count: lC }] = await Promise.all([
           supabase.from("pessoas").select("*").eq("id", userId).single(),
           supabase.from("censo_ceep").select("*", { count: "exact", head: true }).eq("pesquisador_id", userId),
+          supabase.from("entrevistas").select("*", { count: "exact", head: true }).eq("user_id", userId),
           supabase.from("lyka_posts").select("*", { count: "exact", head: true }).eq("user_id", userId),
           supabase.from("lyka_messages").select("*", { count: "exact", head: true }).eq("sender_id", userId),
           supabase.from("pessoa_likes").select("*", { count: "exact", head: true }).eq("liked_id", userId),
         ]);
 
-        setTotalFichas(count || 0);
+        const totalFichasContadas = Math.max(censoCount || 0, entrevistasCount || 0);
+        setTotalFichas(totalFichasContadas);
         setXpStats({ posts: pC || 0, msgs: mC || 0, likes: lC || 0 });
 
         const nomeCompleto = pessoaData?.nome_completo || session.user.user_metadata?.nome_completo || "Usuário Censo";
@@ -188,7 +191,8 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err: unknown) {
-      alert("Erro ao salvar: " + (err.message || "Erro desconhecido"));
+      const msg = err instanceof Error ? err.message : "Erro desconhecido";
+      alert("Erro ao salvar: " + msg);
     } finally {
       setSaving(false);
     }
@@ -306,6 +310,31 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
               }}>
                 {badge.label}
               </span>
+              {totalFichas >= 20 && (
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent('abrir-celebracao-meta-20', { detail: { count: totalFichas } }))}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "4px 14px",
+                    borderRadius: 99,
+                    fontSize: 11,
+                    fontWeight: 900,
+                    color: "#92400e",
+                    background: "linear-gradient(135deg, #fef3c7, #fde68a)",
+                    border: "1.5px solid #f59e0b",
+                    boxShadow: "0 2px 8px rgba(245,158,11,0.25)",
+                    cursor: "pointer",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.5px"
+                  }}
+                  title="Clique para ver o troféu e certificado da Adinha Campeã"
+                >
+                  🏆 Top Entrevistador • Meta 20 (Adinha Campeã) ✨
+                </button>
+              )}
               {saved && (
                 <span style={{
                   display:"flex", alignItems:"center", gap:4,
@@ -415,6 +444,10 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
           </div>
         );
       })()}
+
+      <div style={{ marginTop: 20 }}>
+        <BadgeList userId={perfil.id} />
+      </div>
 
       {/* ── MODO EDIÇÃO ──────────────────────────────────────────────────── */}
       {isEditing && (

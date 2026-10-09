@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 import { Search, Trash2, ShieldCheck, UserCheck, WifiOff } from 'lucide-react';
 
 export function TeacherDashboard() {
-  const [coletas, setColetas] = useState<unknown[]>([]);
+  const [coletas, setColetas] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [isOfflineMode, setIsOfflineMode] = useState(false);
@@ -37,9 +37,9 @@ export function TeacherDashboard() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Deseja realmente excluir esta coleta do Censo?')) return;
+    if (!window.confirm('Deseja realmente excluir esta coleta do Censo?')) return;
     
-    if (id.toString().startsWith('local-')) {
+    if (String(id).startsWith('local-')) {
       const localPending = JSON.parse(localStorage.getItem('censo_pending_queue') || '[]');
       const updatedQueue = localPending.filter((c: any) => c.id !== id);
       localStorage.setItem('censo_pending_queue', JSON.stringify(updatedQueue));
@@ -118,6 +118,7 @@ export function TeacherDashboard() {
                   onClick={() => void handleDelete(item.id)}
                   className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer border-0 bg-transparent"
                   title="Excluir Coleta"
+                  aria-label="Excluir Coleta"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -158,6 +159,7 @@ export function TeacherDashboard() {
             <input
               type="text"
               placeholder="Buscar por entrevistado, turma ou aluno(a)..."
+              aria-label="Buscar por entrevistado, turma ou aluno(a)"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"

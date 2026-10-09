@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 import { Search, FileText, User } from 'lucide-react';
 
 export function Dashboard() {
-  const [coletas, setColetas] = useState<unknown[]>([]);
+  const [coletas, setColetas] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<any>(null);

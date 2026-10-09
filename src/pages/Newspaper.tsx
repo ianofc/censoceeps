@@ -12,6 +12,19 @@ interface NewsArticle {
   category: string;
   date: string;
   url: string;
+  score?: number;
+  likes?: number;
+  shares?: number;
+}
+
+interface RawRssItem {
+  title?: string;
+  description?: string;
+  thumbnail?: string;
+  enclosure?: { link?: string };
+  link?: string;
+  categories?: string[];
+  pubDate?: string;
 }
 
 export function Newspaper() {
@@ -57,7 +70,7 @@ export function Newspaper() {
 
         const responses = await Promise.all(urls.map(url => fetch(url).then(res => res.json())));
         
-        let allItems: unknown[] = [
+        let allItems: RawRssItem[] = [
           {
             title: 'Quem foi Ada Lovelace? A história da primeira programadora do mundo',
             description: 'Muito antes do primeiro computador moderno ser construído, a matemática Ada Lovelace escreveu o primeiro algoritmo a ser processado por uma máquina. Seu legado revolucionou a programação e hoje inspira mulheres na tecnologia e ciência em todo o mundo.',
@@ -238,7 +251,7 @@ export function Newspaper() {
           } as NewsArticle & { score: number, likes: number, shares: number };
         });
 
-        const trendingNews = [...processedNews].sort((a: unknown, b: unknown) => b.score - a.score).slice(0, 100);
+        const trendingNews = [...processedNews].sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, 100);
         
         setLiveNews(trendingNews);
       } catch (err) {

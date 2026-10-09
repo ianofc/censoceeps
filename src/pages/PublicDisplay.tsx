@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Tv2, Award, Landmark } from 'lucide-react';
+import { useUserSession } from '../hooks/useUserSession';
+import { Navigate } from 'react-router-dom';
 
 export function PublicDisplay() {
   const [total, setTotal] = useState(0);
+  const { isTeacher, loading } = useUserSession();
 
   useEffect(() => {
     const fetchTotal = async () => {
@@ -15,6 +18,9 @@ export function PublicDisplay() {
     const interval = setInterval(fetchTotal, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  if (loading) return <div className="p-6 text-center">Carregando telão...</div>;
+  if (!isTeacher) return <Navigate to="/feed" replace />;
 
   return (
     <div className="min-h-[85vh] bg-white rounded-3xl p-8 border border-slate-200 shadow-lg flex flex-col justify-between animate-in fade-in duration-500">

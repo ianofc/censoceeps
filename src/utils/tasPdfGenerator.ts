@@ -1,11 +1,19 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+export interface CensoFichaReport {
+  readonly nome?: string;
+  readonly idade?: number | string;
+  readonly cor_raca?: string;
+  readonly local_moradia?: string;
+  readonly criado_em?: string;
+}
+
 export const tasPdfGenerator = {
   /**
    * Gera um PDF oficial com base nos dados brutos e estatísticas do censo.
    */
-  generateCensoReport: (fichas: unknown[], pesquisadorNome: string, escolaNome: string) => {
+  generateCensoReport: (fichas: readonly CensoFichaReport[], pesquisadorNome: string, escolaNome: string) => {
     console.info("[TAS Relatórios] Gerando PDF Sintético...");
     
     // Inicializa o documento PDF (formato A4)
@@ -45,7 +53,7 @@ export const tasPdfGenerator = {
       ficha.idade || "-",
       ficha.cor_raca || "Mista",
       ficha.local_moradia || "Urbana",
-      new Date(ficha.criado_em).toLocaleDateString("pt-BR")
+      ficha.criado_em ? new Date(ficha.criado_em).toLocaleDateString("pt-BR") : "-"
     ]);
 
     // Tabela usando autotable
@@ -61,7 +69,7 @@ export const tasPdfGenerator = {
     });
 
     // Rodapé de segurança do TAS
-    const finalY = (doc as any).lastAutoTable.finalY || 100;
+    const finalY = (doc as any).lastAutoTable?.finalY ?? 100;
     
     doc.setFont("helvetica", "italic");
     doc.setFontSize(9);
@@ -72,7 +80,7 @@ export const tasPdfGenerator = {
     );
 
     // Salva o PDF
-    const fileName = `CensoCEEP_Relatorio_${new Date().getTime()}.pdf`;
+    const fileName = `CensoCEEP_Relatorio_${Date.now()}.pdf`;
     doc.save(fileName);
     console.info(`[TAS Relatórios] PDF '${fileName}' salvo com sucesso!`);
   }

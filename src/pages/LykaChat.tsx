@@ -296,6 +296,7 @@ export function LykaChat() {
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [scrollUnread, setScrollUnread] = useState(0);
   const [search, setSearch] = useState("");
+  const [chatFilter, setChatFilter] = useState<'todas' | 'nao_lidas' | 'grupos'>('todas');
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
@@ -351,6 +352,7 @@ export function LykaChat() {
         setPessoas(ps);
         const convs: Conversation[] = [
           { id: "group", name: "Layka Chat · Geral", isGroup: true, convKey: null, unread: 0 },
+          { id: "adinha", name: "🤖 Assistente Adinha", isGroup: false, convKey: "adinha_chat", unread: 0 },
         ];
         ps.filter(p => p.id !== profile.id).forEach(p => {
           const key = [profile.id, p.id].sort().join("_");
@@ -640,7 +642,14 @@ export function LykaChat() {
     return a.name.localeCompare(b.name);
   });
 
-  const filteredConvs = sortedConvs.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+  const filteredConvs = sortedConvs.filter(c => {
+    if (!c.name.toLowerCase().includes(search.toLowerCase())) return false;
+    const key = c.convKey ?? "group";
+    const unread = lastMsgs[key]?.unread || 0;
+    if (chatFilter === 'nao_lidas' && unread === 0) return false;
+    if (chatFilter === 'grupos' && !c.isGroup) return false;
+    return true;
+  });
   const totalUnread = Object.values(lastMsgs).reduce((s, v) => s + (v.unread || 0), 0);
   const p = profile;
 
@@ -662,13 +671,36 @@ export function LykaChat() {
             </span>
           )}
         </div>
-        <div style={{ position: "relative" }}>
+        
+        <div style={{ position: "relative", marginBottom: 12 }}>
           <Search style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", width: 14, height: 14, color: "#94a3b8", pointerEvents: "none" }} />
           <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar conversa..."
             style={{ width: "100%", boxSizing: "border-box", paddingLeft: 30, paddingRight: 10, paddingTop: 8, paddingBottom: 8, background: "#f1f5f9", border: "1px solid transparent", borderRadius: 10, color: "#0f172a", fontSize: 13, fontWeight: 500, outline: "none", fontFamily: "inherit", transition: "border 0.2s" }} 
             onFocus={e => (e.target.style.border = "1px solid #3b82f6")}
             onBlur={e => (e.target.style.border = "1px solid transparent")}
           />
+        </div>
+
+        {/* Filtros estilo WhatsApp */}
+        <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 8, scrollbarWidth: "none", msOverflowStyle: "none" }}>
+          <button type="button" onClick={() => setChatFilter('todas')}
+            style={{ flexShrink: 0, padding: "6px 14px", borderRadius: 99, fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.2s",
+              background: chatFilter === 'todas' ? "#dbeafe" : "#f1f5f9",
+              color: chatFilter === 'todas' ? "#2563eb" : "#64748b", border: "none" }}>
+            Todas
+          </button>
+          <button type="button" onClick={() => setChatFilter('nao_lidas')}
+            style={{ flexShrink: 0, padding: "6px 14px", borderRadius: 99, fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.2s",
+              background: chatFilter === 'nao_lidas' ? "#dbeafe" : "#f1f5f9",
+              color: chatFilter === 'nao_lidas' ? "#2563eb" : "#64748b", border: "none" }}>
+            Não lidas
+          </button>
+          <button type="button" onClick={() => setChatFilter('grupos')}
+            style={{ flexShrink: 0, padding: "6px 14px", borderRadius: 99, fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.2s",
+              background: chatFilter === 'grupos' ? "#dbeafe" : "#f1f5f9",
+              color: chatFilter === 'grupos' ? "#2563eb" : "#64748b", border: "none" }}>
+            Grupos
+          </button>
         </div>
       </div>
 

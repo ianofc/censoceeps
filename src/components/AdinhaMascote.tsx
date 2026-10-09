@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 const adinhaCorrendo = new URL('../assets/imgs/adinhacorrendo.png', import.meta.url).href;
 const adinhaAndando = new URL('../assets/imgs/adinhaandando.png', import.meta.url).href;
 const adinhaVencedora = new URL('../assets/imgs/adinhavencedora.png', import.meta.url).href;
-const adinhaPerfil = new URL('../assets/imgs/adinhapefil.png', import.meta.url).href;
+const adinhaPerfil = new URL('../assets/imgs/adinhaperfil.png', import.meta.url).href;
 const adinhaIdeia = new URL('../assets/imgs/adinhaideia.png', import.meta.url).href;
 const adinhaLendo = new URL('../assets/imgs/adinhalendo.png', import.meta.url).href;
 const adinhaCafe = new URL('../assets/imgs/adinhatomandocafe.png', import.meta.url).href;

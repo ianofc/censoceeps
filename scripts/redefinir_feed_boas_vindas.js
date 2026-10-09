@@ -1,14 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 
 function loadEnv() {
   try {
     const envPath = path.resolve(process.cwd(), '.env');
     const envContent = fs.readFileSync(envPath, 'utf-8');
     const getVal = (key) => {
-      const match = envContent.match(new RegExp(`${key}=(.*)`));
-      return match ? match[1].trim() : '';
+      const line = envContent.split(/\r?\n/).find(l => l.trim().startsWith(`${key}=`));
+      return line ? line.substring(line.indexOf('=') + 1).trim() : '';
     };
 
     const url = getVal('VITE_SUPABASE_URL') || getVal('SUPABASE_URL');
@@ -132,4 +132,4 @@ Contamos com a energia, a dedicação e o compromisso de cada um de vocês. Um e
   console.log('📊 Estado atual de lyka_posts:', totalPosts);
 }
 
-resetFeed();
+await resetFeed();
