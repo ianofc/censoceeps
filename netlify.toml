@@ -1,5 +1,5 @@
 [build]
-  command = "npm run build"
+  command = "node scripts/validate-build.js && npm run build"
   publish = "dist" # ou "build", conforme a pasta de saída do seu projeto
   functions = "netlify/functions"
 

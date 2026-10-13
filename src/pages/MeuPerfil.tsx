@@ -6,6 +6,7 @@ import {
   CheckCircle, UserCircle, Calendar, Hash, Trophy, Target
 } from "lucide-react";
 import BadgeList from "../components/Gamification/BadgeList";
+import { CrachaPesquisador } from "../components/CrachaPesquisador";
 
 interface MeuPerfilProps {
   readonly escolaNome: string;
@@ -207,6 +208,12 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 0", gap: 16 }}>
         <style>{`@keyframes perfilSpin { to { transform: rotate(360deg); } }`}</style>
+
+      {perfil.turma_ou_cargo?.toUpperCase().includes('1� ADM') || perfil.turma_ou_cargo?.toUpperCase().includes('1 ADM') ? (
+        <div style={{ marginBottom: 24 }}>
+          <CrachaPesquisador nome={perfil.nome} avatarUrl={perfil.avatar_url} turma={perfil.turma_ou_cargo} />
+        </div>
+      ) : null}
         <div style={{ width: 44, height: 44, border: "3px solid #ede9fe", borderTopColor: "#7c3aed", borderRadius: "50%", animation: "perfilSpin 0.8s linear infinite" }} />
         <span style={{ color: "#7c3aed", fontWeight: 700, fontSize: 14 }}>Carregando perfil...</span>
       </div>
@@ -234,6 +241,12 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
         @keyframes perfilPop { from { opacity:0; transform: scale(0.95) translateY(8px); } to { opacity:1; transform: scale(1) translateY(0); } }
         @keyframes savedPulse { 0%,100% { opacity:1; } 50% { opacity:0.7; } }
       `}</style>
+
+      {perfil.turma_ou_cargo?.toUpperCase().includes('1� ADM') || perfil.turma_ou_cargo?.toUpperCase().includes('1 ADM') ? (
+        <div style={{ marginBottom: 24 }}>
+          <CrachaPesquisador nome={perfil.nome} avatarUrl={perfil.avatar_url} turma={perfil.turma_ou_cargo} />
+        </div>
+      ) : null}
 
       {/* ── CARD PRINCIPAL ─────────────────────────────────────────────── */}
       <div style={{

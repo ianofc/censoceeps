@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { InterviewData, PreconceitoTipo, LocalizacaoMoradiaTipo, OrigemFamiliaTipo, CorRacaIBGE, VinculoTipo } from '../types/interview';
 import { ClipboardList, UserCheck, Users, AlertCircle, Send, User, Phone, MapPin, Globe, Compass, ShieldAlert } from 'lucide-react';
 import { AdinhaMascote } from './AdinhaMascote';
+import { supabase } from '../lib/supabaseClient';
+import { CelebracaoConquistaModal } from './CelebracaoConquistaModal';
 
 interface Props {
   readonly userId: string;
@@ -41,6 +43,23 @@ export const InterviewForm: React.FC<Props> = ({ userId }) => {
 
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [celebracaoAberta, setCelebracaoAberta] = useState(false);
+
+  const verificarMetaEntrevistas = async (usuarioId: string) => {
+    const { count, error } = await supabase
+      .from('entrevistas')
+      .select('*', { count: 'exact', head: true })
+      .eq('entrevistador_id', usuarioId);
+
+    if (!error && count === 20) {
+      setCelebracaoAberta(true);
+      await supabase.from('usuario_badges').upsert({
+        usuario_id: usuarioId,
+        badge_tipo: 'adinha_campea_meta_20',
+        conquistado_em: new Date().toISOString(),
+      });
+    }
+  };
 
   const handleArrayToggle = (field: 'espacos_influencia' | 'ambientes_conversa' | 'locais_ocorrencia' | 'formas_ocorrencia', item: string) => {
     const atuais = (formData[field] as string[]) || [];
@@ -55,57 +74,89 @@ export const InterviewForm: React.FC<Props> = ({ userId }) => {
     e.preventDefault();
     setLoading(true);
     try {
+      if (!formData.vinculo || !userId) {
+        alert('Preencha todos os campos obrigatórios.');
+        setLoading(false);
+        return;
+      }
+
       const payload = {
-        ...formData,
-        grupo_escolar: `${formData.serie || ''} - ${formData.turma || ''}`.trim()
+        entrevistador_id: userId,
+        nome_participante: formData.nome_participante?.trim() || 'Anônimo',
+        contato_whatsapp: formData.contato_whatsapp?.trim() || null,
+        vinculo: formData.vinculo,
+        serie: formData.serie || null,
+        turma: formData.turma || null,
+        turno: formData.turno || null,
+        faixa_etaria: formData.faixa_etaria || null,
+        genero: formData.genero || null,
+        cidade_natal: formData.cidade_natal || null,
+        local_moradia: formData.localizacao_moradia || null,
+        detalhe_localizacao: formData.detalhe_localizacao?.trim() || null,
+        cor_raca: formData.cor_raca || null,
+        origem_familia: formData.origem_familia || null,
+        povo_indigena: formData.povo_indigena?.trim() || null,
+        cor_raca_influencia: formData.cor_raca_influencia || null,
+        espacos_influencia: formData.espacos_influencia || [],
+        conhece_ancestralidade: formData.conhece_ancestralidade || null,
+        ja_conversou_sobre: formData.ja_conversou_sobre || null,
+        ambientes_conversa: formData.ambientes_conversa || [],
+        sofreu_preconceito: formData.sofreu_preconceito || null,
+        locais_ocorrencia: formData.locais_ocorrencia || [],
+        formas_ocorrencia: formData.formas_ocorrencia || [],
+        relato_preconceito: formData.relato_preconceito?.trim() || null,
+        mora_com: formData.mora_com || null,
+        acesso_internet: formData.acesso_internet || null,
+        tempo_deslocamento: formData.tempo_deslocamento || null,
+        risco_evasao: formData.risco_evasao || null,
       };
 
-      const res = await fetch('/api/interview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      const { error } = await supabase
+        .from('entrevistas')
+        .insert([payload]);
 
-      const result = await res.json();
-      if (res.ok) {
-        setSuccess(true);
-        setFormData({
-          interviewer_id: userId,
-          nome_participante: '',
-          contato_whatsapp: '',
-          genero: '',
-          vinculo: 'ESTUDANTE_REGULAR',
-          serie: '',
-          turma: '',
-          turno: 'Matutino',
-          faixa_etaria: '',
-          cidade_natal: 'Seabra',
-          localizacao_moradia: 'Sede de Seabra',
-          detalhe_localizacao: '',
-          cor_raca: 'Parda',
-          origem_familia: 'Mista / Diversa',
-          mora_com: '',
-          acesso_internet: '',
-          tempo_deslocamento: '',
-          risco_evasao: '',
-          povo_indigena: '',
-          cor_raca_influencia: 'Sim',
-          espacos_influencia: [],
-          conhece_ancestralidade: 'Não conheço',
-          ja_conversou_sobre: 'Nunca',
-          ambientes_conversa: [],
-          sofreu_preconceito: 'Não',
-          locais_ocorrencia: [],
-          formas_ocorrencia: [],
-          relato_preconceito: ''
-        });
-        setTimeout(() => setSuccess(false), 5000);
-      } else {
-        alert(`Erro: ${result.error}`);
+      if (error) {
+        console.error('Erro ao salvar no Supabase:', error);
+        alert(`Erro ao registrar entrevista: ${error.message}`);
+        return;
       }
-    } catch (error) {
-      console.error('Erro de conexão:', error);
-      alert('Erro de conexão com o servidor.');
+
+      setSuccess(true);
+      await verificarMetaEntrevistas(userId);
+      setFormData({
+        interviewer_id: userId,
+        nome_participante: '',
+        contato_whatsapp: '',
+        genero: '',
+        vinculo: 'ESTUDANTE_REGULAR',
+        serie: '',
+        turma: '',
+        turno: 'Matutino',
+        faixa_etaria: '',
+        cidade_natal: 'Seabra',
+        localizacao_moradia: 'Sede de Seabra',
+        detalhe_localizacao: '',
+        cor_raca: 'Parda',
+        origem_familia: 'Mista / Diversa',
+        mora_com: '',
+        acesso_internet: '',
+        tempo_deslocamento: '',
+        risco_evasao: '',
+        povo_indigena: '',
+        cor_raca_influencia: 'Sim',
+        espacos_influencia: [],
+        conhece_ancestralidade: 'Não conheço',
+        ja_conversou_sobre: 'Nunca',
+        ambientes_conversa: [],
+        sofreu_preconceito: 'Não',
+        locais_ocorrencia: [],
+        formas_ocorrencia: [],
+        relato_preconceito: ''
+      });
+      setTimeout(() => setSuccess(false), 5000);
+    } catch (error: any) {
+      console.error('Erro ao salvar entrevista:', error);
+      alert(error?.message ? `Erro: ${error.message}` : 'Erro de conexão com o banco de dados.');
     } finally {
       setLoading(false);
     }
@@ -339,7 +390,7 @@ export const InterviewForm: React.FC<Props> = ({ userId }) => {
 
 
             <div>
-              <label htmlFor="acesso-internet" className="block text-xs font-bold text-slate-700 uppercase mb-2">Acesso à internet e equipamentos</label>
+              <label htmlFor="acesso-internet" className="block text-xs font-bold text-slate-700 uppercase mb-2">Tem acesso a internet em casa? Se sim, no computador ou celular?</label>
               <select 
                 id="acesso-internet"
                 value={formData.acesso_internet || ''} 
@@ -426,7 +477,7 @@ export const InterviewForm: React.FC<Props> = ({ userId }) => {
 
           <div>
             <label htmlFor="cor-raca-influencia" className="block text-xs font-bold text-slate-700 uppercase mb-2">
-              Você considera que a cor ou raça influencia a vida das pessoas no Brasil?
+              A raiz social (cor, raça ou classe) influencia a vida das pessoas no Brasil?
             </label>
             <select 
               id="cor-raca-influencia"
@@ -443,7 +494,7 @@ export const InterviewForm: React.FC<Props> = ({ userId }) => {
 
           <div>
             <label htmlFor="risco-evasao" className="block text-xs font-bold text-slate-700 uppercase mb-2">
-              Você já pensou seriamente em desistir ou abandonar a escola?
+              Você já pensou em desistir da escola por motivos financeiros ou de convivência?
             </label>
             <select 
               id="risco-evasao"
@@ -611,6 +662,13 @@ export const InterviewForm: React.FC<Props> = ({ userId }) => {
         </button>
 
       </form>
+
+      <CelebracaoConquistaModal 
+        isOpen={celebracaoAberta} 
+        onClose={() => setCelebracaoAberta(false)} 
+        nomeAluno={"Pesquisador"} 
+        totalEntrevistas={20} 
+      />
     </div>
   );
 };

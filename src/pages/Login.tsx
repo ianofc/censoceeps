@@ -51,7 +51,14 @@ export function Login({ onLoginSuccess }: LoginProps) {
 
       onLoginSuccess();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Erro ao realizar login. Verifique suas credenciais.');
+      const msg = err?.message || '';
+      if (msg.toLowerCase().includes('failed to fetch') || msg.toLowerCase().includes('network')) {
+        setErrorMsg('Falha de conexão com o servidor. Verifique sua internet ou tente novamente em instantes.');
+      } else if (msg.toLowerCase().includes('invalid login credentials') || msg.toLowerCase().includes('invalid credentials')) {
+        setErrorMsg('E-mail ou senha incorretos. Verifique suas credenciais.');
+      } else {
+        setErrorMsg(msg || 'Erro ao realizar login. Verifique suas credenciais.');
+      }
     } finally {
       setLoading(false);
     }

@@ -12,6 +12,8 @@ export function AnalyticsDashboard() {
     internet: {} as Record<string, number>,
     evasao: {} as Record<string, number>,
     moradia: {} as Record<string, number>,
+    moraCom: {} as Record<string, number>,
+    raizSocial: {} as Record<string, number>,
   });
 
   const [rawData, setRawData] = useState<any[]>([]);
@@ -40,6 +42,8 @@ export function AnalyticsDashboard() {
           internet: {} as Record<string, number>,
           evasao: {} as Record<string, number>,
           moradia: {} as Record<string, number>,
+          moraCom: {} as Record<string, number>,
+          raizSocial: {} as Record<string, number>,
         };
 
         data.forEach((row) => {
@@ -48,7 +52,9 @@ export function AnalyticsDashboard() {
           if (row.vinculo) newStats.vinculo[row.vinculo] = (newStats.vinculo[row.vinculo] || 0) + 1;
           if (row.acesso_internet) newStats.internet[row.acesso_internet] = (newStats.internet[row.acesso_internet] || 0) + 1;
           if (row.risco_evasao) newStats.evasao[row.risco_evasao] = (newStats.evasao[row.risco_evasao] || 0) + 1;
-          if (row.local_moradia) newStats.moradia[row.local_moradia] = (newStats.moradia[row.local_moradia] || 0) + 1;
+          if (row.localizacao_moradia) newStats.moradia[row.localizacao_moradia] = (newStats.moradia[row.localizacao_moradia] || 0) + 1;
+          if (row.mora_com) newStats.moraCom[row.mora_com] = (newStats.moraCom[row.mora_com] || 0) + 1;
+          if (row.cor_raca_influencia) newStats.raizSocial[row.cor_raca_influencia] = (newStats.raizSocial[row.cor_raca_influencia] || 0) + 1;
         });
 
         // Ordena os resultados para gráficos mais bonitos
@@ -61,6 +67,8 @@ export function AnalyticsDashboard() {
           internet: sortObj(newStats.internet),
           evasao: sortObj(newStats.evasao),
           moradia: sortObj(newStats.moradia),
+          moraCom: sortObj(newStats.moraCom),
+          raizSocial: sortObj(newStats.raizSocial),
         });
       }
     } catch (err) {
@@ -284,7 +292,7 @@ export function AnalyticsDashboard() {
         {/* INCLUSÃO DIGITAL */}
         <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-6">
           <h3 className="font-black text-slate-800 text-base flex items-center gap-2 pb-4 border-b border-slate-50">
-            <Laptop className="w-5 h-5 text-cyan-600" /> Inclusão Digital (Acesso)
+            <Laptop className="w-5 h-5 text-cyan-600" /> Inclusão Digital (Internet no Computador/Celular)
           </h3>
           <div className="space-y-4">
             {Object.keys(stats.internet).length === 0 ? (
@@ -298,13 +306,41 @@ export function AnalyticsDashboard() {
         {/* RISCO DE EVASÃO ESCOLAR */}
         <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-6">
           <h3 className="font-black text-slate-800 text-base flex items-center gap-2 pb-4 border-b border-slate-50">
-            <AlertCircle className="w-5 h-5 text-rose-600" /> Indicativo de Risco de Evasão
+            <AlertCircle className="w-5 h-5 text-rose-600" /> Risco de Evasão Escolar (por motivos)
           </h3>
           <div className="space-y-4">
             {Object.keys(stats.evasao).length === 0 ? (
               <p className="text-xs text-slate-400 font-medium">Sem dados suficientes.</p>
             ) : (
               Object.entries(stats.evasao).map(([key, count]) => renderProgressBar(key, count, totalAmostras, 'bg-rose-500'))
+            )}
+          </div>
+        </div>
+
+        {/* COM QUEM MORA */}
+        <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-6">
+          <h3 className="font-black text-slate-800 text-base flex items-center gap-2 pb-4 border-b border-slate-50">
+            <Users className="w-5 h-5 text-orange-600" /> Com Quem Mora
+          </h3>
+          <div className="space-y-4">
+            {Object.keys(stats.moraCom).length === 0 ? (
+              <p className="text-xs text-slate-400 font-medium">Sem dados suficientes.</p>
+            ) : (
+              Object.entries(stats.moraCom).map(([key, count]) => renderProgressBar(key, count, totalAmostras, 'bg-orange-500'))
+            )}
+          </div>
+        </div>
+
+        {/* INFLUÊNCIA DA RAIZ SOCIAL */}
+        <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-6">
+          <h3 className="font-black text-slate-800 text-base flex items-center gap-2 pb-4 border-b border-slate-50">
+            <Compass className="w-5 h-5 text-purple-600" /> A Raiz Social Influencia no Brasil?
+          </h3>
+          <div className="space-y-4">
+            {Object.keys(stats.raizSocial).length === 0 ? (
+              <p className="text-xs text-slate-400 font-medium">Sem dados suficientes.</p>
+            ) : (
+              Object.entries(stats.raizSocial).map(([key, count]) => renderProgressBar(key, count, totalAmostras, 'bg-purple-500'))
             )}
           </div>
         </div>
