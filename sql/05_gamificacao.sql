@@ -1,9 +1,9 @@
 -- ==============================================================================
 -- CENSO CEEP ADA LOVELACE - SISTEMA DE GAMIFICAÇÃO & INSÍGNIAS
--- Schema e Catálogo Inicial de Insígnias
+-- Schema e Catálogo Inicial de Insígnias (100% Idempotente e Seguro)
 -- ==============================================================================
 
--- Tabela para persistência ágil de status, XP e Insígnias
+-- 1. Tabela para persistência ágil de status, XP e Insígnias
 CREATE TABLE IF NOT EXISTS public.user_stats (
     user_id TEXT PRIMARY KEY,
     xp INTEGER NOT NULL DEFAULT 0,
@@ -14,10 +14,17 @@ CREATE TABLE IF NOT EXISTS public.user_stats (
 );
 
 ALTER TABLE public.user_stats ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "user_stats_select_all" ON public.user_stats FOR SELECT USING (true);
-CREATE POLICY "user_stats_insert_upsert" ON public.user_stats FOR ALL USING (true) WITH CHECK (true);
 
--- Tabela de Catálogo de Insígnias Disponíveis
+DROP POLICY IF EXISTS "user_stats_select_all" ON public.user_stats;
+CREATE POLICY "user_stats_select_all" ON public.user_stats 
+    FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "user_stats_insert_upsert" ON public.user_stats;
+CREATE POLICY "user_stats_insert_upsert" ON public.user_stats 
+    FOR ALL USING (true) WITH CHECK (true);
+
+
+-- 2. Tabela de Catálogo de Insígnias Disponíveis
 CREATE TABLE IF NOT EXISTS public.badges (
     id VARCHAR(100) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -32,9 +39,14 @@ CREATE TABLE IF NOT EXISTS public.badges (
 );
 
 ALTER TABLE public.badges ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Badges are viewable by everyone" ON public.badges FOR SELECT USING (true);
 
--- Tabela relacional de insígnias conquistadas
+DROP POLICY IF EXISTS "Badges are viewable by everyone" ON public.badges;
+DROP POLICY IF EXISTS "badges_select_all" ON public.badges;
+CREATE POLICY "badges_select_all" ON public.badges 
+    FOR SELECT USING (true);
+
+
+-- 3. Tabela relacional de insígnias conquistadas
 CREATE TABLE IF NOT EXISTS public.user_badges (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL,
@@ -44,10 +56,19 @@ CREATE TABLE IF NOT EXISTS public.user_badges (
 );
 
 ALTER TABLE public.user_badges ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "User badges are viewable by everyone" ON public.user_badges FOR SELECT USING (true);
-CREATE POLICY "User badges are insertable" ON public.user_badges FOR INSERT WITH CHECK (true);
 
--- Seed Inicial das Insígnias
+DROP POLICY IF EXISTS "User badges are viewable by everyone" ON public.user_badges;
+DROP POLICY IF EXISTS "user_badges_select_all" ON public.user_badges;
+CREATE POLICY "user_badges_select_all" ON public.user_badges 
+    FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "User badges are insertable" ON public.user_badges;
+DROP POLICY IF EXISTS "user_badges_insert" ON public.user_badges;
+CREATE POLICY "user_badges_insert" ON public.user_badges 
+    FOR INSERT WITH CHECK (true);
+
+
+-- 4. Seed Inicial das Insígnias Graduais
 INSERT INTO public.badges (id, name, description, icon, category, rarity, xp_reward, criteria)
 VALUES
   ('primeiro_acesso', 'Pioneiro do Censo', 'Entrou e desbravou a plataforma do Censo Escolar pela primeira vez.', '🚀', 'acesso', 'comum', 50, 'Fazer o primeiro login na plataforma'),

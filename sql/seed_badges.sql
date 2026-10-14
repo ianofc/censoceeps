@@ -1,7 +1,7 @@
 -- ==============================================================================
 -- CENSO CEEP ADA LOVELACE - SISTEMA DE GAMIFICAÇÃO & INSÍGNIAS
 -- Script de Criação e Cadastro Inicial de Insígnias (Seed)
--- Pode ser executado diretamente no Supabase SQL Editor
+-- Pode ser executado repetidas vezes no Supabase SQL Editor sem erros
 -- ==============================================================================
 
 -- 1. Garante que a tabela user_stats existe para sincronização ágil de XP e Insígnias
@@ -14,23 +14,15 @@ CREATE TABLE IF NOT EXISTS public.user_stats (
     badges TEXT NOT NULL DEFAULT '[]'
 );
 
--- Políticas RLS para user_stats
 ALTER TABLE public.user_stats ENABLE ROW LEVEL SECURITY;
 
-DO $$ 
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_policies WHERE tablename = 'user_stats' AND policyname = 'user_stats_select_all'
-    ) THEN
-        CREATE POLICY "user_stats_select_all" ON public.user_stats FOR SELECT USING (true);
-    END IF;
+DROP POLICY IF EXISTS "user_stats_select_all" ON public.user_stats;
+CREATE POLICY "user_stats_select_all" ON public.user_stats 
+    FOR SELECT USING (true);
 
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_policies WHERE tablename = 'user_stats' AND policyname = 'user_stats_insert_upsert'
-    ) THEN
-        CREATE POLICY "user_stats_insert_upsert" ON public.user_stats FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-END $$;
+DROP POLICY IF EXISTS "user_stats_insert_upsert" ON public.user_stats;
+CREATE POLICY "user_stats_insert_upsert" ON public.user_stats 
+    FOR ALL USING (true) WITH CHECK (true);
 
 
 -- 2. Tabela de Catálogo Oficial de Insígnias (Badges)
@@ -49,14 +41,10 @@ CREATE TABLE IF NOT EXISTS public.badges (
 
 ALTER TABLE public.badges ENABLE ROW LEVEL SECURITY;
 
-DO $$ 
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_policies WHERE tablename = 'badges' AND policyname = 'badges_select_all'
-    ) THEN
-        CREATE POLICY "badges_select_all" ON public.badges FOR SELECT USING (true);
-    END IF;
-END $$;
+DROP POLICY IF EXISTS "Badges are viewable by everyone" ON public.badges;
+DROP POLICY IF EXISTS "badges_select_all" ON public.badges;
+CREATE POLICY "badges_select_all" ON public.badges 
+    FOR SELECT USING (true);
 
 
 -- 3. Tabela Relacional de Insígnias Conquistadas (user_badges)
@@ -70,20 +58,15 @@ CREATE TABLE IF NOT EXISTS public.user_badges (
 
 ALTER TABLE public.user_badges ENABLE ROW LEVEL SECURITY;
 
-DO $$ 
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_policies WHERE tablename = 'user_badges' AND policyname = 'user_badges_select_all'
-    ) THEN
-        CREATE POLICY "user_badges_select_all" ON public.user_badges FOR SELECT USING (true);
-    END IF;
+DROP POLICY IF EXISTS "User badges are viewable by everyone" ON public.user_badges;
+DROP POLICY IF EXISTS "user_badges_select_all" ON public.user_badges;
+CREATE POLICY "user_badges_select_all" ON public.user_badges 
+    FOR SELECT USING (true);
 
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_policies WHERE tablename = 'user_badges' AND policyname = 'user_badges_insert'
-    ) THEN
-        CREATE POLICY "user_badges_insert" ON public.user_badges FOR INSERT WITH CHECK (true);
-    END IF;
-END $$;
+DROP POLICY IF EXISTS "User badges are insertable" ON public.user_badges;
+DROP POLICY IF EXISTS "user_badges_insert" ON public.user_badges;
+CREATE POLICY "user_badges_insert" ON public.user_badges 
+    FOR INSERT WITH CHECK (true);
 
 
 -- 4. CADASTRO GRADUAL DAS INSÍGNIAS (SEED DATA)
