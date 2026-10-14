@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useUserSession } from "../hooks/useUserSession";
+import { badgeService } from "../services/badgeService";
 import {
   Sparkles, Send, Heart, MessageCircle,
   MoreHorizontal, Trash2, TrendingUp, Zap,
@@ -159,6 +160,8 @@ function PostCard({ post, profile, onRefresh }: { post:Post; profile:any; onRefr
         alert("Erro ao reagir: " + error.message);
         // revert optimistic update
         setLiked(false); setLikeCount(c => c-1);
+      } else if (profile?.id) {
+        void badgeService.unlockBadge(profile.id, 'primeira_reacao');
       }
     }
     onRefresh();
@@ -168,6 +171,9 @@ function PostCard({ post, profile, onRefresh }: { post:Post; profile:any; onRefr
   const handleEmojiReact = async (emoji: string) => {
     setShowEmoji(false);
     await supabase.from("lyka_reactions").upsert([{post_id:post.id, user_id:profile.id, emoji}],{onConflict:"post_id,user_id"});
+    if (profile?.id) {
+      void badgeService.unlockBadge(profile.id, 'primeira_reacao');
+    }
     onRefresh();
   };
 
@@ -529,6 +535,10 @@ export function Feed() {
       alert("Erro ao publicar: " + error.message);
     } else {
       setNewPostContent(""); setImageUrl(""); setShowImageInput(false);
+      if (profile?.id) {
+        void badgeService.unlockBadge(profile.id, 'primeiro_post');
+        void badgeService.checkUserMilestones(profile.id);
+      }
       await fetchPosts();
     }
     setPosting(false);

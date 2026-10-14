@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useUserSession } from "../hooks/useUserSession";
+import { badgeService } from "../services/badgeService";
 import {
   Send, Wifi, WifiOff, ChevronDown, ArrowLeft, Search,
   Radio, CornerUpLeft, Trash2, X, Heart, ExternalLink, Mic, Square, Edit2, XCircle, MoreVertical, Palette, Smile
@@ -558,6 +559,10 @@ export function LykaChat() {
       setNewMessage(text); 
     } else if (data && data[0]) {
       setMessages(prev => prev.map(m => m.id === opt.id ? { ...m, id: data[0].id } : m));
+      if (profile?.id) {
+        void badgeService.unlockBadge(profile.id, 'primeira_mensagem');
+        void badgeService.checkUserMilestones(profile.id);
+      }
     }
     setSending(false);
     inputRef.current?.focus();

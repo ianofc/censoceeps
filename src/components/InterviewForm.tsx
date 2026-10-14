@@ -4,6 +4,7 @@ import { ClipboardList, UserCheck, Users, AlertCircle, Send, User, Phone, MapPin
 import { AdinhaMascote } from './AdinhaMascote';
 import { supabase } from '../lib/supabaseClient';
 import { CelebracaoConquistaModal } from './CelebracaoConquistaModal';
+import { badgeService } from '../services/badgeService';
 
 interface Props {
   readonly userId: string;
@@ -46,18 +47,17 @@ export const InterviewForm: React.FC<Props> = ({ userId }) => {
   const [celebracaoAberta, setCelebracaoAberta] = useState(false);
 
   const verificarMetaEntrevistas = async (usuarioId: string) => {
+    // Atualiza marcos graduais (1ª entrevista, 5 entrevistas, 10 entrevistas e meta 20)
+    await badgeService.checkUserMilestones(usuarioId);
+
     const { count, error } = await supabase
       .from('entrevistas')
       .select('*', { count: 'exact', head: true })
       .eq('entrevistador_id', usuarioId);
 
-    if (!error && count === 20) {
+    if (!error && count && count >= 20) {
       setCelebracaoAberta(true);
-      await supabase.from('usuario_badges').upsert({
-        usuario_id: usuarioId,
-        badge_tipo: 'adinha_campea_meta_20',
-        conquistado_em: new Date().toISOString(),
-      });
+      await badgeService.unlockBadge(usuarioId, 'adinha_campea_meta_20');
     }
   };
 

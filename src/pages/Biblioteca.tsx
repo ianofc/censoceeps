@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { badgeService } from '../services/badgeService';
 
 interface BibliotecaItem {
   id: string;
@@ -17,6 +18,18 @@ export function Biblioteca() {
 
   useEffect(() => {
     fetchItems();
+    supabase.auth.getSession().then(({ data }) => {
+      let uid = data.session?.user?.id;
+      if (!uid && typeof window !== 'undefined') {
+        try {
+          const testUser = JSON.parse(localStorage.getItem('ceep_test_user') || '{}');
+          uid = testUser?.id;
+        } catch {}
+      }
+      if (uid) {
+        void badgeService.recordExplorationVisit(uid, 'biblioteca');
+      }
+    });
   }, []);
 
   const fetchItems = async () => {

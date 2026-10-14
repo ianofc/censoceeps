@@ -7,6 +7,8 @@ import { MercurioToaster } from './components/MercurioToaster';
 import { FloatingNav } from './components/FloatingNav';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { CelebracaoAdinhaCampea } from './components/CelebracaoAdinhaCampea';
+import { BadgeCelebrationModal } from './components/Gamification/BadgeCelebrationModal';
+import { badgeService } from './services/badgeService';
 import { tasOfflineSync } from './utils/tasOfflineSync';
 
 const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login })));
@@ -49,6 +51,21 @@ function Layout({ session }: LayoutProps) {
       tasOfflineSync.syncOfflineData(session.user.id);
     }
     return () => window.removeEventListener('online', handleOnline);
+  }, [session?.user?.id]);
+
+  useEffect(() => {
+    let uid = session?.user?.id;
+    if (!uid && typeof window !== 'undefined') {
+      try {
+        const testUser = JSON.parse(localStorage.getItem('ceep_test_user') || '{}');
+        uid = testUser?.id;
+      } catch {
+        // ignora
+      }
+    }
+    if (uid) {
+      void badgeService.checkUserMilestones(uid);
+    }
   }, [session?.user?.id]);
 
   return (
@@ -95,6 +112,7 @@ function Layout({ session }: LayoutProps) {
         <MercurioToaster />
         <PWAInstallPrompt />
         <CelebracaoAdinhaCampea />
+        <BadgeCelebrationModal />
       </main>
     </div>
   );

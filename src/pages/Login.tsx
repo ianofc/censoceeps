@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { Landmark, Lock, Mail, ArrowRight, Loader2, Sparkles, WifiOff } from 'lucide-react';
+import { Landmark, Lock, Mail, ArrowRight, Loader2, Sparkles, WifiOff, Smartphone, Globe } from 'lucide-react';
 
 const adinhaprogramando = new URL('../assets/imgs/adinhaprogramando.png', import.meta.url).href;
 const logoCenso = new URL('../assets/imgs/AdaLovelace.png', import.meta.url).href;
@@ -205,7 +205,17 @@ export function Login({ onLoginSuccess }: LoginProps) {
             </button>
           </form>
 
-
+          {/* Botão de Ajuda para Instalação no iPhone/Android & Acesso Direto */}
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent('open-pwa-install-modal'))}
+              className="w-full py-2.5 px-3 bg-indigo-50/80 hover:bg-indigo-100/90 text-indigo-700 hover:text-indigo-800 text-xs font-semibold rounded-xl border border-indigo-200/80 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+            >
+              <Smartphone className="w-4 h-4 text-indigo-600 shrink-0" />
+              <span>Instalar no Celular (iPhone / Android) & Ajuda Safari</span>
+            </button>
+          </div>
 
           <p className="text-[11px] text-center text-slate-400 font-medium mt-4">
             Centro Estadual de Educação Profissional de Seabra — CEEP<br />

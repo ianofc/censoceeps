@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Newspaper as NewsIcon, Radio, Sparkles, Search, BookOpen } from 'lucide-react';
 import { AdinhaMascote } from '../components/AdinhaMascote';
+import { supabase } from '../lib/supabaseClient';
+import { badgeService } from '../services/badgeService';
 
 // Estrutura de dados que a IRIS vai coletar e o Mercúrio vai entregar
 interface NewsArticle {
@@ -52,6 +54,19 @@ export function Newspaper() {
   };
 
   useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      let uid = data.session?.user?.id;
+      if (!uid && typeof window !== 'undefined') {
+        try {
+          const testUser = JSON.parse(localStorage.getItem('ceep_test_user') || '{}');
+          uid = testUser?.id;
+        } catch {}
+      }
+      if (uid) {
+        void badgeService.recordExplorationVisit(uid, 'jornal');
+      }
+    });
+
     const fetchLiveNews = async () => {
       try {
         setLoading(true);

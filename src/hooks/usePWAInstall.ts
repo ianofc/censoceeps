@@ -20,6 +20,8 @@ export function usePWAInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(globalDeferredPrompt);
   const [isInstalled, setIsInstalled] = useState<boolean>(false);
   const [isIOS, setIsIOS] = useState<boolean>(false);
+  const [isInApp, setIsInApp] = useState<boolean>(false);
+  const [isSafari, setIsSafari] = useState<boolean>(false);
 
   useEffect(() => {
     // 1. Verifica se já está rodando como PWA instalado (Standalone)
@@ -34,12 +36,23 @@ export function usePWAInstall() {
       return;
     }
 
-    // 2. Detecta iOS Safari
+    // 2. Detecta iOS (iPhone, iPad, iPod ou iPadOS que envia MacIntel mas possui touch)
     const userAgent = window.navigator.userAgent.toLowerCase();
-    const isIOSDevice = /iphone|ipad|ipod/.test(userAgent);
+    const isIOSDevice = 
+      /iphone|ipad|ipod/.test(userAgent) || 
+      (window.navigator.platform === 'MacIntel' && window.navigator.maxTouchPoints > 1);
     setIsIOS(isIOSDevice);
 
-    // 3. Listener do evento nativo
+    // 3. Detecta se está rodando dentro de um In-App Browser (Instagram, WhatsApp, Facebook, TikTok, Twitter, Google App)
+    const inApp = /fbav|instagram|fban|gsa|line|twitter|tiktok|bytedance|wv/i.test(userAgent) ||
+      (isIOSDevice && !userAgent.includes('safari') && !userAgent.includes('crios') && !userAgent.includes('fxios'));
+    setIsInApp(inApp);
+
+    // 4. Detecta Safari nativo no iOS (onde o botão de Compartilhar está na barra inferior)
+    const safari = isIOSDevice && userAgent.includes('safari') && !userAgent.includes('crios') && !userAgent.includes('fxios') && !inApp;
+    setIsSafari(safari);
+
+    // 5. Listener do evento nativo
     const handleInstallable = () => {
       setDeferredPrompt(globalDeferredPrompt);
     };
@@ -72,7 +85,7 @@ export function usePWAInstall() {
     };
   }, []);
 
-  const triggerInstall = async () => {
+  const triggerInstall = async (): Promise<boolean> => {
     if (!deferredPrompt) {
       return false;
     }
@@ -97,6 +110,8 @@ export function usePWAInstall() {
     hasPrompt: !!deferredPrompt,
     isInstalled,
     isIOS,
+    isInApp,
+    isSafari,
     triggerInstall,
   };
 }

@@ -1,0 +1,6 @@
+# Robots.txt para Censo CEEP — Projeto Ada Lovelace
+User-agent: *
+Allow: /
+
+# Sitemap oficial para o Google e outros buscadores
+Sitemap: https://censoceeps.vercel.app/sitemap.xml
