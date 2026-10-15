@@ -3,6 +3,56 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
 
+// Auto-recuperação resiliente contra chunks desatualizados após deploys
+if (typeof window !== 'undefined') {
+  const triggerAutoReload = (reason: string) => {
+    console.warn(`[AutoReload] Detectada inconsistência de versão (${reason}). Atualizando para nova versão...`);
+    const lastReload = Number(sessionStorage.getItem('last_version_reload') || 0);
+    const now = Date.now();
+    // Previne loops de recarga rápida (espera no mínimo 6s entre recargas)
+    if (now - lastReload > 6000) {
+      sessionStorage.setItem('last_version_reload', String(now));
+      // Se houver service worker, força atualização antes de recarregar
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          registrations.forEach((reg) => void reg.update());
+        }).catch(() => {});
+      }
+      window.location.reload();
+    }
+  };
+
+  // 1. Vite preloadError nativo
+  window.addEventListener('vite:preloadError', (event) => {
+    event.preventDefault();
+    triggerAutoReload('vite:preloadError');
+  });
+
+  // 2. Erros globais de script ou CSS com MIME incorreto / chunk 404
+  window.addEventListener('error', (event) => {
+    const msg = event?.message || '';
+    if (
+      msg.includes('dynamically imported module') ||
+      msg.includes('Expected a JavaScript-or-Wasm module script') ||
+      msg.includes('MIME type')
+    ) {
+      triggerAutoReload('error: ' + msg);
+    }
+  });
+
+  // 3. Rejeições de Promises não tratadas de import() dinâmico
+  window.addEventListener('unhandledrejection', (event) => {
+    const reason = String(event?.reason?.message || event?.reason || '');
+    if (
+      reason.includes('dynamically imported module') ||
+      reason.includes('Expected a JavaScript-or-Wasm module script') ||
+      reason.includes('MIME type')
+    ) {
+      triggerAutoReload('unhandledrejection: ' + reason);
+    }
+  });
+}
+
 const rootElement = document.getElementById('root');
 
 if (!rootElement) {
