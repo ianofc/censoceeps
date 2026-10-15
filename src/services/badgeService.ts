@@ -345,7 +345,7 @@ export const badgeService = {
       ] = await Promise.all([
         supabase.from('lyka_posts').select('id', { count: 'exact', head: true }).eq('user_id', userId),
         supabase.from('lyka_messages').select('id', { count: 'exact', head: true }).eq('user_id', userId),
-        supabase.from('entrevistas').select('id', { count: 'exact', head: true }).or(`user_id.eq.${userId},entrevistador_id.eq.${userId}`),
+        supabase.from('entrevistas').select('id', { count: 'exact', head: true }).eq('entrevistador_id', userId),
         supabase.from('lyka_reactions').select('post_id', { count: 'exact', head: true }).eq('user_id', userId),
         supabase.from('pessoas').select('avatar_url, turma_ou_cargo').eq('id', userId).maybeSingle(),
       ]);

@@ -131,12 +131,13 @@ export function useCelebracaoMeta20(): UseCelebracaoMeta20Return {
       const { count } = await supabase
         .from('entrevistas')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId);
+        .eq('entrevistador_id', userId);
 
       const pendingQueue = JSON.parse(localStorage.getItem('censo_pending_queue') || '[]');
-      const pendingUserCount = pendingQueue.filter((item: any) => 
-        item.user_id === userId || !item.user_id
-      ).length;
+      const pendingUserCount = pendingQueue.filter((item: any) => {
+        const raw = item.data || item;
+        return (raw.entrevistador_id === userId || raw.user_id === userId || !raw.user_id);
+      }).length;
 
       return (count || 0) + pendingUserCount;
     } catch (err) {

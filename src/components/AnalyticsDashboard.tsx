@@ -52,7 +52,8 @@ export function AnalyticsDashboard() {
           if (row.vinculo) newStats.vinculo[row.vinculo] = (newStats.vinculo[row.vinculo] || 0) + 1;
           if (row.acesso_internet) newStats.internet[row.acesso_internet] = (newStats.internet[row.acesso_internet] || 0) + 1;
           if (row.risco_evasao) newStats.evasao[row.risco_evasao] = (newStats.evasao[row.risco_evasao] || 0) + 1;
-          if (row.localizacao_moradia) newStats.moradia[row.localizacao_moradia] = (newStats.moradia[row.localizacao_moradia] || 0) + 1;
+          const moradia = row.local_moradia || row.localizacao_moradia;
+          if (moradia) newStats.moradia[moradia] = (newStats.moradia[moradia] || 0) + 1;
           if (row.mora_com) newStats.moraCom[row.mora_com] = (newStats.moraCom[row.mora_com] || 0) + 1;
           if (row.cor_raca_influencia) newStats.raizSocial[row.cor_raca_influencia] = (newStats.raizSocial[row.cor_raca_influencia] || 0) + 1;
         });

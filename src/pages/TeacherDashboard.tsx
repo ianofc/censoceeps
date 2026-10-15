@@ -15,10 +15,10 @@ export function TeacherDashboard() {
   const fetchColetasComEntrevistador = async () => {
     setLoading(true);
     try {
-      // Ajustado para a tabela correta: 'entrevistas'
+      // Ajustado para a tabela correta: 'entrevistas' com relacionamento para 'pessoas'
       const { data, error } = await supabase
         .from('entrevistas')
-        .select('*')
+        .select('*, entrevistador:pessoas(nome_completo)')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -56,8 +56,8 @@ export function TeacherDashboard() {
   const filteredColetas = coletas.filter((c) => {
     const termo = search.toLowerCase();
     const nomeEntrevistado = c.nome_participante?.toLowerCase() || c.nome?.toLowerCase() || '';
-    const turmaEntrevistado = c.grupo_escolar?.toLowerCase() || c.turma?.toLowerCase() || '';
-    const nomeEntrevistador = c.interviewer_name?.toLowerCase() || '';
+    const turmaEntrevistado = (c.turma ? `${c.serie || ''} ${c.turma}` : c.grupo_escolar || '').toLowerCase();
+    const nomeEntrevistador = (c.entrevistador?.nome_completo || c.interviewer_name || '').toLowerCase();
     
     return (
       nomeEntrevistado.includes(termo) ||
@@ -102,11 +102,13 @@ export function TeacherDashboard() {
                 {item.created_at ? new Date(item.created_at).toLocaleString('pt-BR') : 'Data inválida'}
               </td>
               <td className="p-3 font-bold text-slate-800">{item.nome_participante || item.nome || 'Não informado'}</td>
-              <td className="p-3 font-semibold text-slate-600">{item.grupo_escolar || item.turma || 'Não informada'}</td>
+              <td className="p-3 font-semibold text-slate-600">
+                {item.turma ? (item.serie ? `${item.serie} - ${item.turma}` : item.turma) : (item.grupo_escolar || 'Comunidade')}
+              </td>
               <td className="p-3 text-slate-700">
                 <div className="flex items-center gap-1.5 font-medium">
                   <UserCheck className="w-3.5 h-3.5 text-blue-500" />
-                  <span>{item.interviewer_name || 'Não identificado'}</span>
+                  <span>{item.entrevistador?.nome_completo || item.interviewer_name || 'Pesquisador'}</span>
                 </div>
               </td>
               <td className="p-3 text-slate-600 text-xs">

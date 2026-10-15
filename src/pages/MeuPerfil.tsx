@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { supabase } from "../lib/supabaseClient";
+import { supabase, supabaseAdmin } from "../lib/supabaseClient";
 import {
   Save, Edit3, X, ShieldCheck, Mail, Phone, MapPin,
   Briefcase, BookOpen, Star, Award, GraduationCap,
@@ -135,13 +135,21 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
         const [{ data: pessoaData }, { count: censoCount }, { count: entrevistasCount }, { count: pC }, { count: mC }, { count: lC }] = await Promise.all([
           supabase.from("pessoas").select("*").eq("id", userId).single(),
           supabase.from("censo_ceep").select("*", { count: "exact", head: true }).eq("pesquisador_id", userId),
-          supabase.from("entrevistas").select("*", { count: "exact", head: true }).eq("user_id", userId),
+          supabase.from("entrevistas").select("*", { count: "exact", head: true }).eq("entrevistador_id", userId),
           supabase.from("lyka_posts").select("*", { count: "exact", head: true }).eq("user_id", userId),
           supabase.from("lyka_messages").select("*", { count: "exact", head: true }).eq("sender_id", userId),
           supabase.from("pessoa_likes").select("*", { count: "exact", head: true }).eq("liked_id", userId),
         ]);
 
-        const totalFichasContadas = Math.max(censoCount || 0, entrevistasCount || 0);
+        let pendingUserCount = 0;
+        try {
+          const pending = JSON.parse(localStorage.getItem('censo_pending_queue') || '[]');
+          pendingUserCount = pending.filter((item) => {
+            const raw = item.data || item;
+            return (raw.entrevistador_id === userId || raw.user_id === userId);
+          }).length;
+        } catch {}
+        const totalFichasContadas = Math.max(censoCount || 0, (entrevistasCount || 0) + pendingUserCount);
         setTotalFichas(totalFichasContadas);
         setXpStats({ posts: pC || 0, msgs: mC || 0, likes: lC || 0 });
 
@@ -178,14 +186,30 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
     e.preventDefault();
     setSaving(true);
     try {
-      const { error } = await supabase.from("pessoas").update({
+      const gLow = (editPerfil.genero || 'masculino').toLowerCase().trim();
+      const validGenero = ['masculino', 'feminino', 'outro'].includes(gLow) ? gLow : 'outro';
+
+      const updatePayload = {
         nome_completo: editPerfil.nome,
         turma_ou_cargo: editPerfil.turma_ou_cargo,
         bio: editPerfil.bio,
         avatar_url: editPerfil.avatar_url,
         telefone: editPerfil.telefone,
-      }).eq("id", perfil.id);
-      if (error) throw error;
+        cidade: editPerfil.cidade,
+        estado: editPerfil.estado,
+        endereco: editPerfil.endereco,
+        numero: editPerfil.numero,
+        bairro: editPerfil.bairro,
+        cep: editPerfil.cep,
+        genero: validGenero,
+      };
+
+      let { error } = await supabase.from("pessoas").update(updatePayload).eq("id", perfil.id);
+      if (error) {
+        const { error: adminErr } = await supabaseAdmin.from("pessoas").update(updatePayload).eq("id", perfil.id);
+        if (adminErr) throw adminErr;
+      }
+
       setPerfil({ ...editPerfil });
       setImgErr(false);
       setIsEditing(false);
@@ -209,7 +233,7 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 0", gap: 16 }}>
         <style>{`@keyframes perfilSpin { to { transform: rotate(360deg); } }`}</style>
 
-      {perfil.turma_ou_cargo?.toUpperCase().includes('1º ADM') || perfil.turma_ou_cargo?.toUpperCase().includes('1 ADM') ? (
+      {perfil.turma_ou_cargo?.toUpperCase().includes('1ï¿½ ADM') || perfil.turma_ou_cargo?.toUpperCase().includes('1 ADM') ? (
         <div style={{ marginBottom: 24 }}>
           <CrachaPesquisador nome={perfil.nome} avatarUrl={perfil.avatar_url} turma={perfil.turma_ou_cargo} />
         </div>
@@ -242,7 +266,7 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
         @keyframes savedPulse { 0%,100% { opacity:1; } 50% { opacity:0.7; } }
       `}</style>
 
-      {perfil.turma_ou_cargo?.toUpperCase().includes('1º ADM') || perfil.turma_ou_cargo?.toUpperCase().includes('1 ADM') ? (
+      {perfil.turma_ou_cargo?.toUpperCase().includes('1ï¿½ ADM') || perfil.turma_ou_cargo?.toUpperCase().includes('1 ADM') ? (
         <div style={{ marginBottom: 24 }}>
           <CrachaPesquisador nome={perfil.nome} avatarUrl={perfil.avatar_url} turma={perfil.turma_ou_cargo} />
         </div>

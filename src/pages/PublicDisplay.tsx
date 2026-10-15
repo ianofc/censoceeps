@@ -10,8 +10,13 @@ export function PublicDisplay() {
 
   useEffect(() => {
     const fetchTotal = async () => {
-      const { count } = await supabase.from('censo_coletas').select('*', { count: 'exact', head: true });
-      setTotal(count || 0);
+      const { count } = await supabase.from('entrevistas').select('*', { count: 'exact', head: true });
+      let pendingCount = 0;
+      try {
+        const pending = JSON.parse(localStorage.getItem('censo_pending_queue') || '[]');
+        pendingCount = pending.length;
+      } catch {}
+      setTotal((count || 0) + pendingCount);
     };
 
     fetchTotal();

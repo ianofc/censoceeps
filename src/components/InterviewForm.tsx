@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { InterviewData, PreconceitoTipo, LocalizacaoMoradiaTipo, OrigemFamiliaTipo, CorRacaIBGE, VinculoTipo } from '../types/interview';
 import { ClipboardList, UserCheck, Users, AlertCircle, Send, User, Phone, MapPin, Globe, Compass, ShieldAlert } from 'lucide-react';
 import { AdinhaMascote } from './AdinhaMascote';
-import { supabase } from '../lib/supabaseClient';
+import { supabase, salvarEntrevistaResiliente } from '../lib/supabaseClient';
 import { CelebracaoConquistaModal } from './CelebracaoConquistaModal';
 import { badgeService } from '../services/badgeService';
 
@@ -111,9 +111,7 @@ export const InterviewForm: React.FC<Props> = ({ userId }) => {
         risco_evasao: formData.risco_evasao || null,
       };
 
-      const { error } = await supabase
-        .from('entrevistas')
-        .insert([payload]);
+      const { error } = await salvarEntrevistaResiliente(payload, userId);
 
       if (error) {
         console.error('Erro ao salvar no Supabase:', error);

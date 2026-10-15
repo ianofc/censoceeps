@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabaseClient';
+import { supabase, salvarEntrevistaResiliente } from '../lib/supabaseClient';
 import { useUserSession } from '../hooks/useUserSession';
 import { UserAvatar } from '../components/UserAvatar';
 import { ClipboardList, Send, AlertCircle, Loader2, Plus, CheckCircle, Award, Users, Heart, WifiOff, RefreshCw, Trophy, Sparkles, Target } from 'lucide-react';
@@ -13,25 +13,31 @@ const normalizeStr = (s?: string) =>
 
 interface CensoItem {
   id: string;
-  user_id: string;
-  interviewer_name: string;
+  entrevistador_id?: string;
+  user_id?: string;
+  interviewer_name?: string;
   nome_participante: string;
-  contato_whatsapp: string;
-  genero: string;
+  contato_whatsapp?: string;
+  genero?: string;
   vinculo: string;
-  serie: string;
-  turma: string;
-  grupo_escolar: string;
-  cidade_natal: string;
-  local_moradia: string;
-  cor_raca: string;
-  origem_familia: string;
-  sofreu_preconceito: string;
+  serie?: string;
+  turma?: string;
+  grupo_escolar?: string;
+  turno?: string;
+  cidade_natal?: string;
+  local_moradia?: string;
+  cor_raca?: string;
+  origem_familia?: string;
+  sofreu_preconceito?: string;
+  relato_preconceito?: string;
   relato_sofreu?: string;
   presenciou_preconceito?: string;
   relato_presenciou?: string;
   created_at: string;
   synced?: boolean;
+  entrevistador?: {
+    nome_completo: string;
+  };
 }
 
 export function Home() {
@@ -90,14 +96,30 @@ export function Home() {
 
   const syncPendingData = async () => {
     try {
-      const pending: CensoItem[] = JSON.parse(localStorage.getItem('censo_pending_queue') || '[]');
+      const pending: any[] = JSON.parse(localStorage.getItem('censo_pending_queue') || '[]');
       if (pending.length === 0) return;
 
-      const payload = pending.map(({ id, synced, ...rest }) => rest);
-      const { error } = await supabase.from('entrevistas').insert(payload);
-      if (!error) {
-        localStorage.removeItem('censo_pending_queue');
-        setPendingSyncCount(0);
+      const successfulIds: string[] = [];
+      for (const item of pending) {
+        const raw = item.data || item;
+        const itemId = item.id || raw.id || `local-${Math.random()}`;
+        const { error } = await salvarEntrevistaResiliente(raw, profile?.id);
+        if (!error) {
+          successfulIds.push(itemId);
+        }
+      }
+
+      if (successfulIds.length > 0) {
+        const remaining = pending.filter((item: any) => {
+          const id = item.id || item.data?.id;
+          return !successfulIds.includes(id);
+        });
+        if (remaining.length === 0) {
+          localStorage.removeItem('censo_pending_queue');
+        } else {
+          localStorage.setItem('censo_pending_queue', JSON.stringify(remaining));
+        }
+        setPendingSyncCount(remaining.length);
         window.location.reload();
       }
     } catch (err) {
@@ -108,32 +130,38 @@ export function Home() {
   useEffect(() => {
     async function fetchDashboardData() {
       try {
-        const pending: CensoItem[] = JSON.parse(localStorage.getItem('censo_pending_queue') || '[]');
+        const pending: any[] = JSON.parse(localStorage.getItem('censo_pending_queue') || '[]');
         setPendingSyncCount(pending.length);
 
         const [{ count: total }, { count: pessoas }, { data: recentes }, { data: todasEntrevistas }] = await Promise.all([
           supabase.from('entrevistas').select('*', { count: 'exact', head: true }),
           supabase.from('pessoas').select('*', { count: 'exact', head: true }),
-          supabase.from('entrevistas').select('*').order('created_at', { ascending: false }).limit(5),
-          supabase.from('entrevistas').select('nome_participante, interviewer_name'),
+          supabase.from('entrevistas').select('*, entrevistador:pessoas(nome_completo)').order('created_at', { ascending: false }).limit(5),
+          supabase.from('entrevistas').select('nome_participante, entrevistador_id, entrevistador:pessoas(nome_completo)'),
         ]);
 
         const mapEntrevistados = new Map<string, string>();
-        (todasEntrevistas || []).forEach((row: { nome_participante?: string; interviewer_name?: string }) => {
+        (todasEntrevistas || []).forEach((row: any) => {
           if (row.nome_participante) {
-            mapEntrevistados.set(normalizeStr(row.nome_participante), row.interviewer_name || 'outro entrevistador');
+            const intName = row.entrevistador?.nome_completo || 'outro entrevistador';
+            mapEntrevistados.set(normalizeStr(row.nome_participante), intName);
           }
         });
-        pending.forEach((item: CensoItem) => {
-          if (item.nome_participante) {
-            mapEntrevistados.set(normalizeStr(item.nome_participante), item.interviewer_name || 'você (salvo offline)');
+        pending.forEach((item: any) => {
+          const raw = item.data || item;
+          if (raw.nome_participante) {
+            mapEntrevistados.set(normalizeStr(raw.nome_participante), raw.interviewer_name || 'você (salvo offline)');
           }
         });
         setEntrevistadosExistentes(mapEntrevistados);
 
-        // Count distinct turmas
-        const { data: turmasData } = await supabase.from('entrevistas').select('grupo_escolar');
-        const turmasUnicas = new Set((turmasData || []).map((r: {grupo_escolar: string}) => r.grupo_escolar).filter(Boolean));
+        // Count distinct turmas a partir de serie e turma
+        const { data: turmasData } = await supabase.from('entrevistas').select('serie, turma');
+        const turmasUnicas = new Set(
+          (turmasData || [])
+            .map((r: any) => `${r.serie || ''} - ${r.turma || ''}`.trim())
+            .filter(Boolean)
+        );
 
         setStats({
           totalColetas: (total || 0) + pending.length,
@@ -141,16 +169,21 @@ export function Home() {
           totalTurmas: turmasUnicas.size,
         });
 
-        const serverData = recentes || [];
+        const serverData = (recentes || []).map((r: any) => ({
+          ...r,
+          interviewer_name: r.entrevistador?.nome_completo || 'Pesquisador(a)',
+          grupo_escolar: r.turma ? (r.serie ? `${r.serie} - ${r.turma}` : r.turma) : 'Comunidade Escolar'
+        }));
         const reversedPending = [...pending].reverse();
         setAtividadesRecentes([...reversedPending, ...serverData].slice(0, 5));
       } catch (err) {
         console.warn("Modo Offline ativado / Erro de conexão com Supabase:", err);
-        const pending: CensoItem[] = JSON.parse(localStorage.getItem('censo_pending_queue') || '[]');
+        const pending: any[] = JSON.parse(localStorage.getItem('censo_pending_queue') || '[]');
         const mapEntrevistados = new Map<string, string>();
-        pending.forEach((item: CensoItem) => {
-          if (item.nome_participante) {
-            mapEntrevistados.set(normalizeStr(item.nome_participante), item.interviewer_name || 'você (salvo offline)');
+        pending.forEach((item: any) => {
+          const raw = item.data || item;
+          if (raw.nome_participante) {
+            mapEntrevistados.set(normalizeStr(raw.nome_participante), raw.interviewer_name || 'você (salvo offline)');
           }
         });
         setEntrevistadosExistentes(mapEntrevistados);
@@ -167,7 +200,7 @@ export function Home() {
   useEffect(() => {
     if (!profile.id) return;
     void Promise.all([
-      supabase.from('entrevistas').select('*', { count: 'exact', head: true }).eq('user_id', profile.id),
+      supabase.from('entrevistas').select('*', { count: 'exact', head: true }).eq('entrevistador_id', profile.id),
       supabase.from('pessoa_likes').select('*', { count: 'exact', head: true }).eq('liked_id', profile.id),
       supabase.from('pessoa_likes').select('id').eq('liked_id', profile.id).eq('liker_id', profile.id).maybeSingle(),
     ]).then(([{ count: myCount }, { count: lkCount }]) => {
@@ -204,12 +237,13 @@ export function Home() {
     try {
       const { data: existingInterview } = await supabase
         .from('entrevistas')
-        .select('id, interviewer_name')
+        .select('id, entrevistador_id, entrevistador:pessoas(nome_completo)')
         .ilike('nome_participante', nomeParticipante.trim())
         .maybeSingle();
 
       if (existingInterview) {
-        setErrorMsg(`O(A) participante "${nomeParticipante.trim()}" já foi entrevistado(a) anteriormente (${existingInterview.interviewer_name ? `por ${existingInterview.interviewer_name}` : 'no sistema'}). Para manter os dados estatísticos íntegros, cada pessoa só pode ser entrevistada uma vez.`);
+        const intName = (existingInterview as any).entrevistador?.nome_completo;
+        setErrorMsg(`O(A) participante "${nomeParticipante.trim()}" já foi entrevistado(a) anteriormente (${intName ? `por ${intName}` : 'no sistema'}). Para manter os dados estatísticos íntegros, cada pessoa só pode ser entrevistada uma vez.`);
         setLoading(false);
         return;
       }
@@ -217,9 +251,9 @@ export function Home() {
       console.warn('Não foi possível checar duplicidade online, prosseguindo com verificação local:', checkErr);
     }
 
-    const novaFicha: CensoItem = {
+    const rawFicha = {
       id: `local-${Date.now()}`,
-      user_id: profile?.id || 'offline-user',
+      entrevistador_id: profile?.id || 'offline-user',
       interviewer_name: profile?.nomeCompleto || 'Pesquisador(a)',
       nome_participante: nomeParticipante,
       contato_whatsapp: contatoWhatsapp,
@@ -227,15 +261,13 @@ export function Home() {
       vinculo,
       serie,
       turma,
-      grupo_escolar: `${serie} - ${turma}`.trim(),
+      turno: 'Matutino',
       cidade_natal: cidadeNatal,
       local_moradia: localizacaoMoradia,
       cor_raca: corRaca,
       origem_familia: origemFamilia,
       sofreu_preconceito: sofreuPreconceito,
-      relato_sofreu: relatoSofreu,
-      presenciou_preconceito: presenciouPreconceito,
-      relato_presenciou: relatoPresenciou,
+      relato_preconceito: relatoSofreu || relatoPresenciou || null,
       created_at: new Date().toISOString(),
       synced: false
     };
@@ -248,8 +280,7 @@ export function Home() {
         throw new Error("Dispositivo offline. Salvando localmente...");
       }
 
-      const { id, synced, ...payloadToInsert } = novaFicha;
-      const { error } = await supabase.from('entrevistas').insert([payloadToInsert]);
+      const { error } = await salvarEntrevistaResiliente(rawFicha, profile?.id);
       if (error) throw error;
 
       setSuccess(true);
@@ -257,8 +288,8 @@ export function Home() {
     } catch (err) {
       console.warn('Salvando em modo de segurança offline (Local Storage):', err);
       
-      const existingQueue: CensoItem[] = JSON.parse(localStorage.getItem('censo_pending_queue') || '[]');
-      existingQueue.push({ ...novaFicha, synced: false });
+      const existingQueue: any[] = JSON.parse(localStorage.getItem('censo_pending_queue') || '[]');
+      existingQueue.push({ ...rawFicha, synced: false });
       localStorage.setItem('censo_pending_queue', JSON.stringify(existingQueue));
       
       setPendingSyncCount(existingQueue.length);

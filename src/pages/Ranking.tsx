@@ -319,7 +319,7 @@ export function Ranking() {
         { data: likesRaw },
       ] = await Promise.all([
         supabase.from("pessoas").select("id, nome_completo, papel, avatar_url"),
-        supabase.from("entrevistas").select("user_id"),
+        supabase.from("entrevistas").select("entrevistador_id"),
         supabase.from("lyka_messages").select("user_id").is("conversation_key", null),
         supabase.from("lyka_posts").select("user_id"),
         supabase.from("pessoa_likes").select("liked_id, liker_id"),
@@ -347,11 +347,24 @@ export function Ranking() {
         });
       }
 
-      // Count fichas per user
+      // Count fichas per user (online + offline drafts)
       const fichasMap: Record<string, number> = {};
-      (fichasRaw || []).forEach((r: { user_id: string }) => {
-        fichasMap[r.user_id] = (fichasMap[r.user_id] || 0) + 1;
+      (fichasRaw || []).forEach((r: any) => {
+        const uid = r.entrevistador_id || r.user_id;
+        if (uid) fichasMap[uid] = (fichasMap[uid] || 0) + 1;
       });
+
+      // Inclui contagem de rascunhos pendentes locais
+      try {
+        const pendingQueue: any[] = JSON.parse(localStorage.getItem('censo_pending_queue') || '[]');
+        pendingQueue.forEach((p: any) => {
+          const raw = p.data || p;
+          const uid = raw.entrevistador_id || raw.user_id || profile?.id;
+          if (uid) fichasMap[uid] = (fichasMap[uid] || 0) + 1;
+        });
+      } catch {
+        // ignora
+      }
       const msgsMap: Record<string, number> = {};
       (msgsRaw || []).forEach((r: { user_id: string }) => {
         msgsMap[r.user_id] = (msgsMap[r.user_id] || 0) + 1;
