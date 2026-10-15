@@ -15,7 +15,8 @@ import {
   Download, 
   Briefcase, 
   Library, 
-  Headset } from 'lucide-react';
+  Headset,
+  Shield } from 'lucide-react';
 
 const adinhaAvatar = new URL('../assets/imgs/AdaLovelace.png', import.meta.url).href;
 
@@ -43,26 +44,31 @@ export const FloatingNav: React.FC<FloatingNavProps> = ({ onLogout }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAdmin } = useUserSession();
+  const { isAdmin, isTeacher } = useUserSession();
 
   const activeTab = location.pathname;
 
   const primaryItems = [
-    { id: '/coleta', label: 'Ficha Censo', icon: ClipboardList, activeColor: 'bg-indigo-600 shadow-indigo-600/30' },
+    ...(isTeacher || isAdmin
+      ? [{ id: '/auditoria', label: 'Gestão & Auditoria', icon: FolderCheck, activeColor: 'bg-emerald-600 shadow-emerald-600/30' }]
+      : [{ id: '/coleta', label: 'Ficha Censo', icon: ClipboardList, activeColor: 'bg-indigo-600 shadow-indigo-600/30' }]
+    ),
     { id: '/feed', label: 'Feed & Evidências', icon: Rss, activeColor: 'bg-blue-600 shadow-blue-600/30' },
-    { id: '/ranking', label: 'Ranking', icon: Trophy, activeColor: 'bg-amber-500 shadow-amber-500/30' },
+    { id: '/ranking', label: 'Ranking Alunos', icon: Trophy, activeColor: 'bg-amber-500 shadow-amber-500/30' },
     { id: '/jornal', label: 'Censo Tribune', icon: NewspaperIcon, activeColor: 'bg-purple-600 shadow-purple-600/30' },
+    ...(isAdmin ? [{ id: '/admin', label: 'Painel Admin', icon: Shield, activeColor: 'bg-rose-600 shadow-rose-600/30' }] : []),
     ...(isAdmin ? [{ id: '/oportunidades', label: 'Oportunidades', icon: Briefcase, activeColor: 'bg-teal-600 shadow-teal-600/30' }] : []),
     { id: '/chat', label: 'Layka Chat', icon: LaikaNavIcon, activeColor: 'bg-violet-600 shadow-violet-600/30' },
     { id: '/perfil', label: 'Meu Perfil', icon: User, activeColor: 'bg-emerald-600 shadow-emerald-600/30' },
   ];
 
   const secondaryItems = [
-    { id: '/dashboard', label: 'Minhas Coletas', icon: ClipboardList, activeColor: 'bg-indigo-600 shadow-indigo-600/30' },
+    { id: '/dashboard', label: isTeacher || isAdmin ? 'Todas as Coletas' : 'Minhas Coletas', icon: ClipboardList, activeColor: 'bg-indigo-600 shadow-indigo-600/30' },
     { id: '/biblioteca', label: 'Biblioteca Viva', icon: Library, activeColor: 'bg-blue-600 shadow-blue-600/30' },
     ...(isAdmin ? [{ id: '/ouvidoria', label: 'Ouvidoria', icon: Headset, activeColor: 'bg-rose-600 shadow-rose-600/30' }] : []),
     { id: '/sobre', label: 'Sobre o Projeto', icon: Info, activeColor: 'bg-blue-600 shadow-blue-600/30' },
-    { id: '/auditoria', label: 'Painel Docente', icon: FolderCheck, activeColor: 'bg-blue-600 shadow-blue-600/30' },
+    ...(!isTeacher && !isAdmin ? [{ id: '/auditoria', label: 'Painel Docente', icon: FolderCheck, activeColor: 'bg-blue-600 shadow-blue-600/30' }] : []),
+    ...(isTeacher || isAdmin ? [{ id: '/coleta', label: 'Ficha Censo (Testar)', icon: ClipboardList, activeColor: 'bg-indigo-600 shadow-indigo-600/30' }] : []),
   ];
 
   const handleTabClick = (path: string) => {
@@ -198,19 +204,34 @@ export const FloatingNav: React.FC<FloatingNavProps> = ({ onLogout }) => {
       >
         {/* Itens Unificados (Mobile e Desktop) */}
         <div className="flex max-lg:flex-row max-lg:justify-around lg:flex-col items-center w-full gap-1 lg:gap-3">
-          {/* 1. Coleta */}
-          <button
-            type="button"
-            onClick={() => handleTabClick('/coleta')}
-            title="Ficha Censo"
-            aria-label="Ficha Censo"
-            className={`flex flex-col items-center justify-center p-2 rounded-xl transition-all border-0 ${
-              activeTab === '/coleta' ? 'text-indigo-400 bg-indigo-950/60 font-bold' : 'text-blue-200 hover:text-white bg-transparent'
-            }`}
-          >
-            <ClipboardList size={20} />
-            <span className="text-[10px] mt-0.5">Coleta</span>
-          </button>
+          {/* 1. Auditoria (Docente/Admin) ou Coleta (Estudante) */}
+          {isTeacher || isAdmin ? (
+            <button
+              type="button"
+              onClick={() => handleTabClick('/auditoria')}
+              title="Gestão & Auditoria"
+              aria-label="Gestão & Auditoria"
+              className={`flex flex-col items-center justify-center p-2 rounded-xl transition-all border-0 ${
+                activeTab === '/auditoria' ? 'text-emerald-400 bg-emerald-950/60 font-bold' : 'text-blue-200 hover:text-white bg-transparent'
+              }`}
+            >
+              <FolderCheck size={20} />
+              <span className="text-[10px] mt-0.5">Auditoria</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => handleTabClick('/coleta')}
+              title="Ficha Censo"
+              aria-label="Ficha Censo"
+              className={`flex flex-col items-center justify-center p-2 rounded-xl transition-all border-0 ${
+                activeTab === '/coleta' ? 'text-indigo-400 bg-indigo-950/60 font-bold' : 'text-blue-200 hover:text-white bg-transparent'
+              }`}
+            >
+              <ClipboardList size={20} />
+              <span className="text-[10px] mt-0.5">Coleta</span>
+            </button>
+          )}
 
           {/* 2. Feed */}
           <button
