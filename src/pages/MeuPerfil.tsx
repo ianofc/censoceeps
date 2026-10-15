@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import BadgeList from "../components/Gamification/BadgeList";
 import { CrachaPesquisador } from "../components/CrachaPesquisador";
+import { badgeService } from "../services/badgeService";
 
 interface MeuPerfilProps {
   readonly escolaNome: string;
@@ -214,6 +215,9 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
       setImgErr(false);
       setIsEditing(false);
       setSaved(true);
+      if (editPerfil.avatar_url && editPerfil.turma_ou_cargo) {
+        void badgeService.unlockBadge(perfil.id, "perfil_completo");
+      }
       setTimeout(() => setSaved(false), 3000);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Erro desconhecido";

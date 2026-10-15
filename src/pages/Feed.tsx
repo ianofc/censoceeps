@@ -536,8 +536,16 @@ export function Feed() {
     } else {
       setNewPostContent(""); setImageUrl(""); setShowImageInput(false);
       if (profile?.id) {
-        void badgeService.unlockBadge(profile.id, 'primeiro_post');
-        void badgeService.checkUserMilestones(profile.id);
+        void (async () => {
+          await badgeService.unlockBadge(profile.id, 'primeiro_post');
+          const { count } = await supabase
+            .from('lyka_posts')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', profile.id);
+          if (count && count >= 5) {
+            await badgeService.unlockBadge(profile.id, 'cronista_do_feed');
+          }
+        })();
       }
       await fetchPosts();
     }

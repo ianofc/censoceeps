@@ -18,6 +18,9 @@ export function Biblioteca() {
 
   useEffect(() => {
     fetchItems();
+  }, []);
+
+  const handleDownloadClick = () => {
     supabase.auth.getSession().then(({ data }) => {
       let uid = data.session?.user?.id;
       if (!uid && typeof window !== 'undefined') {
@@ -30,7 +33,7 @@ export function Biblioteca() {
         void badgeService.recordExplorationVisit(uid, 'biblioteca');
       }
     });
-  }, []);
+  };
 
   const fetchItems = async () => {
     try {
@@ -113,6 +116,7 @@ export function Biblioteca() {
                       rel="noopener noreferrer"
                       className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors"
                       download
+                      onClick={handleDownloadClick}
                     >
                       <svg
                         className="w-5 h-5 mr-2"

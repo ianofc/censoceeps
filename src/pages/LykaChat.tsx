@@ -560,8 +560,16 @@ export function LykaChat() {
     } else if (data && data[0]) {
       setMessages(prev => prev.map(m => m.id === opt.id ? { ...m, id: data[0].id } : m));
       if (profile?.id) {
-        void badgeService.unlockBadge(profile.id, 'primeira_mensagem');
-        void badgeService.checkUserMilestones(profile.id);
+        void (async () => {
+          await badgeService.unlockBadge(profile.id, 'primeira_mensagem');
+          const { count } = await supabase
+            .from('lyka_messages')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', profile.id);
+          if (count && count >= 10) {
+            await badgeService.unlockBadge(profile.id, 'comunicador_laika');
+          }
+        })();
       }
     }
     setSending(false);

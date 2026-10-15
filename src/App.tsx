@@ -64,7 +64,8 @@ function Layout({ session }: LayoutProps) {
       }
     }
     if (uid) {
-      void badgeService.checkUserMilestones(uid);
+      // Concede estritamente apenas a insígnia de boas-vindas (primeiro acesso)
+      void badgeService.unlockBadge(uid, 'primeiro_acesso');
     }
   }, [session?.user?.id]);
 

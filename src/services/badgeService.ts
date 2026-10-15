@@ -251,9 +251,13 @@ export const badgeService = {
 
   /**
    * Concede uma insígnia ao usuário se ainda não a possuir.
-   * Dispara confete e evento global para celebração instantânea.
+   * Dispara confete e modal de celebração apenas quando conquistada em ação direta (!silent).
    */
-  async unlockBadge(userId: string, badgeId: string): Promise<{ unlocked: boolean; badge?: BadgeDefinition }> {
+  async unlockBadge(
+    userId: string, 
+    badgeId: string, 
+    options: { silent?: boolean } = {}
+  ): Promise<{ unlocked: boolean; badge?: BadgeDefinition }> {
     if (!userId || !badgeId) return { unlocked: false };
 
     const badge = BADGE_CATALOG.find(b => b.id === badgeId);
@@ -308,8 +312,8 @@ export const badgeService = {
       }
     })();
 
-    // 3. Dispara evento customizado global para a UI reagir (Modal, Toaster, Confetes)
-    if (typeof window !== 'undefined') {
+    // 3. Dispara celebração (Modal, Confetes) apenas se não for silencioso
+    if (!options.silent && typeof window !== 'undefined') {
       window.dispatchEvent(
         new CustomEvent('ceep-badge-unlocked', {
           detail: {
@@ -325,14 +329,11 @@ export const badgeService = {
   },
 
   /**
-   * Verifica o progresso do usuário no banco e concede insígnias graduais
-   * automaticamente baseadas em contagens reais.
+   * Sincronização manual (silenciosa) para atualizar insígnias já merecidas
+   * sem disparar popups inesperados na tela do usuário.
    */
-  async checkUserMilestones(userId: string): Promise<void> {
+  async checkUserMilestones(userId: string, options: { silent?: boolean } = { silent: true }): Promise<void> {
     if (!userId) return;
-
-    // Primeiro Acesso: é garantido ao chamar a verificação
-    await this.unlockBadge(userId, 'primeiro_acesso');
 
     try {
       // Executa contagens em paralelo no Supabase
@@ -356,40 +357,33 @@ export const badgeService = {
       const reactionsCount = reactionsRes.count || 0;
 
       // 1. Post no Feed
-      if (postsCount >= 1) await this.unlockBadge(userId, 'primeiro_post');
-      if (postsCount >= 5) await this.unlockBadge(userId, 'cronista_do_feed');
+      if (postsCount >= 1) await this.unlockBadge(userId, 'primeiro_post', options);
+      if (postsCount >= 5) await this.unlockBadge(userId, 'cronista_do_feed', options);
 
       // 2. Mensagens no Layka
-      if (msgsCount >= 1) await this.unlockBadge(userId, 'primeira_mensagem');
-      if (msgsCount >= 10) await this.unlockBadge(userId, 'comunicador_laika');
+      if (msgsCount >= 1) await this.unlockBadge(userId, 'primeira_mensagem', options);
+      if (msgsCount >= 10) await this.unlockBadge(userId, 'comunicador_laika', options);
 
       // 3. Fichas de Entrevista
-      if (fichasCount >= 1) await this.unlockBadge(userId, 'primeira_entrevista');
-      if (fichasCount >= 5) await this.unlockBadge(userId, 'meta_5_entrevistas');
-      if (fichasCount >= 10) await this.unlockBadge(userId, 'meta_10_entrevistas');
-      if (fichasCount >= 20) await this.unlockBadge(userId, 'adinha_campea_meta_20');
+      if (fichasCount >= 1) await this.unlockBadge(userId, 'primeira_entrevista', options);
+      if (fichasCount >= 5) await this.unlockBadge(userId, 'meta_5_entrevistas', options);
+      if (fichasCount >= 10) await this.unlockBadge(userId, 'meta_10_entrevistas', options);
+      if (fichasCount >= 20) await this.unlockBadge(userId, 'adinha_campea_meta_20', options);
 
       // 4. Reações
-      if (reactionsCount >= 1) await this.unlockBadge(userId, 'primeira_reacao');
+      if (reactionsCount >= 1) await this.unlockBadge(userId, 'primeira_reacao', options);
 
       // 5. Perfil Completo
       if (pessoaRes.data?.avatar_url && pessoaRes.data?.turma_ou_cargo) {
-        await this.unlockBadge(userId, 'perfil_completo');
-      }
-
-      // 6. Exploração (se já visitou jornal e biblioteca)
-      const visitJornal = localStorage.getItem(`${EXPLORATION_STORAGE_PREFIX}${userId}_jornal`);
-      const visitBiblio = localStorage.getItem(`${EXPLORATION_STORAGE_PREFIX}${userId}_biblioteca`);
-      if (visitJornal && visitBiblio) {
-        await this.unlockBadge(userId, 'explorador_do_saber');
+        await this.unlockBadge(userId, 'perfil_completo', options);
       }
     } catch (err) {
-      console.warn('[BadgeService] Erro ao checar marcos graduais:', err);
+      console.warn('[BadgeService] Erro ao sincronizar marcos:', err);
     }
   },
 
   /**
-   * Registra visita a módulos de exploração (Jornal e Biblioteca)
+   * Registra exploração ativa de conteúdo na Biblioteca ou Jornal
    */
   async recordExplorationVisit(userId: string, module: 'jornal' | 'biblioteca'): Promise<void> {
     if (!userId) return;

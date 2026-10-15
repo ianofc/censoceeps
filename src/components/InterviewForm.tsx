@@ -47,17 +47,19 @@ export const InterviewForm: React.FC<Props> = ({ userId }) => {
   const [celebracaoAberta, setCelebracaoAberta] = useState(false);
 
   const verificarMetaEntrevistas = async (usuarioId: string) => {
-    // Atualiza marcos graduais (1ª entrevista, 5 entrevistas, 10 entrevistas e meta 20)
-    await badgeService.checkUserMilestones(usuarioId);
-
     const { count, error } = await supabase
       .from('entrevistas')
       .select('*', { count: 'exact', head: true })
       .eq('entrevistador_id', usuarioId);
 
-    if (!error && count && count >= 20) {
-      setCelebracaoAberta(true);
-      await badgeService.unlockBadge(usuarioId, 'adinha_campea_meta_20');
+    if (!error && count) {
+      if (count >= 1) await badgeService.unlockBadge(usuarioId, 'primeira_entrevista');
+      if (count >= 5) await badgeService.unlockBadge(usuarioId, 'meta_5_entrevistas');
+      if (count >= 10) await badgeService.unlockBadge(usuarioId, 'meta_10_entrevistas');
+      if (count >= 20) {
+        setCelebracaoAberta(true);
+        await badgeService.unlockBadge(usuarioId, 'adinha_campea_meta_20');
+      }
     }
   };
 

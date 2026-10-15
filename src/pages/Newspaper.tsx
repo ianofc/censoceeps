@@ -53,7 +53,7 @@ export function Newspaper() {
     return { score, likes, shares };
   };
 
-  useEffect(() => {
+  const handleArticleClick = () => {
     supabase.auth.getSession().then(({ data }) => {
       let uid = data.session?.user?.id;
       if (!uid && typeof window !== 'undefined') {
@@ -66,7 +66,9 @@ export function Newspaper() {
         void badgeService.recordExplorationVisit(uid, 'jornal');
       }
     });
+  };
 
+  useEffect(() => {
     const fetchLiveNews = async () => {
       try {
         setLoading(true);
@@ -372,7 +374,7 @@ export function Newspaper() {
           
           {/* Manchete Principal (Left Col) */}
           <div className="lg:col-span-8 flex flex-col">
-            <a href={mainArticle.url} className="group cursor-pointer flex flex-col">
+            <a href={mainArticle.url} onClick={handleArticleClick} className="group cursor-pointer flex flex-col">
               <span className="text-[#C4170C] font-black text-sm uppercase tracking-wide mb-2">
                 {mainArticle.category}
               </span>
@@ -400,7 +402,7 @@ export function Newspaper() {
           {/* Destaques Secundários (Right Col) */}
           <div className="lg:col-span-4 flex flex-col gap-6 border-l-0 lg:border-l border-gray-200 lg:pl-8">
             {subArticles.map((article) => (
-              <a key={article.id} href={article.url} className="group cursor-pointer flex flex-col border-b border-gray-100 pb-6 last:border-0 last:pb-0">
+              <a key={article.id} href={article.url} onClick={handleArticleClick} className="group cursor-pointer flex flex-col border-b border-gray-100 pb-6 last:border-0 last:pb-0">
                 <span className="text-[#C4170C] font-black text-[11px] uppercase tracking-wide mb-1.5">
                   {article.category}
                 </span>
@@ -425,7 +427,7 @@ export function Newspaper() {
       {!loading && otherArticles.length > 0 && (
         <div className="w-full max-w-6xl px-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-10 pt-8 border-t border-gray-200">
           {otherArticles.map((article) => (
-            <a key={article.id} href={article.url} className="group cursor-pointer flex flex-col">
+            <a key={article.id} href={article.url} onClick={handleArticleClick} className="group cursor-pointer flex flex-col">
               <div className="w-full aspect-[4/3] overflow-hidden rounded bg-gray-100 mb-3">
                 <img 
                   src={article.imageUrl} 
