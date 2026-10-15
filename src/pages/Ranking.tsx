@@ -374,7 +374,20 @@ export function Ranking() {
         postsMap[r.user_id] = (postsMap[r.user_id] || 0) + 1;
       });
 
-      const ranked: Player[] = (pessoas || []).map((p: { id: string; nome_completo: string; papel: string; avatar_url: string }) => {
+      // Apenas alunos pesquisadores/entrevistadores competem no ranking. Professores e gestão são mentores/respondentes.
+      const ranked: Player[] = (pessoas || [])
+        .filter((p: { id: string; nome_completo: string; papel: string }) => {
+          const papel = (p.papel || '').toLowerCase();
+          const nome = (p.nome_completo || '').toLowerCase();
+          const isDocenteOuAdmin =
+            papel === 'admin' ||
+            papel === 'professor' ||
+            papel === 'gestor' ||
+            nome.includes('ian') ||
+            nome.includes('juliana');
+          return !isDocenteOuAdmin;
+        })
+        .map((p: { id: string; nome_completo: string; papel: string; avatar_url: string }) => {
         const fichas = fichasMap[p.id] || 0;
         const msgs = msgsMap[p.id] || 0;
         const posts = postsMap[p.id] || 0;
