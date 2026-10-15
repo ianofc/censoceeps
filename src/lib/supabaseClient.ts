@@ -33,7 +33,9 @@ export function normalizeName(str?: string): string {
     .trim()
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/^(professor|professora|prof|profa|aluno|aluna|estudante|tio|tia)\.?\s+/gi, '')
+    .trim();
 }
 
 /**
@@ -92,8 +94,8 @@ export async function syncPessoaDataFromInterview(nome: string, dados: {
   local_moradia?: string | null;
 }) {
   try {
-    const nomeLimpo = nome.trim();
-    if (!nomeLimpo || nomeLimpo.toLowerCase() === 'anônimo') return;
+    const nomeLimpo = (nome || '').trim();
+    if (!nomeLimpo || nomeLimpo.toLowerCase() === 'anonimo' || nomeLimpo.toLowerCase() === 'anônimo') return;
 
     // Busca participantes correspondentes na tabela pessoas
     const { data: pessoas } = await supabaseAdmin
@@ -103,10 +105,29 @@ export async function syncPessoaDataFromInterview(nome: string, dados: {
     if (!pessoas || pessoas.length === 0) return;
 
     const normTarget = normalizeName(nomeLimpo);
-    const matched = pessoas.find((p) => {
-      const normP = normalizeName(p.nome_completo);
-      return normP === normTarget || normP.includes(normTarget) || normTarget.includes(normP);
-    });
+    if (!normTarget) return;
+
+    // 1. Busca exata
+    let matched = pessoas.find((p) => normalizeName(p.nome_completo) === normTarget);
+
+    // 2. Busca por substring
+    if (!matched) {
+      matched = pessoas.find((p) => {
+        const normP = normalizeName(p.nome_completo);
+        return normP.includes(normTarget) || normTarget.includes(normP);
+      });
+    }
+
+    // 3. Busca por subconjunto de palavras (ex: 'Ian Santos' casa com 'Ian da Silva Almeida Santos')
+    if (!matched) {
+      const targetWords = normTarget.split(/\s+/).filter((w) => w.length > 2);
+      if (targetWords.length > 0) {
+        matched = pessoas.find((p) => {
+          const pWords = normalizeName(p.nome_completo).split(/\s+/);
+          return targetWords.every((tw) => pWords.includes(tw));
+        });
+      }
+    }
 
     if (matched) {
       const updates: Record<string, string> = {};
@@ -149,6 +170,49 @@ export async function syncPessoaDataFromInterview(nome: string, dados: {
  */
 export async function salvarEntrevistaResiliente(rawPayload: any, interviewerId?: string) {
   const payload = formatEntrevistaPayload(rawPayload, interviewerId);
+
+  // 0. Bloqueio estrito de duplicidade: cada pessoa só pode ser entrevistada 1 única vez
+  try {
+    const normTarget = normalizeName(payload.nome_participante);
+    if (normTarget && normTarget !== 'anonimo') {
+      const { data: existingRows } = await supabaseAdmin
+        .from('entrevistas')
+        .select('id, nome_participante, contato_whatsapp, genero, relato_preconceito, cidade_natal, local_moradia');
+
+      const matchedExisting = (existingRows || []).find((r) => {
+        return normalizeName(r.nome_participante) === normTarget;
+      });
+
+      if (matchedExisting) {
+        console.info(`[Supabase Insert] Participante "${payload.nome_participante}" já cadastrado(a) (ID ${matchedExisting.id}). Impedindo duplicidade.`);
+
+        // Se a nova chamada trouxer campos que antes estavam vazios, enriquece o registro existente
+        const patchUpdates: Record<string, any> = {};
+        if (payload.contato_whatsapp && !matchedExisting.contato_whatsapp) patchUpdates.contato_whatsapp = payload.contato_whatsapp;
+        if (payload.relato_preconceito && !matchedExisting.relato_preconceito) patchUpdates.relato_preconceito = payload.relato_preconceito;
+        if (payload.genero && !matchedExisting.genero) patchUpdates.genero = payload.genero;
+        if (payload.cidade_natal && !matchedExisting.cidade_natal) patchUpdates.cidade_natal = payload.cidade_natal;
+        if (payload.local_moradia && !matchedExisting.local_moradia) patchUpdates.local_moradia = payload.local_moradia;
+
+        if (Object.keys(patchUpdates).length > 0) {
+          await supabaseAdmin.from('entrevistas').update(patchUpdates).eq('id', matchedExisting.id);
+          console.info(`[Supabase Insert] Registro existente complementado com novos dados:`, patchUpdates);
+        }
+
+        // Sincroniza dados com a tabela pessoas se aplicável
+        void syncPessoaDataFromInterview(payload.nome_participante, {
+          genero: payload.genero || matchedExisting.genero,
+          cidade: payload.cidade_natal || matchedExisting.cidade_natal,
+          telefone: payload.contato_whatsapp || matchedExisting.contato_whatsapp,
+          local_moradia: payload.local_moradia || matchedExisting.local_moradia,
+        });
+
+        return { data: [matchedExisting], error: null };
+      }
+    }
+  } catch (checkErr) {
+    console.warn('[Supabase Insert] Erro ao checar duplicidade prévia, prosseguindo com inserção:', checkErr);
+  }
 
   let insertError: any = null;
 

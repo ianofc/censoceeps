@@ -58,6 +58,7 @@ export const FloatingNav: React.FC<FloatingNavProps> = ({ onLogout }) => {
   ];
 
   const secondaryItems = [
+    { id: '/dashboard', label: 'Minhas Coletas', icon: ClipboardList, activeColor: 'bg-indigo-600 shadow-indigo-600/30' },
     { id: '/biblioteca', label: 'Biblioteca Viva', icon: Library, activeColor: 'bg-blue-600 shadow-blue-600/30' },
     ...(isAdmin ? [{ id: '/ouvidoria', label: 'Ouvidoria', icon: Headset, activeColor: 'bg-rose-600 shadow-rose-600/30' }] : []),
     { id: '/sobre', label: 'Sobre o Projeto', icon: Info, activeColor: 'bg-blue-600 shadow-blue-600/30' },

@@ -13,6 +13,7 @@ import { tasOfflineSync } from './utils/tasOfflineSync';
 
 const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login })));
 const Home = lazy(() => import('./pages/Home').then(m => ({ default: m.Home })));
+const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
 const TeacherDashboard = lazy(() => import('./components/TeacherDashboard').then(m => ({ default: m.TeacherDashboard })));
 const Admin = lazy(() => import('./pages/Admin').then(m => ({ default: m.Admin })));
 const PublicDisplay = lazy(() => import('./pages/PublicDisplay').then(m => ({ default: m.PublicDisplay })));
@@ -100,6 +101,7 @@ function Layout({ session }: LayoutProps) {
               <Route path="/biblioteca" element={<Biblioteca />} />
               <Route path="/ouvidoria" element={<Ouvidoria />} />
               <Route path="/coleta" element={<Home />} />
+              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/telao" element={<PublicDisplay />} />
               <Route path="/auditoria" element={<TeacherDashboard />} />
               <Route path="/admin" element={<Admin />} />

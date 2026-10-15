@@ -11,7 +11,9 @@ export const TeacherDashboard: React.FC = () => {
   const { profile, isTeacher, loading: sessionLoading } = useUserSession();
 
   useEffect(() => {
-    supabase.from('entrevistas').select('*')
+    supabase.from('entrevistas')
+      .select('*, entrevistador:pessoas(nome_completo)')
+      .order('created_at', { ascending: false })
       .then(({ data }) => {
         setInterviews(data || []);
         setDataLoading(false);
@@ -31,7 +33,7 @@ export const TeacherDashboard: React.FC = () => {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-black text-slate-900 mb-1">Acompanhamento e Auditoria</h1>
-          <p className="text-slate-500 font-medium text-sm">Visão geral dos registros realizados no censo escolar.</p>
+          <p className="text-slate-500 font-medium text-sm">Visão geral dos registros consolidados no Censo CEEP.</p>
         </div>
         <button
           type="button"
@@ -44,30 +46,35 @@ export const TeacherDashboard: React.FC = () => {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+        <table className="w-full text-left border-collapse text-sm">
           <thead>
-            <tr className="bg-gray-100 border-b">
+            <tr className="bg-gray-100 border-b text-xs text-slate-600 uppercase">
               <th className="p-3">Data/Hora</th>
-              <th className="p-3">Vínculo</th>
+              <th className="p-3">Participante</th>
               <th className="p-3">Turma/Setor</th>
+              <th className="p-3">Entrevistador(a)</th>
               <th className="p-3">Cor/Raça</th>
-              <th className="p-3">Sofrera Preconceito?</th>
+              <th className="p-3">Preconceito?</th>
             </tr>
           </thead>
           <tbody>
-            {interviews.map((item, index) => (
-              <tr key={item.id ?? `interview-${index}`} className="border-b hover:bg-gray-50">
-                <td className="p-3 text-sm">{item.created_at ? new Date(item.created_at).toLocaleString('pt-BR') : '-'}</td>
-                <td className="p-3">{item.vinculo}</td>
-                <td className="p-3">{item.grupo_escolar}</td>
-                <td className="p-3 font-medium">{item.cor_raca}</td>
-                <td className="p-3">
-                  <span className={`px-2 py-1 text-xs font-bold rounded ${item.sofreu_preconceito === 'Sim' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-                    {item.sofreu_preconceito}
-                  </span>
-                </td>
-              </tr>
-            ))}
+            {interviews.map((item, index) => {
+              const turmaDisplay = item.turma ? (item.serie ? `${item.serie} - ${item.turma}` : item.turma) : 'Comunidade';
+              return (
+                <tr key={item.id ?? `interview-${index}`} className="border-b hover:bg-gray-50">
+                  <td className="p-3 text-xs text-slate-500">{item.created_at ? new Date(item.created_at).toLocaleString('pt-BR') : '-'}</td>
+                  <td className="p-3 font-bold text-slate-900">{item.nome_participante || 'Participante'}</td>
+                  <td className="p-3 font-semibold text-slate-700">{turmaDisplay}</td>
+                  <td className="p-3 text-blue-600 font-semibold">{item.entrevistador?.nome_completo || 'Pesquisador(a)'}</td>
+                  <td className="p-3">{item.cor_raca || '—'}</td>
+                  <td className="p-3">
+                    <span className={`px-2 py-1 text-xs font-bold rounded ${item.sofreu_preconceito === 'Sim' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                      {item.sofreu_preconceito || 'Não'}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
