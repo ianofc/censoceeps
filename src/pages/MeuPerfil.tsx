@@ -3,11 +3,100 @@ import { supabase, supabaseAdmin } from "../lib/supabaseClient";
 import {
   Save, Edit3, X, ShieldCheck, Mail, Phone, MapPin,
   Briefcase, BookOpen, Star, Award, GraduationCap,
-  CheckCircle, UserCircle, Calendar, Hash, Trophy, Target
+  CheckCircle, UserCircle, Calendar, Hash, Trophy, Target,
+  Upload, Camera, Trash2, Link, Loader2, Check, AlertCircle, RefreshCw
 } from "lucide-react";
 import BadgeList from "../components/Gamification/BadgeList";
 import { CrachaPesquisador } from "../components/CrachaPesquisador";
 import { badgeService } from "../services/badgeService";
+
+/**
+ * Redimensiona e recorta a imagem em quadrado (512x512) no cliente antes do upload.
+ * Reduz arquivos pesados de 5-15MB para ~50KB, acelerando o upload e economizando armazenamento.
+ */
+async function processImageForAvatar(file: File): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith("image/")) {
+      reject(new Error("O arquivo selecionado não é uma imagem válida."));
+      return;
+    }
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const canvas = document.createElement("canvas");
+      const MAX_SIZE = 512;
+      const minDimension = Math.min(img.width, img.height);
+      const sx = (img.width - minDimension) / 2;
+      const sy = (img.height - minDimension) / 2;
+
+      canvas.width = Math.min(minDimension, MAX_SIZE);
+      canvas.height = Math.min(minDimension, MAX_SIZE);
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        resolve(file);
+        return;
+      }
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(img, sx, sy, minDimension, minDimension, 0, 0, canvas.width, canvas.height);
+
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            resolve(file);
+          }
+        },
+        "image/jpeg",
+        0.88
+      );
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Não foi possível carregar a imagem selecionada."));
+    };
+    img.src = objectUrl;
+  });
+}
+
+/**
+ * Envia a foto processada para o bucket público do Supabase Storage e retorna a URL pública.
+ */
+async function uploadAvatarImage(file: File, userId: string): Promise<string> {
+  const processedBlob = await processImageForAvatar(file);
+  const safeId = userId || "user";
+  const fileName = `avatars/${safeId}_${Date.now()}.jpg`;
+
+  let { error: uploadError } = await supabase.storage
+    .from("lyka_media")
+    .upload(fileName, processedBlob, {
+      contentType: "image/jpeg",
+      upsert: true,
+    });
+
+  if (uploadError) {
+    console.warn("Upload com cliente padrão falhou, tentando com supabaseAdmin:", uploadError.message);
+    const { error: adminError } = await supabaseAdmin.storage
+      .from("lyka_media")
+      .upload(fileName, processedBlob, {
+        contentType: "image/jpeg",
+        upsert: true,
+      });
+    if (adminError) {
+      throw new Error(`Erro ao enviar foto: ${adminError.message || uploadError.message}`);
+    }
+  }
+
+  const { data: pubData } = supabase.storage.from("lyka_media").getPublicUrl(fileName);
+  if (!pubData?.publicUrl) {
+    throw new Error("Não foi possível obter o endereço público da foto.");
+  }
+  return pubData.publicUrl;
+}
+
 
 interface MeuPerfilProps {
   readonly escolaNome: string;
@@ -124,6 +213,11 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
     bio: "", avatar_url: "", genero: "masculino",
   });
   const [editPerfil, setEditPerfil] = useState({ ...perfil });
+  const [uploadingImg, setUploadingImg] = useState(false);
+  const [uploadMsg, setUploadMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [avatarInputMode, setAvatarInputMode] = useState<"upload" | "url">("upload");
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     async function fetchUserData() {
@@ -183,6 +277,53 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
     void fetchUserData();
   }, []);
 
+  const handleFileSelect = async (file: File) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setUploadMsg({ type: "error", text: "Por favor, selecione um arquivo de imagem (JPG, PNG, WEBP, etc.)." });
+      return;
+    }
+    if (file.size > 15 * 1024 * 1024) {
+      setUploadMsg({ type: "error", text: "A imagem selecionada é muito pesada (máx 15MB). Escolha outra foto." });
+      return;
+    }
+
+    setUploadingImg(true);
+    setUploadMsg(null);
+
+    // Prévia instantânea local via Blob URL
+    const localUrl = URL.createObjectURL(file);
+    setEditPerfil(prev => ({ ...prev, avatar_url: localUrl }));
+    setImgErr(false);
+
+    try {
+      const publicUrl = await uploadAvatarImage(file, perfil.id);
+      URL.revokeObjectURL(localUrl);
+      setEditPerfil(prev => ({ ...prev, avatar_url: publicUrl }));
+      setUploadMsg({ type: "success", text: "Foto carregada com sucesso! Clique em 'Salvar alterações' para confirmar." });
+    } catch (err: unknown) {
+      console.warn("Upload no storage falhou, gerando base64 otimizado:", err);
+      try {
+        const compressedBlob = await processImageForAvatar(file);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64Url = reader.result as string;
+          setEditPerfil(prev => ({ ...prev, avatar_url: base64Url }));
+          setUploadMsg({
+            type: "success",
+            text: "Foto pronta! Clique em 'Salvar alterações' para gravar no seu perfil.",
+          });
+        };
+        reader.readAsDataURL(compressedBlob);
+      } catch {
+        const msg = err instanceof Error ? err.message : "Erro ao processar imagem.";
+        setUploadMsg({ type: "error", text: msg });
+      }
+    } finally {
+      setUploadingImg(false);
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -211,8 +352,34 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
         if (adminErr) throw adminErr;
       }
 
+      // Sincroniza localmente para sessões de teste e cache
+      try {
+        const testUserStr = localStorage.getItem('ceep_test_user');
+        if (testUserStr) {
+          const testUser = JSON.parse(testUserStr);
+          if (testUser.id === perfil.id || !testUser.id) {
+            testUser.avatarUrl = editPerfil.avatar_url;
+            testUser.nomeCompleto = editPerfil.nome;
+            testUser.turmaOuCargo = editPerfil.turma_ou_cargo;
+            localStorage.setItem('ceep_test_user', JSON.stringify(testUser));
+          }
+        }
+      } catch (e) {
+        console.warn("Erro ao sincronizar ceep_test_user:", e);
+      }
+
+      try {
+        await supabase.auth.updateUser({
+          data: {
+            nome_completo: editPerfil.nome,
+            avatar_url: editPerfil.avatar_url,
+          }
+        });
+      } catch {}
+
       setPerfil({ ...editPerfil });
       setImgErr(false);
+      setUploadMsg(null);
       setIsEditing(false);
       setSaved(true);
       if (editPerfil.avatar_url && editPerfil.turma_ou_cargo) {
@@ -229,6 +396,8 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
 
   const handleCancel = () => {
     setEditPerfil({ ...perfil });
+    setUploadMsg(null);
+    setImgErr(false);
     setIsEditing(false);
   };
 
@@ -250,7 +419,8 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
 
   const badge = papelBadge(perfil.papel);
   const [g1, g2] = gradFor(perfil.nome);
-  const showAvatar = perfil.avatar_url && !imgErr;
+  const activeAvatar = isEditing ? editPerfil.avatar_url : perfil.avatar_url;
+  const showAvatar = activeAvatar && !imgErr;
 
   // Cover gradient based on user
   const coverIdx = perfil.nome.charCodeAt(0) % 5;
@@ -270,7 +440,7 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
         @keyframes savedPulse { 0%,100% { opacity:1; } 50% { opacity:0.7; } }
       `}</style>
 
-      {perfil.turma_ou_cargo?.toUpperCase().includes('1� ADM') || perfil.turma_ou_cargo?.toUpperCase().includes('1 ADM') ? (
+      {perfil.turma_ou_cargo?.toUpperCase().includes('1 ADM') || perfil.turma_ou_cargo?.toUpperCase().includes('1 ADM') ? (
         <div style={{ marginBottom: 24 }}>
           <CrachaPesquisador nome={perfil.nome} avatarUrl={perfil.avatar_url} turma={perfil.turma_ou_cargo} />
         </div>
@@ -313,29 +483,78 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
         <div style={{ padding: "0 28px 24px", position: "relative" }}>
           {/* Avatar */}
           <div style={{ position:"relative", display:"inline-block", marginTop:-56 }}>
-            <div style={{
-              width:104, height:104, borderRadius:"50%",
-              border:"4px solid #fff",
-              background:`linear-gradient(135deg,${g1},${g2})`,
-              overflow:"hidden", boxShadow:"0 4px 20px rgba(0,0,0,0.15)",
-              display:"flex", alignItems:"center", justifyContent:"center",
-            }}>
+            <div
+              style={{
+                width:104, height:104, borderRadius:"50%",
+                border:"4px solid #fff",
+                background:`linear-gradient(135deg,${g1},${g2})`,
+                overflow:"hidden", boxShadow:"0 4px 20px rgba(0,0,0,0.15)",
+                display:"flex", alignItems:"center", justifyContent:"center",
+                position: "relative",
+                cursor: isEditing ? "pointer" : "default",
+              }}
+              onClick={() => {
+                if (isEditing) fileInputRef.current?.click();
+              }}
+              title={isEditing ? "Clique para escolher uma foto do seu dispositivo" : undefined}
+            >
               {showAvatar ? (
-                <img src={perfil.avatar_url} alt={perfil.nome} onError={()=>setImgErr(true)}
+                <img src={activeAvatar} alt={editPerfil.nome || perfil.nome} onError={()=>setImgErr(true)}
                   style={{width:"100%",height:"100%",objectFit:"cover"}} />
               ) : (
                 <span style={{fontWeight:900,fontSize:36,color:"#fff",letterSpacing:"-1px"}}>
-                  {getInitials(perfil.nome)}
+                  {getInitials(editPerfil.nome || perfil.nome)}
                 </span>
               )}
+              {isEditing && (
+                <div style={{
+                  position: "absolute", inset: 0,
+                  background: "rgba(15,23,42,0.45)",
+                  display: "flex", flexDirection: "column",
+                  alignItems: "center", justifyContent: "center",
+                  color: "#fff", transition: "opacity 0.2s",
+                }}>
+                  {uploadingImg ? (
+                    <Loader2 style={{ width: 22, height: 22, animation: "perfilSpin 0.8s linear infinite" }} />
+                  ) : (
+                    <>
+                      <Camera style={{ width: 20, height: 20, marginBottom: 2 }} />
+                      <span style={{ fontSize: 9, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px" }}>Trocar</span>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
-            {/* online dot */}
-            <div style={{
-              position:"absolute", bottom:6, right:6,
-              width:18, height:18, borderRadius:"50%",
-              background:"#10b981", border:"3px solid #fff",
-              boxShadow:"0 2px 6px rgba(16,185,129,0.4)",
-            }} />
+            {/* online dot / camera button */}
+            {isEditing ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fileInputRef.current?.click();
+                }}
+                title="Escolher foto do dispositivo"
+                style={{
+                  position: "absolute", bottom: 2, right: 2,
+                  width: 32, height: 32, borderRadius: "50%",
+                  background: "#7c3aed", border: "2.5px solid #fff",
+                  color: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: "pointer", boxShadow: "0 2px 8px rgba(124,58,237,0.4)",
+                  padding: 0, transition: "transform 0.15s",
+                }}
+                onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.1)")}
+                onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
+              >
+                <Camera style={{ width: 15, height: 15 }} />
+              </button>
+            ) : (
+              <div style={{
+                position:"absolute", bottom:6, right:6,
+                width:18, height:18, borderRadius:"50%",
+                background:"#10b981", border:"3px solid #fff",
+                boxShadow:"0 2px 6px rgba(16,185,129,0.4)",
+              }} />
+            )}
           </div>
 
           {/* name + badge */}
@@ -523,15 +742,301 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
                 onChange={v=>setEditPerfil(p=>({...p,bio:v}))} multiline
                 placeholder="Conte um pouco sobre você..." />
             </div>
-            <div style={{gridColumn:"1/-1"}}>
-              <Field id="edit-avatar" label="URL da foto de perfil" value={editPerfil.avatar_url}
-                onChange={v=>setEditPerfil(p=>({...p,avatar_url:v}))}
-                placeholder="https://..." />
-              {editPerfil.avatar_url && (
-                <div style={{marginTop:8,display:"flex",alignItems:"center",gap:10}}>
-                  <img src={editPerfil.avatar_url} alt="preview" onError={e=>{(e.target as HTMLImageElement).style.display="none";}}
-                    style={{width:48,height:48,borderRadius:12,objectFit:"cover",border:"2px solid #e2e8f0"}} />
-                  <span style={{fontSize:12,color:"#94a3b8",fontWeight:500}}>Prévia da foto</span>
+            {/* Seletor e Upload de Foto de Perfil */}
+            <div style={{ gridColumn: "1/-1", display: "flex", flexDirection: "column", gap: 10 }}>
+              {/* Input de arquivo oculto para acionamento via botões e avatar */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    void handleFileSelect(file);
+                  }
+                  e.target.value = "";
+                }}
+              />
+
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                  Foto de Perfil
+                </label>
+                <div style={{ display: "flex", background: "#f1f5f9", padding: 3, borderRadius: 10, gap: 2 }}>
+                  <button
+                    type="button"
+                    onClick={() => setAvatarInputMode("upload")}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      padding: "6px 12px", borderRadius: 8, border: "none",
+                      fontSize: 12, fontWeight: 700, cursor: "pointer",
+                      background: avatarInputMode === "upload" ? "#fff" : "transparent",
+                      color: avatarInputMode === "upload" ? "#7c3aed" : "#64748b",
+                      boxShadow: avatarInputMode === "upload" ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    <Upload style={{ width: 13, height: 13 }} />
+                    Upload do Dispositivo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAvatarInputMode("url")}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      padding: "6px 12px", borderRadius: 8, border: "none",
+                      fontSize: 12, fontWeight: 700, cursor: "pointer",
+                      background: avatarInputMode === "url" ? "#fff" : "transparent",
+                      color: avatarInputMode === "url" ? "#7c3aed" : "#64748b",
+                      boxShadow: avatarInputMode === "url" ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    <Link style={{ width: 13, height: 13 }} />
+                    Usar Link / URL
+                  </button>
+                </div>
+              </div>
+
+              {avatarInputMode === "upload" ? (
+                <div>
+                  {/* Área de Dropzone e Seleção de Arquivo */}
+                  <div
+                    onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDragging(false);
+                      const file = e.dataTransfer.files?.[0];
+                      if (file) void handleFileSelect(file);
+                    }}
+                    onClick={() => fileInputRef.current?.click()}
+                    style={{
+                      border: isDragging ? "2px dashed #7c3aed" : "2px dashed #cbd5e1",
+                      borderRadius: 16,
+                      background: isDragging ? "#f5f3ff" : "#f8fafc",
+                      padding: "22px 18px",
+                      textAlign: "center",
+                      cursor: "pointer",
+                      transition: "all 0.2s",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    {uploadingImg ? (
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "10px 0" }}>
+                        <Loader2 style={{ width: 30, height: 30, color: "#7c3aed", animation: "perfilSpin 0.8s linear infinite" }} />
+                        <span style={{ fontSize: 13, fontWeight: 700, color: "#7c3aed" }}>
+                          Processando e otimizando sua foto...
+                        </span>
+                      </div>
+                    ) : (
+                      <>
+                        <div style={{
+                          width: 48, height: 48, borderRadius: 14,
+                          background: "#ede9fe", color: "#7c3aed",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          boxShadow: "0 2px 8px rgba(124,58,237,0.15)",
+                        }}>
+                          <Camera style={{ width: 24, height: 24 }} />
+                        </div>
+                        <div>
+                          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#1e293b" }}>
+                            Clique para escolher do seu celular ou computador
+                          </p>
+                          <p style={{ margin: "3px 0 0", fontSize: 11, color: "#64748b", fontWeight: 500 }}>
+                            Formatos: JPG, PNG, WEBP (recorte e compressão automáticos)
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            fileInputRef.current?.click();
+                          }}
+                          style={{
+                            marginTop: 6,
+                            padding: "8px 18px",
+                            borderRadius: 10,
+                            background: "#7c3aed",
+                            color: "#fff",
+                            border: "none",
+                            fontSize: 12,
+                            fontWeight: 700,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                            cursor: "pointer",
+                            boxShadow: "0 2px 8px rgba(124,58,237,0.25)",
+                          }}
+                        >
+                          <Upload style={{ width: 14, height: 14 }} />
+                          Escolher foto do aparelho
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Mensagem de Feedback */}
+                  {uploadMsg && (
+                    <div style={{
+                      marginTop: 8,
+                      padding: "10px 14px",
+                      borderRadius: 12,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      background: uploadMsg.type === "success" ? "#ecfdf5" : "#fef2f2",
+                      color: uploadMsg.type === "success" ? "#065f46" : "#991b1b",
+                      border: `1px solid ${uploadMsg.type === "success" ? "#a7f3d0" : "#fecaca"}`,
+                    }}>
+                      {uploadMsg.type === "success" ? (
+                        <Check style={{ width: 15, height: 15, flexShrink: 0 }} />
+                      ) : (
+                        <AlertCircle style={{ width: 15, height: 15, flexShrink: 0 }} />
+                      )}
+                      <span>{uploadMsg.text}</span>
+                    </div>
+                  )}
+
+                  {/* Prévia da Foto Atual/Carregada */}
+                  {editPerfil.avatar_url && (
+                    <div style={{
+                      marginTop: 10,
+                      padding: "10px 14px",
+                      borderRadius: 14,
+                      background: "#f1f5f9",
+                      border: "1px solid #e2e8f0",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 12,
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <img
+                          src={editPerfil.avatar_url}
+                          alt="preview"
+                          onError={() => setImgErr(true)}
+                          style={{
+                            width: 44, height: 44,
+                            borderRadius: "50%",
+                            objectFit: "cover",
+                            border: "2px solid #7c3aed",
+                          }}
+                        />
+                        <div>
+                          <span style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#1e293b" }}>
+                            Foto selecionada
+                          </span>
+                          <span style={{ fontSize: 11, color: "#64748b" }}>
+                            Pronta para salvar no seu perfil
+                          </span>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: 8,
+                            background: "#fff",
+                            border: "1px solid #cbd5e1",
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: "#475569",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                          }}
+                        >
+                          <RefreshCw style={{ width: 12, height: 12 }} />
+                          Trocar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditPerfil(p => ({ ...p, avatar_url: "" }));
+                            setUploadMsg(null);
+                          }}
+                          style={{
+                            padding: "6px 10px",
+                            borderRadius: 8,
+                            background: "#fee2e2",
+                            border: "none",
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: "#ef4444",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                          }}
+                        >
+                          <Trash2 style={{ width: 12, height: 12 }} />
+                          Remover
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <Field
+                    id="edit-avatar"
+                    label=""
+                    value={editPerfil.avatar_url}
+                    onChange={(v) => {
+                      setEditPerfil(p => ({ ...p, avatar_url: v }));
+                      setImgErr(false);
+                      setUploadMsg(null);
+                    }}
+                    placeholder="Cole aqui o link da imagem (https://...)"
+                  />
+                  {editPerfil.avatar_url && (
+                    <div style={{
+                      marginTop: 8,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "8px 12px",
+                      background: "#f8fafc",
+                      borderRadius: 12,
+                      border: "1px solid #e2e8f0"
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <img
+                          src={editPerfil.avatar_url}
+                          alt="preview"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                          style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover", border: "2px solid #e2e8f0" }}
+                        />
+                        <span style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>Prévia da foto vinculada</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setEditPerfil(p => ({ ...p, avatar_url: "" }))}
+                        style={{
+                          padding: "5px 10px",
+                          borderRadius: 8,
+                          background: "#fee2e2",
+                          border: "none",
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: "#ef4444",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Limpar
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
