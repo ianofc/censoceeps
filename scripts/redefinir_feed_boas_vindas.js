@@ -82,8 +82,8 @@ async function resetFeed() {
     adminId = adminUser.id;
   }
 
-  const welcomeContent = 
-`👋 Olá, equipe de pesquisadores(as) do CEEP Seabra! Sejam muito bem-vindos(as) ao Censo Escolar — Projeto Ada Lovelace! 🚀✨
+  const welcomeContent =
+    `👋 Olá, equipe de pesquisadores(as) do CEEP Seabra! Sejam muito bem-vindos(as) ao Censo Escolar — Projeto Ada Lovelace! 🚀✨
 
 Este aplicativo foi desenvolvido especialmente para apoiar a nossa jornada de pesquisa de campo, garantindo que os dados da nossa comunidade escolar sejam coletados com rigor, transparência e confiabilidade.
 
@@ -133,3 +133,4 @@ Contamos com a energia, a dedicação e o compromisso de cada um de vocês. Um e
 }
 
 await resetFeed();
+

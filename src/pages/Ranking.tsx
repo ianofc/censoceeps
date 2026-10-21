@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabaseClient";
-import { useUserSession } from "../hooks/useUserSession";
+import { useUserSession, isStaffPapel } from "../hooks/useUserSession";
+import { mesclarEntrevistadoresOficiais, normalizarNome } from "../utils/entrevistadoresOficiais";
 import {
   Trophy, Zap, Star, BookOpen, MessageCircle,
   Rss, Heart, RefreshCw, Medal, Crown, Flame,
-  ChevronUp, Shield, Award, TrendingUp
+  ChevronUp, Shield, Award, TrendingUp, Search
 } from "lucide-react";
 
 // ─── XP CONFIG ───────────────────────────────────────────────────────────────
@@ -306,24 +307,28 @@ export function Ranking() {
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [animIn, setAnimIn] = useState(false);
+  const [search, setSearch] = useState("");
 
   const fetchRanking = useCallback(async () => {
     setLoading(true);
     try {
       // Fetch all data in parallel
       const [
-        { data: pessoas },
-        { data: fichasRaw },
+        { data: pessoas, error: pesErr },
+        { data: fichasRaw, error: fichasErr },
         { data: msgsRaw },
         { data: postsRaw },
         { data: likesRaw },
       ] = await Promise.all([
         supabase.from("pessoas").select("id, nome_completo, papel, avatar_url"),
-        supabase.from("entrevistas").select("entrevistador_id"),
+        supabase.from("entrevistas").select("entrevistador_id, entrevistador:pessoas(id, nome_completo)"),
         supabase.from("lyka_messages").select("user_id").is("conversation_key", null),
         supabase.from("lyka_posts").select("user_id"),
         supabase.from("pessoa_likes").select("liked_id, liker_id"),
       ]);
+
+      if (pesErr) console.warn("Erro ao buscar pessoas no ranking:", pesErr);
+      if (fichasErr) console.warn("Erro ao buscar entrevistas no ranking:", fichasErr);
 
       // Count post likes received per user (from lyka_reactions)
       const { data: postsWithAuthor } = await supabase.from("lyka_posts").select("id, user_id");
@@ -347,11 +352,14 @@ export function Ranking() {
         });
       }
 
-      // Count fichas per user (online + offline drafts)
+      // Count fichas per user (online + offline drafts) by ID and by Name
       const fichasMap: Record<string, number> = {};
+      const fichasMapByName: Record<string, number> = {};
       (fichasRaw || []).forEach((r: any) => {
         const uid = r.entrevistador_id || r.user_id;
+        const intName = normalizarNome(r.entrevistador?.nome_completo);
         if (uid) fichasMap[uid] = (fichasMap[uid] || 0) + 1;
+        if (intName) fichasMapByName[intName] = (fichasMapByName[intName] || 0) + 1;
       });
 
       // Inclui contagem de rascunhos pendentes locais
@@ -360,7 +368,9 @@ export function Ranking() {
         pendingQueue.forEach((p: any) => {
           const raw = p.data || p;
           const uid = raw.entrevistador_id || raw.user_id || profile?.id;
+          const intName = normalizarNome(raw.interviewer_name || profile?.nomeCompleto);
           if (uid) fichasMap[uid] = (fichasMap[uid] || 0) + 1;
+          if (intName) fichasMapByName[intName] = (fichasMapByName[intName] || 0) + 1;
         });
       } catch {
         // ignora
@@ -374,27 +384,21 @@ export function Ranking() {
         postsMap[r.user_id] = (postsMap[r.user_id] || 0) + 1;
       });
 
-      // Apenas alunos pesquisadores/entrevistadores competem no ranking. Professores e gestão são mentores/respondentes.
-      const ranked: Player[] = (pessoas || [])
-        .filter((p: { id: string; nome_completo: string; papel: string }) => {
-          const papel = (p.papel || '').toLowerCase();
-          const nome = (p.nome_completo || '').toLowerCase();
-          const isDocenteOuAdmin =
-            papel === 'admin' ||
-            papel === 'professor' ||
-            papel === 'gestor' ||
-            nome.includes('ian') ||
-            nome.includes('juliana');
-          return !isDocenteOuAdmin;
-        })
-        .map((p: { id: string; nome_completo: string; papel: string; avatar_url: string }) => {
-        const fichas = fichasMap[p.id] || 0;
+      // Filtra apenas alunos pesquisadores e mescla com a lista canônica dos 38 oficiais
+      const pessoasAlunos = (pessoas || []).filter((p: any) => !isStaffPapel(p.papel));
+      const unificados = mesclarEntrevistadoresOficiais(pessoasAlunos, fichasRaw || []);
+
+      const ranked: Player[] = unificados.map((p) => {
+        const norm = normalizarNome(p.nome_completo);
+        const fichas = fichasMap[p.id] || fichasMapByName[norm] || 0;
         const msgs = msgsMap[p.id] || 0;
         const posts = postsMap[p.id] || 0;
         const likes = likesReceivedMap[p.id] || 0;
         const xp = fichas * XP_FICHA + posts * XP_POST + msgs * XP_MSG + likes * XP_LIKE;
         return {
-          id: p.id, nome: p.nome_completo, papel: p.papel,
+          id: p.id,
+          nome: p.nome_completo,
+          papel: p.papel,
           avatar_url: p.avatar_url || "",
           fichas, msgs, posts, likes, xp,
         };
@@ -414,14 +418,14 @@ export function Ranking() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [profile?.id, profile?.nomeCompleto]);
 
   useEffect(() => { void fetchRanking(); }, [fetchRanking]);
 
   // Realtime updates
   useEffect(() => {
     const ch = supabase.channel("ranking-rt")
-      .on("postgres_changes", { event: "*", schema: "public", table: "censo_ceep" }, () => void fetchRanking())
+      .on("postgres_changes", { event: "*", schema: "public", table: "entrevistas" }, () => void fetchRanking())
       .on("postgres_changes", { event: "*", schema: "public", table: "lyka_messages" }, () => void fetchRanking())
       .on("postgres_changes", { event: "*", schema: "public", table: "lyka_posts" }, () => void fetchRanking())
       .on("postgres_changes", { event: "*", schema: "public", table: "lyka_reactions" }, () => void fetchRanking())
@@ -434,6 +438,14 @@ export function Ranking() {
   const top3 = players.slice(0, 3);
   const rest = players.slice(3);
   const totalXP = players.reduce((s, p) => s + p.xp, 0);
+
+  const filteredPlayers = search.trim()
+    ? players.filter(p => {
+        const term = normalizarNome(search);
+        const nameNorm = normalizarNome(p.nome);
+        return nameNorm.includes(term) || p.nome.toLowerCase().includes(search.toLowerCase());
+      })
+    : null;
 
   return (
     <div style={{ width: "100%", maxWidth: 820, margin: "0 auto", paddingBottom: 80 }}>
@@ -595,38 +607,72 @@ export function Ranking() {
 
           {/* ── LISTA COMPLETA ─────────────────────────────────────────── */}
           <div style={{ background:"#fff", borderRadius:24, padding:24, border:"1px solid #f1f5f9", boxShadow:"0 4px 24px rgba(0,0,0,0.04)" }}>
-            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:18, paddingBottom:14, borderBottom:"1px solid #f8fafc" }}>
-              <TrendingUp style={{ width:16, height:16, color:"#7c3aed" }} />
-              <span style={{ fontWeight:800, fontSize:14, color:"#0f172a" }}>Classificação Completa</span>
-              <span style={{ marginLeft:"auto", fontSize:11, color:"#94a3b8", fontWeight:600, display:"flex", alignItems:"center", gap:4 }}>
-                <span style={{ width:6, height:6, borderRadius:"50%", background:"#10b981", display:"inline-block", animation:"pulse 2s infinite" }} />
-                Tempo real
-              </span>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:18, paddingBottom:14, borderBottom:"1px solid #f8fafc", flexWrap:"wrap" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <TrendingUp style={{ width:16, height:16, color:"#7c3aed" }} />
+                <span style={{ fontWeight:800, fontSize:14, color:"#0f172a" }}>Classificação (38 Alunos Oficiais)</span>
+              </div>
+              <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
+                <div style={{ display:"flex", alignItems:"center", background:"#f8fafc", border:"1px solid #e2e8f0", borderRadius:12, padding:"5px 12px", gap:8 }}>
+                  <Search style={{ width:14, height:14, color:"#94a3b8" }} />
+                  <input
+                    type="text"
+                    placeholder="Buscar aluno (ex: Taylon)..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    style={{ border:"none", background:"transparent", outline:"none", fontSize:12, color:"#1e293b", width:170 }}
+                  />
+                  {search && (
+                    <button type="button" onClick={() => setSearch("")} style={{ border:"none", background:"none", cursor:"pointer", color:"#94a3b8", fontSize:12, padding:0 }}>✕</button>
+                  )}
+                </div>
+                <span style={{ fontSize:11, color:"#94a3b8", fontWeight:600, display:"flex", alignItems:"center", gap:4 }}>
+                  <span style={{ width:6, height:6, borderRadius:"50%", background:"#10b981", display:"inline-block", animation:"pulse 2s infinite" }} />
+                  Tempo real
+                </span>
+              </div>
             </div>
 
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-              {/* Top 3 in list too */}
-              {top3.map((p, i) => (
-                <div key={p.id} style={{ animation: animIn ? `rankIn 0.4s ease ${i*0.05}s both` : "none" }}>
-                  <RankRow player={p} rank={i+1} isMe={p.id === profile.id} />
-                </div>
-              ))}
+              {filteredPlayers ? (
+                filteredPlayers.length === 0 ? (
+                  <p style={{ textAlign:"center", padding:"30px 0", color:"#94a3b8", fontSize:13 }}>Nenhum aluno encontrado para "{search}".</p>
+                ) : (
+                  filteredPlayers.map((p) => {
+                    const realRank = players.findIndex(x => x.id === p.id) + 1;
+                    return (
+                      <div key={p.id}>
+                        <RankRow player={p} rank={realRank} isMe={p.id === profile.id} />
+                      </div>
+                    );
+                  })
+                )
+              ) : (
+                <>
+                  {/* Top 3 in list too */}
+                  {top3.map((p, i) => (
+                    <div key={p.id} style={{ animation: animIn ? `rankIn 0.4s ease ${i*0.05}s both` : "none" }}>
+                      <RankRow player={p} rank={i+1} isMe={p.id === profile.id} />
+                    </div>
+                  ))}
 
-              {rest.length > 0 && (
-                <div style={{ margin:"4px 0", display:"flex", alignItems:"center", gap:8 }}>
-                  <div style={{ flex:1, height:1, background:"#f1f5f9" }} />
-                  <span style={{ fontSize:10, color:"#94a3b8", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.5px" }}>
-                    demais participantes
-                  </span>
-                  <div style={{ flex:1, height:1, background:"#f1f5f9" }} />
-                </div>
+                  {rest.length > 0 && (
+                    <div style={{ margin:"4px 0", display:"flex", alignItems:"center", gap:8 }}>
+                      <div style={{ flex:1, height:1, background:"#f1f5f9" }} />
+                      <span style={{ fontSize:10, color:"#94a3b8", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.5px" }}>
+                        demais participantes
+                      </span>
+                      <div style={{ flex:1, height:1, background:"#f1f5f9" }} />
+                    </div>
+                  )}
+
+                  {rest.map((p, i) => (
+                    <div key={p.id} style={{ animation: animIn ? `rankIn 0.4s ease ${(i+3)*0.04}s both` : "none" }}>
+                      <RankRow player={p} rank={i+4} isMe={p.id === profile.id} />
+                    </div>
+                  ))}
+                </>
               )}
-
-              {rest.map((p, i) => (
-                <div key={p.id} style={{ animation: animIn ? `rankIn 0.4s ease ${(i+3)*0.04}s both` : "none" }}>
-                  <RankRow player={p} rank={i+4} isMe={p.id === profile.id} />
-                </div>
-              ))}
             </div>
           </div>
 

@@ -284,7 +284,7 @@ export const BadgeList: React.FC<BadgeListProps> = ({ userId }) => {
       {/* ─── MODAL DE DETALHES DA INSÍGNIA AO CLICAR ────────────────────── */}
       {selectedBadge && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm"
           onClick={() => setSelectedBadge(null)}
         >
           <div 

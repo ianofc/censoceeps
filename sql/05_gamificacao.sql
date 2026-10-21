@@ -20,8 +20,13 @@ CREATE POLICY "user_stats_select_all" ON public.user_stats
     FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "user_stats_insert_upsert" ON public.user_stats;
-CREATE POLICY "user_stats_insert_upsert" ON public.user_stats 
-    FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "user_stats_insert_own" ON public.user_stats;
+CREATE POLICY "user_stats_insert_own" ON public.user_stats 
+    FOR INSERT WITH CHECK (auth.uid()::text = user_id);
+
+DROP POLICY IF EXISTS "user_stats_update_own" ON public.user_stats;
+CREATE POLICY "user_stats_update_own" ON public.user_stats 
+    FOR UPDATE USING (auth.uid()::text = user_id) WITH CHECK (auth.uid()::text = user_id);
 
 
 -- 2. Tabela de Catálogo de Insígnias Disponíveis
@@ -65,7 +70,11 @@ CREATE POLICY "user_badges_select_all" ON public.user_badges
 DROP POLICY IF EXISTS "User badges are insertable" ON public.user_badges;
 DROP POLICY IF EXISTS "user_badges_insert" ON public.user_badges;
 CREATE POLICY "user_badges_insert" ON public.user_badges 
-    FOR INSERT WITH CHECK (true);
+    FOR INSERT WITH CHECK (auth.uid()::text = user_id);
+
+DROP POLICY IF EXISTS "user_badges_update_own" ON public.user_badges;
+CREATE POLICY "user_badges_update_own" ON public.user_badges 
+    FOR UPDATE USING (auth.uid()::text = user_id) WITH CHECK (auth.uid()::text = user_id);
 
 
 -- 4. Seed Inicial das Insígnias Graduais

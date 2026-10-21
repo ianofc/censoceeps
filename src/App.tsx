@@ -122,6 +122,7 @@ const AdinhaDirectChat = lazyRetry(() => import('./components/Chat/AdinhaDirectC
 const Oportunidades = lazyRetry(() => import('./pages/Oportunidades'));
 const Biblioteca = lazyRetry(() => import('./pages/Biblioteca'));
 const Ouvidoria = lazyRetry(() => import('./pages/Ouvidoria'));
+const Membros = lazyRetry(() => import('./pages/Membros').then(m => ({ default: m.Membros })));
 
 interface LayoutProps {
   readonly session: any;
@@ -129,6 +130,12 @@ interface LayoutProps {
 
 function Layout({ session }: LayoutProps) {
   const handleLogout = async () => {
+    try {
+      localStorage.removeItem('ceep_offline_session');
+      localStorage.removeItem('ceep_cached_profile');
+    } catch {
+      // ignora
+    }
     await supabase.auth.signOut();
   };
 
@@ -167,7 +174,7 @@ function Layout({ session }: LayoutProps) {
       {/* Navegação Flutuante Adaptativa (Sidebar no Desktop / Barra com Drawer no Mobile) */}
       <FloatingNav onLogout={handleLogout} />
 
-      <main className="flex-1 overflow-y-auto bg-slate-50 p-6 lg:p-10 pb-28 lg:pb-10 relative flex flex-col items-center">
+      <main className="flex-1 overflow-y-auto bg-slate-50 p-6 lg:p-10 lg:pl-28 pb-28 lg:pb-10 relative flex flex-col items-center">
         <div className="w-full max-w-6xl mx-auto flex flex-col items-center">
           <ChunkErrorBoundary>
             <Suspense fallback={
@@ -183,6 +190,7 @@ function Layout({ session }: LayoutProps) {
                 <Route path="/feed" element={<Feed />} />
                 <Route path="/jornal" element={<Newspaper />} />
                 <Route path="/ranking" element={<Ranking />} />
+                <Route path="/membros" element={<Membros />} />
                 <Route path="/chat" element={<LykaChat />} />
                 <Route path="/chat/turmas" element={<GroupChannels />} />
                 <Route path="/chat/adinha" element={
@@ -220,13 +228,28 @@ export default function App() {
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    }).catch(console.error);
+    const getOfflineSessionFallback = () => {
+      try {
+        const raw = localStorage.getItem('ceep_offline_session');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed?.user?.id) return parsed;
+          if (parsed?.id) return { user: parsed };
+        }
+      } catch {}
+      return null;
+    };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
+    supabase.auth.getSession().then(({ data: { session: activeSession } }) => {
+      setSession(activeSession || getOfflineSessionFallback());
+      setLoading(false);
+    }).catch(() => {
+      setSession(getOfflineSessionFallback());
+      setLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, activeSession) => {
+      setSession(activeSession || getOfflineSessionFallback());
       setLoading(false);
     });
 
@@ -253,9 +276,27 @@ export default function App() {
             </div>
           }>
             <Login onLoginSuccess={() => {
-              supabase.auth.getSession().then(({ data: { session } }) => {
-                setSession(session);
-              }).catch(console.error);
+              supabase.auth.getSession().then(({ data: { session: activeSession } }) => {
+                if (activeSession) {
+                  setSession(activeSession);
+                } else {
+                  try {
+                    const raw = localStorage.getItem('ceep_offline_session');
+                    if (raw) {
+                      const parsed = JSON.parse(raw);
+                      setSession(parsed?.user?.id ? parsed : { user: parsed });
+                    }
+                  } catch {}
+                }
+              }).catch(() => {
+                try {
+                  const raw = localStorage.getItem('ceep_offline_session');
+                  if (raw) {
+                    const parsed = JSON.parse(raw);
+                    setSession(parsed?.user?.id ? parsed : { user: parsed });
+                  }
+                } catch {}
+              });
             }} />
           </Suspense>
         </ChunkErrorBoundary>

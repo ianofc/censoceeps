@@ -85,7 +85,9 @@ export function Newspaper() {
           'https://api.rss2json.com/v1/api.json?rss_url=https://agenciabrasil.ebc.com.br/cultura/feed'
         ];
 
-        const responses = await Promise.all(urls.map(url => fetch(url).then(res => res.json())));
+        const settledResponses = await Promise.allSettled(
+          urls.map(url => fetch(url).then(res => res.json()))
+        );
         
         let allItems: RawRssItem[] = [
           {
@@ -118,6 +120,7 @@ export function Newspaper() {
             thumbnail: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80&w=600',
             link: 'https://pt.wikipedia.org/wiki/Estrelas_Al%C3%A9m_do_Tempo',
             categories: ['Ciência', 'Feminismo'],
+            pubDate: new Date().toISOString()
           },
           {
             title: 'A Camélia Branca: O símbolo secreto da abolição e a assinatura da Princesa Isabel',
@@ -141,6 +144,7 @@ export function Newspaper() {
             thumbnail: 'https://images.unsplash.com/photo-1457369804613-52c61a468e7d?auto=format&fit=crop&q=80&w=600',
             link: 'https://pt.wikipedia.org/wiki/Antonieta_de_Barros',
             categories: ['Literatura', 'Educação'],
+            pubDate: new Date().toISOString()
           },
           {
             title: 'Cochicho, Fuzuê e Caçula: A herança linguística negra que o Brasil fala todos os dias',
@@ -188,6 +192,7 @@ export function Newspaper() {
             thumbnail: 'https://images.unsplash.com/photo-1507838153414-b4b713384a76?auto=format&fit=crop&q=80&w=600',
             link: 'https://pt.wikipedia.org/wiki/Chiquinha_Gonzaga',
             categories: ['Música', 'Feminismo'],
+            pubDate: new Date().toISOString()
           },
           {
             title: 'A sala de aula como campo de batalha: O alarmante cenário de desrespeito aos professores',
@@ -195,12 +200,13 @@ export function Newspaper() {
             thumbnail: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80&w=600',
             link: 'https://www.bbc.com/portuguese/brasil-40439403',
             categories: ['Educação', 'Realidade Escolar'],
+            pubDate: new Date().toISOString()
           }
         ];
 
-        responses.forEach(res => {
-          if (res.status === 'ok' && res.items) {
-            allItems = [...allItems, ...res.items];
+        settledResponses.forEach(result => {
+          if (result.status === 'fulfilled' && result.value?.status === 'ok' && result.value.items) {
+            allItems = [...allItems, ...result.value.items];
           }
         });
 
@@ -219,7 +225,7 @@ export function Newspaper() {
 
         const processedNews: NewsArticle[] = allItems
           .filter(item => {
-            const textToInspect = (item.title + ' ' + (item.description || '')).toLowerCase();
+            const textToInspect = ((item.title || '') + ' ' + (item.description || '')).toLowerCase();
             
             // Rejeita sumariamente se tiver palavras bloqueadas usando Regex para pegar palavras inteiras
             const hasBlocked = blockedKeywords.some(keyword => {
@@ -236,7 +242,7 @@ export function Newspaper() {
             return hasRequired;
           })
           .map((item, index) => {
-          const { score, likes, shares } = calculateEngagementScore(item.title, item.description || '');
+          const { score, likes, shares } = calculateEngagementScore(item.title || '', item.description || '');
           
           // Tenta extrair a imagem do RSS (enclosure ou da descrição html)
           let imageUrl = 'https://images.unsplash.com/photo-1589578228447-e1a4e481c6c8?auto=format&fit=crop&q=80&w=600';
@@ -245,22 +251,24 @@ export function Newspaper() {
           } else if (item.thumbnail) {
             imageUrl = item.thumbnail;
           } else {
-             const imgMatch = item.description.match(/<img[^>]+src="([^">]+)"/);
+             const imgMatch = item.description?.match(/<img[^>]+src="([^">]+)"/);
              if (imgMatch) imageUrl = imgMatch[1];
           }
 
           // Limpa HTML da descrição
-          const cleanSummary = item.description.replace(/<[^>]*>?/gm, '').substring(0, 150) + '...';
+          const cleanSummary = (item.description?.replace(/<[^>]*>?/gm, '') || '').substring(0, 150) + '...';
+          const parsedDate = item.pubDate ? new Date(item.pubDate) : new Date();
+          const validDate = isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
 
           return {
             id: `news-${index}-${Date.now()}`,
-            title: item.title,
+            title: item.title || 'Sem título',
             summary: cleanSummary,
             imageUrl,
             source: 'Portal RSS', // RSS de origem
             category: item.categories && item.categories.length > 0 ? item.categories[0] : 'Brasil',
-            date: new Date(item.pubDate).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }),
-            url: item.link,
+            date: validDate.toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }),
+            url: item.link || '#',
             // Meta/X Algorithm metrics
             score,
             likes,
@@ -378,20 +386,20 @@ export function Newspaper() {
               <span className="text-[#C4170C] font-black text-sm uppercase tracking-wide mb-2">
                 {mainArticle.category}
               </span>
-              <h2 className="text-4xl md:text-5xl font-black text-gray-900 leading-[1.1] mb-4 group-hover:text-[#C4170C] transition-colors tracking-tight">
+              <h2 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white leading-[1.1] mb-4 group-hover:text-[#C4170C] transition-colors tracking-tight">
                 {mainArticle.title}
               </h2>
-              <p className="text-gray-600 text-lg md:text-xl font-medium leading-snug mb-6 line-clamp-2">
+              <p className="text-gray-600 dark:text-slate-300 text-lg md:text-xl font-medium leading-snug mb-6 line-clamp-2">
                 {mainArticle.summary}
               </p>
-              <div className="w-full aspect-[16/9] overflow-hidden rounded-lg bg-gray-100 mb-4">
+              <div className="w-full aspect-[16/9] overflow-hidden rounded-lg bg-gray-100 dark:bg-slate-800 mb-4">
                 <img 
                   src={mainArticle.imageUrl} 
                   alt={mainArticle.title}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />
               </div>
-              <div className="flex items-center gap-4 text-xs font-bold text-gray-500">
+              <div className="flex items-center gap-4 text-xs font-bold text-gray-500 dark:text-slate-400">
                 <span>{mainArticle.date}</span>
                 <span className="flex items-center gap-1.5"><span className="text-rose-500">❤️</span> {(mainArticle as any).likes}</span>
                 <span className="flex items-center gap-1.5"><span className="text-blue-500">🔁</span> {(mainArticle as any).shares}</span>
@@ -400,19 +408,19 @@ export function Newspaper() {
           </div>
 
           {/* Destaques Secundários (Right Col) */}
-          <div className="lg:col-span-4 flex flex-col gap-6 border-l-0 lg:border-l border-gray-200 lg:pl-8">
+          <div className="lg:col-span-4 flex flex-col gap-6 border-l-0 lg:border-l border-gray-200 dark:border-slate-800 lg:pl-8">
             {subArticles.map((article) => (
-              <a key={article.id} href={article.url} onClick={handleArticleClick} className="group cursor-pointer flex flex-col border-b border-gray-100 pb-6 last:border-0 last:pb-0">
+              <a key={article.id} href={article.url} onClick={handleArticleClick} className="group cursor-pointer flex flex-col border-b border-gray-100 dark:border-slate-800 pb-6 last:border-0 last:pb-0">
                 <span className="text-[#C4170C] font-black text-[11px] uppercase tracking-wide mb-1.5">
                   {article.category}
                 </span>
-                <h3 className="text-xl md:text-2xl font-bold text-gray-900 leading-tight mb-2 group-hover:text-[#C4170C] transition-colors">
+                <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white leading-tight mb-2 group-hover:text-[#C4170C] transition-colors">
                   {article.title}
                 </h3>
-                <div className="w-full h-40 overflow-hidden rounded bg-gray-100 mb-3 hidden sm:block lg:hidden">
+                <div className="w-full h-40 overflow-hidden rounded bg-gray-100 dark:bg-slate-800 mb-3 hidden sm:block lg:hidden">
                   <img src={article.imageUrl} alt={article.title} className="w-full h-full object-cover" />
                 </div>
-                <div className="flex items-center gap-3 text-[11px] font-bold text-gray-400 mt-1">
+                <div className="flex items-center gap-3 text-[11px] font-bold text-gray-400 dark:text-slate-400 mt-1">
                   <span>{article.date}</span>
                   <span className="flex items-center gap-1"><span className="text-rose-500">❤️</span> {(article as any).likes}</span>
                 </div>
@@ -425,10 +433,10 @@ export function Newspaper() {
 
       {/* Grade de Outras Notícias */}
       {!loading && otherArticles.length > 0 && (
-        <div className="w-full max-w-6xl px-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-10 pt-8 border-t border-gray-200">
+        <div className="w-full max-w-6xl px-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-10 pt-8 border-t border-gray-200 dark:border-slate-800">
           {otherArticles.map((article) => (
             <a key={article.id} href={article.url} onClick={handleArticleClick} className="group cursor-pointer flex flex-col">
-              <div className="w-full aspect-[4/3] overflow-hidden rounded bg-gray-100 mb-3">
+              <div className="w-full aspect-[4/3] overflow-hidden rounded bg-gray-100 dark:bg-slate-800 mb-3">
                 <img 
                   src={article.imageUrl} 
                   alt={article.title}
@@ -438,7 +446,7 @@ export function Newspaper() {
               <span className="text-[#C4170C] font-black text-[10px] uppercase tracking-wide mb-1">
                 {article.category}
               </span>
-              <h4 className="text-[15px] font-bold text-gray-900 leading-snug group-hover:text-[#C4170C] transition-colors line-clamp-3">
+              <h4 className="text-[15px] font-bold text-gray-900 dark:text-white leading-snug group-hover:text-[#C4170C] transition-colors line-clamp-3">
                 {article.title}
               </h4>
             </a>

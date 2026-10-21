@@ -298,17 +298,20 @@ export const badgeService = {
         console.warn('[BadgeService] Erro ao persistir insígnia em user_stats:', err);
       }
 
-      // Tenta também usuario_badges / user_badges caso a tabela exista
+      // Tenta também user_badges (tabela relacional de insígnias) com fallback silencioso
       try {
         await supabase
-          .from('usuario_badges')
-          .upsert({
-            usuario_id: userId,
-            badge_tipo: badgeId,
-            conquistado_em: newEarned.earnedAt,
-          });
+          .from('user_badges')
+          .upsert(
+            {
+              user_id: userId,
+              badge_id: badgeId,
+              earned_at: newEarned.earnedAt,
+            },
+            { onConflict: 'user_id,badge_id' }
+          );
       } catch {
-        // Tabela opcional
+        // Tabela opcional / RLS restrito
       }
     })();
 

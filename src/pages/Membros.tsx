@@ -8,7 +8,7 @@ interface Membro {
   id: string;
   nome_completo: string;
   turma_ou_cargo: string;
-  papel: 'gestor' | 'entrevistador_aluno' | 'entrevistado';
+  papel: 'gestor' | 'entrevistador_aluno' | 'entrevistador' | 'entrevistado';
   genero: string;
   avatar_url: string;
 }
@@ -39,8 +39,8 @@ function getInitials(name: string) {
 }
 
 function papelInfo(papel: string) {
-  if (papel === 'gestor') return { label: 'Gestor', icon: <Shield style={{ width: 11, height: 11 }} />, color: '#F59E0B' };
-  if (papel === 'entrevistador_aluno') return { label: 'Pesquisador', icon: <GraduationCap style={{ width: 11, height: 11 }} />, color: '#3B82F6' };
+  if (papel === 'gestor' || papel === 'admin' || papel === 'professor') return { label: 'Gestor', icon: <Shield style={{ width: 11, height: 11 }} />, color: '#F59E0B' };
+  if (papel === 'entrevistador_aluno' || papel === 'entrevistador') return { label: 'Pesquisador', icon: <GraduationCap style={{ width: 11, height: 11 }} />, color: '#3B82F6' };
   return { label: 'Entrevistado', icon: <User2 style={{ width: 11, height: 11 }} />, color: '#10B981' };
 }
 
@@ -214,7 +214,10 @@ export function Membros() {
     const matchSearch =
       m.nome_completo.toLowerCase().includes(search.toLowerCase()) ||
       (m.turma_ou_cargo || '').toLowerCase().includes(search.toLowerCase());
-    const matchFilter = filter === 'todos' || m.papel === filter;
+    const matchFilter =
+      filter === 'todos' ||
+      m.papel === filter ||
+      (filter === 'entrevistador_aluno' && m.papel === 'entrevistador');
     return matchSearch && matchFilter;
   });
 
@@ -233,7 +236,7 @@ export function Membros() {
     <div style={{ width: '100%', maxWidth: 900, margin: '0 auto', padding: '0 0 80px' }}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
-        ::placeholder { color: rgba(255,255,255,0.5) !important; }
+        .members-search::placeholder { color: rgba(255,255,255,0.5) !important; }
         .members-search:focus { outline: none; border-color: rgba(255,255,255,0.5) !important; }
       `}</style>
 

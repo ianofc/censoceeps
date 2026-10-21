@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useUserSession } from '../hooks/useUserSession';
+import { useUserSession, isStaffPapel } from '../hooks/useUserSession';
 import { supabase } from '../lib/supabaseClient';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { 
@@ -64,12 +64,17 @@ export const Admin: React.FC = () => {
         supabase.from('pessoas').select('*')
       ]);
 
+      const normalizedEntrevistas = (allEntrevistas || []).map(row => ({
+        ...row,
+        nome_participante: row.nome_participante ? String(row.nome_participante).trim().toUpperCase() : row.nome_participante
+      }));
+
       const backup = {
         exportDate: new Date().toISOString(),
         geradoPor: profile.nomeCompleto,
-        totalEntrevistas: allEntrevistas?.length || 0,
+        totalEntrevistas: normalizedEntrevistas.length,
         totalPessoas: allPessoas?.length || 0,
-        entrevistas: allEntrevistas || [],
+        entrevistas: normalizedEntrevistas,
         pessoas: allPessoas || []
       };
 
@@ -108,8 +113,9 @@ export const Admin: React.FC = () => {
         headers.join(','),
         ...allEntrevistas.map(row => 
           headers.map(field => {
-            const val = row[field];
+            let val = row[field];
             if (val === null || val === undefined) return '""';
+            if (field === 'nome_participante') val = String(val).trim().toUpperCase();
             return `"${String(val).replace(/"/g, '""')}"`;
           }).join(',')
         )
@@ -136,16 +142,26 @@ export const Admin: React.FC = () => {
   };
 
   const handleChangeRole = async (pessoaId: string, currentRole: string) => {
-    const newRole = window.prompt(
-      'Informe o novo papel (opções: professor, gestor, entrevistador_aluno, entrevistado):',
+    if (currentRole === 'admin') {
+      alert('O papel de administrador é exclusivo do Prof. Ian Santos e não pode ser alterado por aqui.');
+      return;
+    }
+    const PAPEIS_PERMITIDOS = ['entrevistador', 'professor', 'gestor', 'entrevistado'];
+    const input = window.prompt(
+      'Informe o novo papel (opções: entrevistador, professor, gestor, entrevistado):',
       currentRole
     );
+    const newRole = (input || '').trim().toLowerCase();
     if (!newRole || newRole === currentRole) return;
+    if (!PAPEIS_PERMITIDOS.includes(newRole)) {
+      alert(`Papel inválido: "${newRole}". Use: ${PAPEIS_PERMITIDOS.join(', ')}.`);
+      return;
+    }
 
     try {
       const { error } = await supabase
         .from('pessoas')
-        .update({ papel: newRole.trim().toLowerCase() })
+        .update({ papel: newRole })
         .eq('id', pessoaId);
 
       if (error) throw error;
@@ -176,11 +192,7 @@ export const Admin: React.FC = () => {
     );
   });
 
-  const totalProfessores = pessoas.filter(p => {
-    const papel = (p.papel || '').toLowerCase();
-    const nome = (p.nome_completo || '').toLowerCase();
-    return papel === 'professor' || papel === 'gestor' || papel === 'admin' || nome.includes('ian') || nome.includes('juliana');
-  }).length;
+  const totalProfessores = pessoas.filter(p => isStaffPapel(p.papel)).length;
 
   const totalAlunos = Math.max(0, pessoas.length - totalProfessores);
 
@@ -366,8 +378,7 @@ export const Admin: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredPessoas.map((p) => {
-                  const papel = (p.papel || '').toLowerCase();
-                  const isDocente = papel === 'professor' || papel === 'gestor' || papel === 'admin';
+                  const isDocente = isStaffPapel(p.papel);
                   return (
                     <tr key={p.id} className="hover:bg-slate-50 transition">
                       <td className="py-3 px-4 font-bold text-slate-800 flex items-center gap-2">

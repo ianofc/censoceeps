@@ -92,19 +92,20 @@ export function AnalyticsDashboard() {
         headers.map(header => {
           let cell = row[header];
           if (cell === null || cell === undefined) cell = '';
+          if (header === 'nome_participante' && cell) cell = String(cell).trim().toUpperCase();
           if (Array.isArray(cell)) cell = cell.join('; ');
           const strCell = String(cell);
           // Escapar aspas e envolver em aspas se tiver vírgula
-          if (strCell.includes(',') || strCell.includes('"') || strCell.includes('\\n')) {
+          if (strCell.includes(',') || strCell.includes('"') || strCell.includes('\n') || strCell.includes('\r')) {
             return `"${strCell.replace(/"/g, '""')}"`;
           }
           return strCell;
         }).join(',')
       )
-    ].join('\\n');
+    ].join('\n');
 
     // Baixar o arquivo
-    const blob = new Blob(["\\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -112,6 +113,7 @@ export function AnalyticsDashboard() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const renderProgressBar = (label: string, count: number, total: number, colorClass: string) => {
@@ -212,7 +214,7 @@ export function AnalyticsDashboard() {
             Tipos de Risco (Evasão)
           </span>
           <strong className="text-3xl font-black text-slate-800">
-            {Object.keys(stats.evasao).length > 0 ? Object.keys(stats.evasao).length - 1 : 0}
+            {Object.keys(stats.evasao).filter((k) => k !== 'Não, nunca pensei').length}
           </strong>
         </div>
 

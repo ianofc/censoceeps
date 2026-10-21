@@ -1,55 +1,71 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { useUserSession } from '../hooks/useUserSession';
 import { Search, FileText, User, Users, RefreshCw } from 'lucide-react';
 
 export function Dashboard() {
+  const { profile: sessionProfile, isTeacher, isAdmin } = useUserSession();
   const [coletas, setColetas] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [viewMode, setViewMode] = useState<'minhas' | 'todas'>('minhas');
 
-  useEffect(() => {
-    void fetchColetas();
-  }, [viewMode]);
-
-  const fetchColetas = async () => {
+  const fetchColetas = useCallback(async () => {
     setLoading(true);
+    let userId = sessionProfile?.id || '';
+
+    if (!userId) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        userId = session?.user?.id || '';
+      } catch {
+        // ignora
+      }
+    }
+
+    // Carrega rascunhos locais pendentes
+    const localDrafts = JSON.parse(localStorage.getItem('censo_pending_queue') || '[]');
+    const draftsFormatted = localDrafts.map((d: any) => {
+      const raw = d.data || d;
+      return {
+        id: d.id || raw.id || `local-${Date.now()}`,
+        nome_participante: (raw.nome_participante || raw.nome || '').trim().toUpperCase(),
+        turma: raw.turma ? (raw.serie ? `${raw.serie} - ${raw.turma}` : raw.turma) : (raw.grupo_escolar || 'Offline'),
+        genero: raw.genero || 'Não inf.',
+        cor_raca: raw.cor_raca || 'Não inf.',
+        created_at: raw.created_at || d.timestamp || new Date().toISOString(),
+        isPending: true,
+        entrevistador_id: raw.entrevistador_id && raw.entrevistador_id !== 'offline-user' ? raw.entrevistador_id : userId,
+      };
+    });
+
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (userId) {
+        const { data: profile } = await supabase
+          .from('pessoas')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
 
-      const { data: profile } = await supabase
-        .from('pessoas')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-      
-      setUserProfile(profile);
-
-      // Carrega rascunhos locais pendentes
-      const localDrafts = JSON.parse(localStorage.getItem('censo_pending_queue') || '[]');
-      const draftsFormatted = localDrafts.map((d: any) => {
-        const raw = d.data || d;
-        return {
-          id: d.id || raw.id,
-          nome_participante: raw.nome_participante || raw.nome,
-          turma: raw.turma ? (raw.serie ? `${raw.serie} - ${raw.turma}` : raw.turma) : 'Offline',
-          genero: raw.genero || 'Não inf.',
-          cor_raca: raw.cor_raca || 'Não inf.',
-          created_at: raw.created_at || d.timestamp || new Date().toISOString(),
-          isPending: true,
-          entrevistador_id: raw.entrevistador_id || user.id,
-        };
-      });
+        if (profile) {
+          setUserProfile(profile);
+        } else if (sessionProfile?.nomeCompleto) {
+          setUserProfile({
+            id: userId,
+            nome_completo: sessionProfile.nomeCompleto,
+            papel: sessionProfile.papel,
+          });
+        }
+      }
 
       let query = supabase
         .from('entrevistas')
         .select('*, entrevistador:pessoas(nome_completo)')
         .order('created_at', { ascending: false });
 
-      if (viewMode === 'minhas') {
-        query = query.eq('entrevistador_id', user.id);
+      if (viewMode === 'minhas' && userId) {
+        query = query.eq('entrevistador_id', userId);
       }
 
       const { data, error } = await query;
@@ -57,24 +73,64 @@ export function Dashboard() {
 
       const serverItems = (data || []).map((item: any) => ({
         ...item,
-        turma: item.turma ? (item.serie ? `${item.serie} - ${item.turma}` : item.turma) : 'Comunidade Escolar',
+        nome_participante: (item.nome_participante || item.nome || '').trim().toUpperCase(),
+        turma: item.turma ? (item.serie ? `${item.serie} - ${item.turma}` : item.turma) : (item.grupo_escolar || 'Comunidade Escolar'),
         isPending: false,
       }));
 
-      // Combina rascunhos pendentes do usuário com itens do servidor
-      const relevantDrafts = viewMode === 'minhas'
-        ? draftsFormatted.filter((d: any) => d.entrevistador_id === user.id)
-        : draftsFormatted;
+      if (viewMode === 'minhas' && userId) {
+        try {
+          localStorage.setItem(`censo_my_interviews_cache_${userId}`, JSON.stringify(serverItems));
+        } catch {
+          // ignora
+        }
+      }
+
+      // Combina rascunhos pendentes do usuário com itens do servidor (evitando duplicar pelo nome)
+      const serverNames = new Set(serverItems.map((s: any) => (s.nome_participante || '').trim().toLowerCase()));
+      const relevantDrafts = (viewMode === 'minhas'
+        ? draftsFormatted.filter((d: any) => !userId || d.entrevistador_id === userId)
+        : draftsFormatted
+      ).filter((d: any) => !serverNames.has((d.nome_participante || '').trim().toLowerCase()));
 
       setColetas([...relevantDrafts, ...serverItems]);
     } catch (err) {
-      console.error('Erro ao carregar entrevistas no painel:', err);
-      const localDrafts = JSON.parse(localStorage.getItem('censo_pending_queue') || '[]');
-      setColetas(localDrafts.map((d: any) => ({ ...(d.data || d), isPending: true })));
+      console.warn('Erro ao carregar entrevistas no painel (usando cache local):', err);
+      if (sessionProfile?.nomeCompleto && !userProfile) {
+        setUserProfile({
+          id: userId,
+          nome_completo: sessionProfile.nomeCompleto,
+          papel: sessionProfile.papel,
+        });
+      }
+
+      let cachedItems: any[] = [];
+      if (userId) {
+        try {
+          const cachedStr = localStorage.getItem(`censo_my_interviews_cache_${userId}`);
+          if (cachedStr) {
+            cachedItems = JSON.parse(cachedStr).map((item: any) => ({
+              ...item,
+              turma: item.turma ? (item.serie && !String(item.turma).includes(item.serie) ? `${item.serie} - ${item.turma}` : item.turma) : (item.grupo_escolar || 'Comunidade Escolar'),
+              isPending: false,
+            }));
+          }
+        } catch {
+          // ignora
+        }
+      }
+
+      const cachedNames = new Set(cachedItems.map((s: any) => (s.nome_participante || '').trim().toLowerCase()));
+      const uniqueDrafts = draftsFormatted.filter((d: any) => !cachedNames.has((d.nome_participante || '').trim().toLowerCase()));
+      setColetas([...uniqueDrafts, ...cachedItems]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [viewMode, sessionProfile?.id, sessionProfile?.nomeCompleto, sessionProfile?.papel]);
+
+  useEffect(() => {
+    void fetchColetas();
+  }, [fetchColetas]);
 
   const filteredColetas = coletas.filter((c) => {
     const s = search.toLowerCase();
@@ -84,7 +140,7 @@ export function Dashboard() {
     return nome.includes(s) || turma.includes(s) || entrevistador.includes(s);
   });
 
-  const isStaff = userProfile?.papel === 'admin' || userProfile?.papel === 'gestor' || userProfile?.papel === 'professor';
+  const isStaff = isTeacher || isAdmin;
 
   const renderTableContent = () => {
     if (loading) {
@@ -127,8 +183,8 @@ export function Dashboard() {
               <td className="p-3 text-xs text-slate-400">
                 {new Date(item.created_at).toLocaleString('pt-BR')}
               </td>
-              <td className="p-3 font-bold text-slate-800">
-                {item.nome_participante || item.nome}
+              <td className="p-3 font-bold text-slate-800 uppercase">
+                {(item.nome_participante || item.nome || '').toUpperCase()}
               </td>
               <td className="p-3 font-semibold text-slate-600">{item.turma}</td>
               <td className="p-3 text-slate-700">{item.genero || '—'}</td>

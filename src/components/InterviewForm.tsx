@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { InterviewData, PreconceitoTipo, LocalizacaoMoradiaTipo, OrigemFamiliaTipo, CorRacaIBGE, VinculoTipo } from '../types/interview';
+import { InterviewData, PreconceitoTipo, LocalizacaoMoradiaTipo, OrigemFamiliaTipo, CorRacaIBGE, VinculoTipo, ConheceAncestralidadeTipo, JaConversouTipo } from '../types/interview';
 import { ClipboardList, UserCheck, Users, AlertCircle, Send, User, Phone, MapPin, Globe, Compass, ShieldAlert } from 'lucide-react';
 import { AdinhaMascote } from './AdinhaMascote';
 import { supabase, salvarEntrevistaResiliente } from '../lib/supabaseClient';
@@ -84,7 +84,7 @@ export const InterviewForm: React.FC<Props> = ({ userId }) => {
 
       const payload = {
         entrevistador_id: userId,
-        nome_participante: formData.nome_participante?.trim() || 'Anônimo',
+        nome_participante: (formData.nome_participante?.trim() || 'ANÔNIMO').toUpperCase(),
         contato_whatsapp: formData.contato_whatsapp?.trim() || null,
         vinculo: formData.vinculo,
         serie: formData.serie || null,
@@ -218,10 +218,10 @@ export const InterviewForm: React.FC<Props> = ({ userId }) => {
                 id="nome-participante"
                 type="text" 
                 value={formData.nome_participante || ''} 
-                onChange={e => setFormData({ ...formData, nome_participante: e.target.value })}
+                onChange={e => setFormData({ ...formData, nome_participante: e.target.value.toUpperCase() })}
                 required 
-                placeholder="Nome completo do participante..."
-                className="w-full p-3 border border-slate-200 rounded-xl text-sm font-semibold bg-slate-50 focus:bg-white" 
+                placeholder="NOME COMPLETO DO PARTICIPANTE..."
+                className="w-full p-3 border border-slate-200 rounded-xl text-sm font-semibold bg-slate-50 focus:bg-white uppercase" 
               />
             </div>
 
@@ -293,27 +293,40 @@ export const InterviewForm: React.FC<Props> = ({ userId }) => {
               />
             </div>
 
-            {formData.vinculo?.startsWith('ESTUDANTE') && (
-              <div className="md:col-span-2 animate-in fade-in pt-2">
-                <label htmlFor="mora-com" className="block text-xs font-bold text-slate-700 uppercase mb-2">Com quem você mora atualmente?</label>
-                <select 
-                  id="mora-com"
-                  value={formData.mora_com || ''} 
-                  onChange={e => setFormData({ ...formData, mora_com: e.target.value })}
-                  className="w-full p-3 border border-slate-200 rounded-xl text-sm font-semibold bg-slate-50 focus:bg-white"
-                >
-                  <option value="" disabled>Selecione uma opção...</option>
-                  <option value="Pai e Mãe">Pai e Mãe</option>
-                  <option value="Apenas com a Mãe">Apenas com a Mãe</option>
-                  <option value="Apenas com o Pai">Apenas com o Pai</option>
-                  <option value="Avós ou outros parentes">Avós ou outros parentes</option>
-                  <option value="Cônjuge/Namorado(a)">Cônjuge / Namorado(a)</option>
-                  <option value="Amigos/Colegas">Amigos / Colegas</option>
-                  <option value="Sozinho(a)">Sozinho(a)</option>
-                  <option value="Outros">Outros</option>
-                </select>
-              </div>
-            )}
+            <div>
+              <label htmlFor="turno" className="block text-xs font-bold text-slate-700 uppercase mb-2">Turno</label>
+              <select
+                id="turno"
+                value={formData.turno || 'Matutino'}
+                onChange={e => setFormData({ ...formData, turno: e.target.value })}
+                className="w-full p-3 border border-slate-200 rounded-xl text-sm font-semibold bg-slate-50 focus:bg-white"
+              >
+                <option value="Matutino">Matutino</option>
+                <option value="Vespertino">Vespertino</option>
+                <option value="Noturno">Noturno</option>
+                <option value="Integral">Integral</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="mora-com" className="block text-xs font-bold text-slate-700 uppercase mb-2">Com quem você mora atualmente?</label>
+              <select 
+                id="mora-com"
+                value={formData.mora_com || ''} 
+                onChange={e => setFormData({ ...formData, mora_com: e.target.value })}
+                className="w-full p-3 border border-slate-200 rounded-xl text-sm font-semibold bg-slate-50 focus:bg-white"
+              >
+                <option value="" disabled>Selecione uma opção...</option>
+                <option value="Pai e Mãe">Pai e Mãe</option>
+                <option value="Apenas com a Mãe">Apenas com a Mãe</option>
+                <option value="Apenas com o Pai">Apenas com o Pai</option>
+                <option value="Avós ou outros parentes">Avós ou outros parentes</option>
+                <option value="Cônjuge/Namorado(a)">Cônjuge / Namorado(a)</option>
+                <option value="Amigos/Colegas">Amigos / Colegas</option>
+                <option value="Sozinho(a)">Sozinho(a)</option>
+                <option value="Outros">Outros</option>
+              </select>
+            </div>
 
           </div>
         </div>
@@ -464,6 +477,36 @@ export const InterviewForm: React.FC<Props> = ({ userId }) => {
               />
             </div>
           )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+            <div>
+              <label htmlFor="conhece-ancestralidade" className="block text-xs font-bold text-slate-700 uppercase mb-2">Você conhece a história da sua ancestralidade?</label>
+              <select
+                id="conhece-ancestralidade"
+                value={formData.conhece_ancestralidade || 'Não conheço'}
+                onChange={e => setFormData({ ...formData, conhece_ancestralidade: e.target.value as ConheceAncestralidadeTipo })}
+                className="w-full p-3 border border-slate-200 rounded-xl text-sm font-semibold bg-slate-50 focus:bg-white"
+              >
+                <option value="Sim, conheço bem">Sim, conheço bem</option>
+                <option value="Conheço um pouco">Conheço um pouco</option>
+                <option value="Não conheço">Não conheço</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="ja-conversou" className="block text-xs font-bold text-slate-700 uppercase mb-2">Já conversou sobre identidade/raça?</label>
+              <select
+                id="ja-conversou"
+                value={formData.ja_conversou_sobre || 'Nunca'}
+                onChange={e => setFormData({ ...formData, ja_conversou_sobre: e.target.value as JaConversouTipo })}
+                className="w-full p-3 border border-slate-200 rounded-xl text-sm font-semibold bg-slate-50 focus:bg-white"
+              >
+                <option value="Sim, com frequência">Sim, com frequência</option>
+                <option value="Sim, poucas vezes">Sim, poucas vezes</option>
+                <option value="Nunca">Nunca</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         {/* BLOCO 4: PERCEPÇÃO SOCIAL E VIVÊNCIAS */}

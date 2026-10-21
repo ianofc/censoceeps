@@ -163,11 +163,16 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'lyka_messages' }, (payload) => {
-        if (payload.new && payload.new.user_id !== profile.id) {
+        const msg = payload.new as Record<string, any> | undefined;
+        if (msg && msg.user_id !== profile.id) {
+          const isPublic = !msg.conversation_key;
+          const isParticipant = Boolean(msg.conversation_key && String(msg.conversation_key).includes(profile.id));
+          if (!isPublic && !isParticipant) return;
+
           addNotification({
-            title: 'Nova Mensagem no LykaChat',
-            description: payload.new.message ? `"${payload.new.message.slice(0, 60)}..."` : 'Você recebeu uma nova mensagem no chat.',
-            actionText: 'Abrir LykaChat',
+            title: isPublic ? 'Nova Mensagem no Layka Chat' : `Mensagem privada de ${msg.author_name || 'Colega'}`,
+            description: msg.message ? `"${String(msg.message).slice(0, 60)}..."` : 'Você recebeu uma nova mensagem no chat.',
+            actionText: 'Abrir Layka Chat',
             actionUrl: '/chat',
             type: 'chat'
           });

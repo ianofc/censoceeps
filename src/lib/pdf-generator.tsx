@@ -19,12 +19,16 @@ Relatos de Experiência com Preconceito: ${sofreramPreconceito} (${total > 0 ? (
 
 2. AMBIENTES DE CONVERSA SOBRE RAÇA/GÊNERO
 --------------------------------------------------------------------
-${data.reduce((acc, curr) => {
-  curr.ambientes_conversa?.forEach(amb => {
-    acc[amb] = (acc[amb] || 0) + 1;
-  });
-  return acc;
-}, {} as Record<string, number>)}
+${Object.entries(
+  data.reduce((acc, curr) => {
+    curr.ambientes_conversa?.forEach(amb => {
+      acc[amb] = (acc[amb] || 0) + 1;
+    });
+    return acc;
+  }, {} as Record<string, number>)
+)
+  .map(([amb, qtd]) => `- ${amb}: ${qtd}`)
+  .join('\n') || 'Nenhum ambiente registrado.'}
 
 3. RELATOS QUALITATIVOS REGISTRADOS
 --------------------------------------------------------------------
@@ -40,5 +44,8 @@ ${data
   const link = document.createElement('a');
   link.href = url;
   link.download = `Relatorio_Censo_CEEP_${new Date().toISOString().slice(0,10)}.txt`;
+  document.body.appendChild(link);
   link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 };

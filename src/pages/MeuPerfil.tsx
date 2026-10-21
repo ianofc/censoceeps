@@ -131,8 +131,8 @@ function getInitials(name: string) {
 }
 
 function papelBadge(papel: string) {
-  if (papel === "gestor") return { label: "Gestor", color: "#F59E0B", bg: "#FEF3C7", border: "#FDE68A" };
-  if (papel === "entrevistador_aluno") return { label: "Pesquisador", color: "#3B82F6", bg: "#EFF6FF", border: "#BFDBFE" };
+  if (papel === "gestor" || papel === "admin" || papel === "professor") return { label: "Gestor", color: "#F59E0B", bg: "#FEF3C7", border: "#FDE68A" };
+  if (papel === "entrevistador_aluno" || papel === "entrevistador") return { label: "Pesquisador", color: "#3B82F6", bg: "#EFF6FF", border: "#BFDBFE" };
   return { label: "Entrevistado", color: "#10B981", bg: "#ECFDF5", border: "#A7F3D0" };
 }
 
@@ -223,35 +223,55 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
     async function fetchUserData() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) return;
-        const userId = session.user.id;
-        const userEmail = session.user.email || "";
+        let authUser = session?.user;
+        if (!authUser) {
+          try {
+            const offlineSession = JSON.parse(localStorage.getItem('ceep_offline_session') || '{}');
+            authUser = offlineSession?.user;
+          } catch {}
+        }
+        if (!authUser) return;
+        const userId = authUser.id;
+        const userEmail = authUser.email || "";
 
-        const [{ data: pessoaData }, { count: censoCount }, { count: entrevistasCount }, { count: pC }, { count: mC }, { count: lC }] = await Promise.all([
-          supabase.from("pessoas").select("*").eq("id", userId).single(),
-          supabase.from("censo_ceep").select("*", { count: "exact", head: true }).eq("pesquisador_id", userId),
+        const [{ data: pessoaData }, { count: entrevistasCount }, { count: pC }, { count: mC }, { count: lC }] = await Promise.all([
+          supabase.from("pessoas").select("*").eq("id", userId).maybeSingle(),
           supabase.from("entrevistas").select("*", { count: "exact", head: true }).eq("entrevistador_id", userId),
           supabase.from("lyka_posts").select("*", { count: "exact", head: true }).eq("user_id", userId),
-          supabase.from("lyka_messages").select("*", { count: "exact", head: true }).eq("sender_id", userId),
+          supabase.from("lyka_messages").select("*", { count: "exact", head: true }).eq("user_id", userId),
           supabase.from("pessoa_likes").select("*", { count: "exact", head: true }).eq("liked_id", userId),
         ]);
 
         let pendingUserCount = 0;
+        let cachedFichasCount = 0;
         try {
           const pending = JSON.parse(localStorage.getItem('censo_pending_queue') || '[]');
-          pendingUserCount = pending.filter((item) => {
+          pendingUserCount = pending.filter((item: any) => {
             const raw = item.data || item;
-            return (raw.entrevistador_id === userId || raw.user_id === userId);
+            return (
+              raw.entrevistador_id === userId ||
+              raw.user_id === userId ||
+              raw.entrevistador_id === 'offline-user' ||
+              !raw.entrevistador_id
+            );
           }).length;
+          const cachedInterviews = JSON.parse(localStorage.getItem(`censo_my_interviews_cache_${userId}`) || '[]');
+          cachedFichasCount = Array.isArray(cachedInterviews) ? cachedInterviews.length : 0;
         } catch {}
-        const totalFichasContadas = Math.max(censoCount || 0, (entrevistasCount || 0) + pendingUserCount);
+        const baseOnlineCount = typeof entrevistasCount === 'number' ? entrevistasCount : cachedFichasCount;
+        const totalFichasContadas = baseOnlineCount + pendingUserCount;
         setTotalFichas(totalFichasContadas);
         setXpStats({ posts: pC || 0, msgs: mC || 0, likes: lC || 0 });
 
-        const nomeCompleto = pessoaData?.nome_completo || session.user.user_metadata?.nome_completo || "Usuário Censo";
-        const papelUsuario = pessoaData?.papel || "entrevistador_aluno";
-        const turmaCargo = pessoaData?.turma_ou_cargo || "";
-        const genero = pessoaData?.genero || "masculino";
+        let cachedProfile: any = null;
+        try {
+          cachedProfile = JSON.parse(localStorage.getItem('ceep_cached_profile') || 'null');
+        } catch {}
+
+        const nomeCompleto = pessoaData?.nome_completo || cachedProfile?.nomeCompleto || authUser.user_metadata?.nome_completo || "Usuário Censo";
+        const papelUsuario = pessoaData?.papel || cachedProfile?.papel || "entrevistador_aluno";
+        const turmaCargo = pessoaData?.turma_ou_cargo || cachedProfile?.turmaOuCargo || "";
+        const genero = pessoaData?.genero || cachedProfile?.genero || "masculino";
 
         const avatarPadrao = genero === "feminino"
           ? "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80"
@@ -263,7 +283,7 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
           cep: pessoaData?.cep || "", cidade: pessoaData?.cidade || "Palmeiras",
           estado: pessoaData?.estado || "BA", endereco: pessoaData?.endereco || "",
           numero: pessoaData?.numero || "", bairro: pessoaData?.bairro || "Mandacaru",
-          bio: pessoaData?.bio || "", avatar_url: pessoaData?.avatar_url || avatarPadrao,
+          bio: pessoaData?.bio || "", avatar_url: pessoaData?.avatar_url || cachedProfile?.avatarUrl || avatarPadrao,
           genero,
         };
         setPerfil(p);
@@ -406,7 +426,7 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 0", gap: 16 }}>
         <style>{`@keyframes perfilSpin { to { transform: rotate(360deg); } }`}</style>
 
-      {perfil.turma_ou_cargo?.toUpperCase().includes('1� ADM') || perfil.turma_ou_cargo?.toUpperCase().includes('1 ADM') ? (
+      {perfil.turma_ou_cargo?.toUpperCase().includes('1º ADM') || perfil.turma_ou_cargo?.toUpperCase().includes('1° ADM') || perfil.turma_ou_cargo?.toUpperCase().includes('1 ADM') ? (
         <div style={{ marginBottom: 24 }}>
           <CrachaPesquisador nome={perfil.nome} avatarUrl={perfil.avatar_url} turma={perfil.turma_ou_cargo} />
         </div>
@@ -440,7 +460,7 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
         @keyframes savedPulse { 0%,100% { opacity:1; } 50% { opacity:0.7; } }
       `}</style>
 
-      {perfil.turma_ou_cargo?.toUpperCase().includes('1 ADM') || perfil.turma_ou_cargo?.toUpperCase().includes('1 ADM') ? (
+      {perfil.turma_ou_cargo?.toUpperCase().includes('1º ADM') || perfil.turma_ou_cargo?.toUpperCase().includes('1° ADM') || perfil.turma_ou_cargo?.toUpperCase().includes('1 ADM') ? (
         <div style={{ marginBottom: 24 }}>
           <CrachaPesquisador nome={perfil.nome} avatarUrl={perfil.avatar_url} turma={perfil.turma_ou_cargo} />
         </div>

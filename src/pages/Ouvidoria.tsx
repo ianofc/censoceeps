@@ -30,13 +30,13 @@ export function Ouvidoria() {
   async function fetchTickets() {
     try {
       setLoading(true);
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
 
       const { data, error } = await supabase
         .from('ouvidoria_tickets')
         .select('*')
-        .eq('user_id', userData.user.id)
+        .eq('user_id', session.user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -53,7 +53,7 @@ export function Ouvidoria() {
     setSubmitting(true);
 
     try {
-      const { data: userData } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
       
       const { error } = await supabase
         .from('ouvidoria_tickets')
@@ -63,7 +63,7 @@ export function Ouvidoria() {
             mensagem,
             tipo,
             is_anonimo: isAnonimo,
-            user_id: userData.user?.id
+            user_id: isAnonimo ? null : (session?.user?.id ?? null)
           }
         ]);
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
-import { useUserSession } from "../hooks/useUserSession";
+import { useUserSession, isStaffPapel } from "../hooks/useUserSession";
 import { badgeService } from "../services/badgeService";
 import {
   Send, Wifi, WifiOff, ChevronDown, ArrowLeft, Search,
@@ -58,6 +59,8 @@ interface Message {
   id: number; user_id: string; author_name: string; message: string;
   is_teacher_alert: boolean; created_at: string;
   conversation_key?: string | null;
+  recipient_id?: string | null;
+  recipient_name?: string | null;
   reply_to_id?: number | null; reply_to_text?: string | null; reply_to_author?: string | null;
   media_url?: string | null; media_type?: string | null;
 }
@@ -204,7 +207,7 @@ function PersonProfileModal({ pessoa, myId, onClose }: { pessoa: Pessoa; myId: s
       const [{ count: lk }, { data: myLike }, { count: fichas }, { count: posts }, { count: msgs }] = await Promise.all([
         supabase.from("pessoa_likes").select("*", { count: "exact", head: true }).eq("liked_id", pessoa.id),
         supabase.from("pessoa_likes").select("id").eq("liked_id", pessoa.id).eq("liker_id", myId).maybeSingle(),
-        supabase.from("entrevistas").select("*", { count: "exact", head: true }).eq("user_id", pessoa.id),
+        supabase.from("entrevistas").select("*", { count: "exact", head: true }).eq("entrevistador_id", pessoa.id),
         supabase.from("lyka_posts").select("*", { count: "exact", head: true }).eq("user_id", pessoa.id),
         supabase.from("lyka_messages").select("*", { count: "exact", head: true }).eq("user_id", pessoa.id).is("conversation_key", null),
       ]);
@@ -261,7 +264,7 @@ function PersonProfileModal({ pessoa, myId, onClose }: { pessoa: Pessoa; myId: s
           <p style={{ fontWeight: 900, fontSize: 17, color: "#0f172a", margin: "0 0 2px" }}>{pessoa.nome_completo}</p>
           <p style={{ color: "#64748b", fontSize: 12, margin: "0 0 4px" }}>{pessoa.turma_ou_cargo || "CEEP Seabra"}</p>
           <span style={{ fontSize: 10, fontWeight: 700, color: "#7c3aed", background: "#ede9fe", padding: "2px 10px", borderRadius: 99, border: "1px solid #ddd6fe" }}>
-            {pessoa.papel === "gestor" ? "Professor(a)" : "Pesquisador(a)"}
+            {isStaffPapel(pessoa.papel) ? "Professor(a)" : "Pesquisador(a)"}
           </span>
           {/* Stats */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, marginTop: 16 }}>
@@ -286,6 +289,7 @@ function PersonProfileModal({ pessoa, myId, onClose }: { pessoa: Pessoa; myId: s
 // ─── Main ────────────────────────────────────────────────────────────────────
 export function LykaChat() {
   const { profile } = useUserSession();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [pessoas, setPessoas] = useState<Pessoa[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConv, setActiveConv] = useState<Conversation | null>(null);
@@ -351,22 +355,46 @@ export function LykaChat() {
         if (!data) return;
         const ps = data as Pessoa[];
         setPessoas(ps);
+        const adinhaKey = profile.id ? `adinha_chat_${profile.id}` : "adinha_chat";
         const convs: Conversation[] = [
           { id: "group", name: "Layka Chat · Geral", isGroup: true, convKey: null, unread: 0 },
-          { id: "adinha", name: "🤖 Assistente Adinha", isGroup: false, convKey: "adinha_chat", unread: 0 },
+          { id: "adinha", name: "🤖 Assistente Adinha", isGroup: false, convKey: adinhaKey, unread: 0 },
         ];
         ps.filter(p => p.id !== profile.id).forEach(p => {
           const key = [profile.id, p.id].sort().join("_");
           convs.push({ id: p.id, name: p.nome_completo, isGroup: false, convKey: key, unread: 0 });
         });
         setConversations(convs);
+
+        const dmId = searchParams.get("dm");
+        const dmName = searchParams.get("dmName");
+        if (dmId && dmId !== profile.id) {
+          let targetConv = convs.find(c => c.id === dmId);
+          if (!targetConv) {
+            const key = [profile.id, dmId].sort().join("_");
+            targetConv = { id: dmId, name: dmName || "Conversa Privada", isGroup: false, convKey: key, unread: 0 };
+            setConversations([...convs, targetConv]);
+          }
+          setActiveConv(targetConv);
+          setMobileView("chat");
+          lastReadRef.current[targetConv.convKey ?? "group"] = new Date().toISOString();
+          void supabase.from("lyka_messages")
+            .select("*")
+            .eq("conversation_key", targetConv.convKey ?? "")
+            .order("created_at", { ascending: true })
+            .limit(200)
+            .then(({ data: msgs }) => {
+              if (msgs) setMessages(msgs as Message[]);
+            });
+          setSearchParams({}, { replace: true });
+        }
       });
       
     // Load pinned
     try {
       setPinned(JSON.parse(localStorage.getItem(`lyka_pinned_${profile.id}`) || '[]'));
     } catch {}
-  }, [profile.id]);
+  }, [profile.id, searchParams, setSearchParams]);
 
   // Load last messages for sidebar preview + unread counts
   const loadLastMsgs = useCallback(async () => {
@@ -377,12 +405,15 @@ export function LykaChat() {
     if (!data) return;
     const map: Record<string, { text: string; time: string; unread: number }> = {};
     for (const m of data as Message[]) {
+      // Ignora mensagens privadas cuja conversation_key não inclua o usuário logado
+      if (m.conversation_key && !String(m.conversation_key).includes(profile.id)) continue;
       const key = m.conversation_key ?? "group";
       const lastRead = lastReadRef.current[key] || new Date(0).toISOString();
-      const isUnread = m.user_id !== profile.id && m.created_at > lastRead;
+      const isFromMe = m.user_id === profile.id && !String(m.author_name || "").includes("Adinha");
+      const isUnread = !isFromMe && m.created_at > lastRead;
       if (!map[key]) {
         map[key] = {
-          text: (m.user_id === profile.id ? "Você: " : "") + m.message.slice(0, 45) + (m.message.length > 45 ? "…" : ""),
+          text: (isFromMe ? "Você: " : "") + m.message.slice(0, 45) + (m.message.length > 45 ? "…" : ""),
           time: m.created_at, unread: isUnread ? 1 : 0,
         };
       } else if (isUnread) {
@@ -490,6 +521,24 @@ export function LykaChat() {
     typingTimeout.current = setTimeout(() => broadcastTyping(false), 2000);
   };
 
+  const generateAdinhaReply = (userText: string, userName: string): string => {
+    const lower = userText.toLowerCase();
+    const firstName = (userName || "Pesquisador(a)").split(" ")[0];
+    if (lower.includes("meta") || lower.includes("20") || lower.includes("insignia") || lower.includes("insígnia") || lower.includes("trofeu") || lower.includes("troféu")) {
+      return `Olá, ${firstName}! 🏆 A nossa meta individual no Censo CEEP Ada Lovelace é coletar 20 entrevistas completas. A cada marco (1, 5, 10 e 20 fichas), você desbloqueia novas insígnias e sobe no Ranking!`;
+    }
+    if (lower.includes("offline") || lower.includes("internet") || lower.includes("sincroniz")) {
+      return `Fique tranquilo(a), ${firstName}! 📡 Se você estiver sem internet durante a entrevista, a ficha fica salva na fila offline do seu aparelho e sincroniza automaticamente assim que a conexão voltar.`;
+    }
+    if (lower.includes("duplicad") || lower.includes("repetid") || lower.includes("mesma pessoa")) {
+      return `Boa pergunta, ${firstName}! 🔍 Cada pessoa da comunidade escolar só pode ser entrevistada 1 única vez. Sempre digite o nome completo do participante para evitar duplicidades.`;
+    }
+    if (lower.includes("ouvidoria") || lower.includes("problema") || lower.includes("ajuda") || lower.includes("duvida") || lower.includes("dúvida")) {
+      return `Estou aqui para ajudar, ${firstName}! 💡 Para coletar entrevistas, acesse a aba "Coletar". Para ver seu progresso, acesse "Meu Perfil" ou "Painel". Se precisar relatar algo à gestão com opção de anonimato, use a Ouvidoria!`;
+    }
+    return `Olá, ${firstName}! 🤖 Sou a Assistente Adinha do Censo Escolar CEEP Ada Lovelace. Posso tirar dúvidas sobre a meta de 20 entrevistas, coleta offline, insígnias ou uso da plataforma. Como posso ajudar na sua pesquisa hoje?`;
+  };
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     const text = newMessage.trim();
@@ -516,7 +565,7 @@ export function LykaChat() {
     if (mediaFile) {
       const ext = mediaFile.name ? mediaFile.name.split('.').pop() : (mediaFile.type.includes('audio') ? 'webm' : 'bin');
       const fileName = `${profile.id}_${Date.now()}.${ext}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage.from("lyka_media").upload(fileName, mediaFile, { upsert: false });
+      const { error: uploadError } = await supabase.storage.from("lyka_media").upload(fileName, mediaFile, { upsert: false });
       if (uploadError) {
         alert("Erro ao fazer upload da mídia. Desative o RLS ou configure o Storage.");
         setSending(false);
@@ -527,9 +576,12 @@ export function LykaChat() {
       finalMediaUrl = pubData.publicUrl;
     }
 
-    const isTeacher = profile.papel === "gestor" || (profile.turmaOuCargo || "").toLowerCase().includes("professor");
+    const isTeacher = isStaffPapel(profile.papel);
+    const recipientId = activeConv.isGroup ? null : activeConv.id;
+    const recipientName = activeConv.isGroup ? "Chat Geral" : activeConv.name;
     const ins: Record<string, unknown> = {
       user_id: profile.id || "anon", author_name: profile.nomeCompleto || "Pesquisador(a)",
+      recipient_id: recipientId, recipient_name: recipientName,
       message: text, is_teacher_alert: isTeacher,
       media_url: finalMediaUrl, media_type: finalMediaType,
     };
@@ -541,6 +593,7 @@ export function LykaChat() {
     }
     const opt: Message = {
       id: Date.now(), user_id: profile.id, author_name: profile.nomeCompleto || "Eu",
+      recipient_id: recipientId, recipient_name: recipientName,
       message: text, is_teacher_alert: isTeacher, created_at: new Date().toISOString(),
       conversation_key: activeConv.convKey,
       reply_to_id: replyTo?.id, reply_to_text: replyTo?.message.slice(0, 80),
@@ -570,6 +623,36 @@ export function LykaChat() {
             await badgeService.unlockBadge(profile.id, 'comunicador_laika');
           }
         })();
+      }
+
+      // Resposta automática prestativa da Assistente Adinha
+      if (activeConv.id === "adinha") {
+        const replyText = generateAdinhaReply(text, profile.nomeCompleto);
+        const adinhaConvKey = activeConv.convKey;
+        setTimeout(() => {
+          void (async () => {
+            const botMsgPayload = {
+              user_id: profile.id || "adinha",
+              author_name: "🤖 Assistente Adinha",
+              recipient_id: profile.id,
+              recipient_name: profile.nomeCompleto || "Pesquisador(a)",
+              message: replyText,
+              is_teacher_alert: false,
+              conversation_key: adinhaConvKey,
+            };
+            const tempBotMsg: Message = {
+              id: Date.now() + 1,
+              ...botMsgPayload,
+              created_at: new Date().toISOString(),
+            };
+            setMessages(prev => [...prev, tempBotMsg]);
+            setTimeout(() => scrollToBottom(), 50);
+            const { data: botData } = await supabase.from("lyka_messages").insert([botMsgPayload]).select();
+            if (botData && botData[0]) {
+              setMessages(prev => prev.map(m => m.id === tempBotMsg.id ? { ...m, id: botData[0].id } : m));
+            }
+          })();
+        }, 650);
       }
     }
     setSending(false);
@@ -878,9 +961,10 @@ export function LykaChat() {
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                       {group.msgs.map((msg, idx) => {
-                        const mine = msg.user_id === profile.id;
+                        const isAdinhaMsg = String(msg.author_name || "").includes("Adinha");
+                        const mine = msg.user_id === profile.id && !isAdinhaMsg;
                         const prev = group.msgs[idx - 1];
-                        const showAv = !mine && (!prev || prev.user_id !== msg.user_id);
+                        const showAv = !mine && (!prev || prev.author_name !== msg.author_name || prev.user_id !== msg.user_id);
                         return (
                           <MsgBubble key={msg.id} msg={msg} isMe={mine} showAvatar={showAv} showName={showAv}
                             onReply={setReplyTo} onDelete={handleDeleteMsg} onEdit={handleEditInit} />

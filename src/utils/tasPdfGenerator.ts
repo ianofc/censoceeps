@@ -47,14 +47,17 @@ export const tasPdfGenerator = {
     doc.text("1. Amostra de Dados Processados", 14, 66);
 
     // Preparando os dados para a tabela
-    const tableData = fichas.map((ficha, index) => [
-      index + 1,
-      ficha.nome || "Não informado",
-      ficha.idade || "-",
-      ficha.cor_raca || "Mista",
-      ficha.local_moradia || "Urbana",
-      ficha.criado_em ? new Date(ficha.criado_em).toLocaleDateString("pt-BR") : "-"
-    ]);
+    const tableData = fichas.map((ficha, index) => {
+      const rawDate = ficha.criado_em || (ficha as any).created_at;
+      return [
+        index + 1,
+        ((ficha as any).nome_participante || ficha.nome || "NÃO INFORMADO").toString().trim().toUpperCase(),
+        ficha.idade || (ficha as any).faixa_etaria || "-",
+        ficha.cor_raca || "Mista",
+        ficha.local_moradia || "Urbana",
+        rawDate ? new Date(rawDate).toLocaleDateString("pt-BR") : "-"
+      ];
+    });
 
     // Tabela usando autotable
     autoTable(doc, {
@@ -70,13 +73,18 @@ export const tasPdfGenerator = {
 
     // Rodapé de segurança do TAS
     const finalY = (doc as any).lastAutoTable?.finalY ?? 100;
-    
+    let footerY = finalY + 20;
+    if (finalY + 25 > 280) {
+      doc.addPage();
+      footerY = 20;
+    }
+
     doc.setFont("helvetica", "italic");
     doc.setFontSize(9);
     doc.setTextColor(150, 150, 150);
     doc.text(
       "Documento gerado e autenticado pelo TAS (Task Automation System) - Ecossistema PentaIA.",
-      14, finalY + 20
+      14, footerY
     );
 
     // Salva o PDF

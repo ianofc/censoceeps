@@ -147,19 +147,21 @@ export function CelebrationScreen({
       </div>
 
       {isGoalReached && (
-        <div 
-          ref={cardRef} 
-          className="w-full bg-gradient-to-br from-amber-100 to-amber-200 dark:from-amber-900/50 dark:to-amber-800/50 p-6 rounded-3xl border-2 border-amber-300 dark:border-amber-600 shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-700"
-        >
-          <div className="flex justify-center mb-3">
-            <Medal className="w-12 h-12 text-amber-600 dark:text-amber-400 drop-shadow-md" />
+        <div className="w-full space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div 
+            ref={cardRef} 
+            className="w-full bg-gradient-to-br from-amber-100 to-amber-200 dark:from-amber-900/50 dark:to-amber-800/50 p-6 rounded-3xl border-2 border-amber-300 dark:border-amber-600 shadow-lg"
+          >
+            <div className="flex justify-center mb-3">
+              <Medal className="w-12 h-12 text-amber-600 dark:text-amber-400 drop-shadow-md" />
+            </div>
+            <h3 className="text-xl font-black text-amber-900 dark:text-amber-100 uppercase mb-1">
+              Pesquisador Nota 10!
+            </h3>
+            <p className="text-amber-800 dark:text-amber-200 text-sm font-semibold leading-relaxed">
+              Parabéns, <span className="font-black underline decoration-amber-400">{studentName}</span>! Você concluiu suas 20 entrevistas e ajudou a mapear o futuro do CEEP Seabra!
+            </p>
           </div>
-          <h3 className="text-xl font-black text-amber-900 dark:text-amber-100 uppercase mb-1">
-            Pesquisador Nota 10!
-          </h3>
-          <p className="text-amber-800 dark:text-amber-200 text-sm mb-6 font-semibold leading-relaxed">
-            Parabéns, <span className="font-black underline decoration-amber-400">{studentName}</span>! Você concluiu suas 20 entrevistas e ajudou a mapear o futuro do CEEP Seabra!
-          </p>
 
           <div className="flex flex-col sm:flex-row justify-center gap-3 w-full">
             <button 

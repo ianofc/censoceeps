@@ -5,8 +5,12 @@ import { badgeService } from "../services/badgeService";
 import {
   Sparkles, Send, Heart, MessageCircle,
   MoreHorizontal, Trash2, TrendingUp, Zap,
-  ChevronDown, ChevronUp, X, Smile, Link, Users
+  ChevronDown, ChevronUp, X, Smile, Link, Users,
+  Share2, Award, Flame, ThumbsUp, Compass
 } from "lucide-react";
+import { personalizarFeedTAS, TASUserProfile } from "../utils/tasRecommendationAlgorithm";
+import { IndicarAmigosModal } from "../components/IndicarAmigosModal";
+import { registrarMetricaAB } from "../utils/abTesting";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function timeAgo(d: string) {
@@ -22,7 +26,23 @@ const GRADS = ["#3B82F6,#6366F1","#EC4899,#F43F5E","#10B981,#14B8A6",
 function grad(n: string) { return GRADS[(n||"?").charCodeAt(0) % GRADS.length].split(","); }
 function ini(n: string)  { return (n||"?").split(" ").slice(0,2).map(x=>x[0]).join("").toUpperCase(); }
 
-const EMOJIS = ["❤️","😂","😮","😢","🔥","👏"];
+export interface ReactionItem {
+  key: string;
+  emoji: string;
+  label: string;
+  color: string;
+}
+
+export const REACTION_LIST: ReactionItem[] = [
+  { key: "like",  emoji: "👍", label: "Curtir", color: "#2563eb" },
+  { key: "heart", emoji: "❤️", label: "Amei",   color: "#e11d48" },
+  { key: "fire",  emoji: "🔥", label: "Fogo",   color: "#ea580c" },
+  { key: "clap",  emoji: "👏", label: "Palmas", color: "#ca8a04" },
+  { key: "bulb",  emoji: "💡", label: "Genial", color: "#7c3aed" },
+  { key: "laugh", emoji: "😂", label: "Haha",   color: "#d97706" },
+  { key: "wow",   emoji: "😮", label: "Uau",    color: "#0891b2" },
+  { key: "sad",   emoji: "😢", label: "Força",  color: "#475569" },
+];
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 function Avatar({ name, url="", size=40 }: { name:string; url?:string; size?:number }) {
@@ -53,7 +73,11 @@ interface Post {
   created_at: string;
   likes_count?: number;
   liked?: boolean;
+  my_emoji?: string;
+  reactions_map?: Record<string, number>;
   comments_count?: number;
+  tasScore?: number;
+  tasRecomendacaoMotivo?: string;
 }
 interface Comment {
   id: number;
@@ -64,20 +88,26 @@ interface Comment {
   created_at: string;
 }
 
-// ─── Emoji picker (mini) ─────────────────────────────────────────────────────
-function EmojiBar({ onPick }: { onPick: (e:string)=>void }) {
+// ─── Emoji picker (Facebook style) ───────────────────────────────────────────
+function EmojiBar({ onPick, currentEmoji }: { onPick: (e:string)=>void; currentEmoji?: string | null }) {
   return (
     <div style={{
-      display:"flex", gap:4, background:"#fff", border:"1px solid #e2e8f0",
-      borderRadius:14, padding:"6px 10px", boxShadow:"0 4px 20px rgba(0,0,0,0.12)",
+      display:"flex", gap:4, background:"#fff", border:"1.5px solid #e2e8f0",
+      borderRadius:24, padding:"6px 10px", boxShadow:"0 12px 36px rgba(0,0,0,0.16)",
+      alignItems:"center", zIndex:40,
     }}>
-      {EMOJIS.map(e => (
-        <button key={e} type="button" onClick={()=>onPick(e)}
-          style={{ fontSize:20, background:"none", border:"none", cursor:"pointer", padding:"2px 4px",
-            borderRadius:8, transition:"transform 0.15s" }}
-          onMouseEnter={el=>(el.currentTarget.style.transform="scale(1.3)")}
+      {REACTION_LIST.map(r => (
+        <button key={r.key} type="button" onClick={()=>onPick(r.emoji)}
+          title={r.label}
+          style={{
+            fontSize:22, background: currentEmoji === r.emoji ? "#eff6ff" : "none",
+            border: currentEmoji === r.emoji ? "1.5px solid #60a5fa" : "none",
+            cursor:"pointer", padding:"4px 6px",
+            borderRadius:14, transition:"transform 0.15s, background 0.15s",
+          }}
+          onMouseEnter={el=>(el.currentTarget.style.transform="scale(1.35)")}
           onMouseLeave={el=>(el.currentTarget.style.transform="scale(1)")}
-        >{e}</button>
+        >{r.emoji}</button>
       ))}
     </div>
   );
@@ -110,9 +140,11 @@ function CommentRow({ c, myId, onDelete }: { c:Comment; myId:string; onDelete:()
 
 // ─── Post Card ───────────────────────────────────────────────────────────────
 function PostCard({ post, profile, onRefresh }: { post:Post; profile:any; onRefresh:()=>void }) {
-  const isMe = post.user_id === profile.id;
+  const isMe = post.user_id === profile?.id;
   const [liked, setLiked]           = useState(post.liked ?? false);
   const [likeCount, setLikeCount]   = useState(post.likes_count ?? 0);
+  const [myEmoji, setMyEmoji]       = useState<string | null>(post.my_emoji || (post.liked ? "❤️" : null));
+  const [reactionsMap, setReactionsMap] = useState<Record<string, number>>(post.reactions_map || {});
   const [likeLoading, setLikeLoading] = useState(false);
   const [showMenu, setShowMenu]     = useState(false);
   const [showEmoji, setShowEmoji]   = useState(false);
@@ -123,7 +155,12 @@ function PostCard({ post, profile, onRefresh }: { post:Post; profile:any; onRefr
   const [sendingComment, setSendingComment] = useState(false);
   const [deleting, setDeleting]     = useState(false);
 
-  useEffect(() => { setLiked(post.liked??false); setLikeCount(post.likes_count??0); }, [post.liked, post.likes_count]);
+  useEffect(() => {
+    setLiked(post.liked ?? false);
+    setLikeCount(post.likes_count ?? 0);
+    setMyEmoji(post.my_emoji || (post.liked ? "❤️" : null));
+    setReactionsMap(post.reactions_map || {});
+  }, [post.liked, post.likes_count, post.my_emoji, post.reactions_map]);
 
   const loadComments = async () => {
     setLoadingComments(true);
@@ -148,33 +185,78 @@ function PostCard({ post, profile, onRefresh }: { post:Post; profile:any; onRefr
     return () => { void supabase.removeChannel(ch); };
   }, [showComments, post.id]);
 
-  const handleLike = async () => {
-    if (likeLoading) return;
+  const handleEmojiReact = async (chosenEmoji: string) => {
+    setShowEmoji(false);
+    if (!profile?.id || likeLoading) return;
     setLikeLoading(true);
-    const was = liked;
-    setLiked(!was); setLikeCount(c => was ? c-1 : c+1);
-    if (was) await supabase.from("lyka_reactions").delete().eq("post_id",post.id).eq("user_id",profile.id);
-    else {
-      const { error } = await supabase.from("lyka_reactions").insert([{post_id:post.id, user_id:profile.id, emoji:"heart"}]);
-      if (error) {
-        alert("Erro ao reagir: " + error.message);
-        // revert optimistic update
-        setLiked(false); setLikeCount(c => c-1);
-      } else if (profile?.id) {
-        void badgeService.unlockBadge(profile.id, 'primeira_reacao');
+
+    const isUntoggle = myEmoji === chosenEmoji;
+    const oldEmoji = myEmoji;
+    const oldLiked = liked;
+    const oldCount = likeCount;
+    const oldMap = { ...reactionsMap };
+
+    // Optimistic Update
+    if (isUntoggle) {
+      setMyEmoji(null);
+      setLiked(false);
+      setLikeCount(Math.max(0, oldCount - 1));
+      const nextMap = { ...oldMap };
+      if (nextMap[chosenEmoji] > 1) nextMap[chosenEmoji]--;
+      else delete nextMap[chosenEmoji];
+      setReactionsMap(nextMap);
+    } else {
+      setMyEmoji(chosenEmoji);
+      setLiked(true);
+      if (!oldLiked) setLikeCount(oldCount + 1);
+      const nextMap = { ...oldMap };
+      if (oldEmoji && nextMap[oldEmoji]) {
+        if (nextMap[oldEmoji] > 1) nextMap[oldEmoji]--;
+        else delete nextMap[oldEmoji];
       }
+      nextMap[chosenEmoji] = (nextMap[chosenEmoji] || 0) + 1;
+      setReactionsMap(nextMap);
     }
-    onRefresh();
-    setLikeLoading(false);
+
+    try {
+      // 1. Remove qualquer reação anterior deste usuário nesta postagem
+      await supabase
+        .from("lyka_reactions")
+        .delete()
+        .eq("post_id", post.id)
+        .eq("user_id", profile.id);
+
+      // 2. Se não estiver desmarcando, insere a nova reação
+      if (!isUntoggle) {
+        const { error } = await supabase
+          .from("lyka_reactions")
+          .insert([{ post_id: post.id, user_id: profile.id, emoji: chosenEmoji }]);
+
+        if (error) {
+          console.error("Erro ao salvar reacao:", error);
+          // Reverte otimista
+          setMyEmoji(oldEmoji);
+          setLiked(oldLiked);
+          setLikeCount(oldCount);
+          setReactionsMap(oldMap);
+        } else {
+          void badgeService.unlockBadge(profile.id, 'primeira_reacao');
+        }
+      }
+      onRefresh();
+    } catch (err) {
+      console.error("Erro ao reagir:", err);
+    } finally {
+      setLikeLoading(false);
+    }
   };
 
-  const handleEmojiReact = async (emoji: string) => {
-    setShowEmoji(false);
-    await supabase.from("lyka_reactions").upsert([{post_id:post.id, user_id:profile.id, emoji}],{onConflict:"post_id,user_id"});
-    if (profile?.id) {
-      void badgeService.unlockBadge(profile.id, 'primeira_reacao');
+  const handleLike = () => {
+    if (liked) {
+      void handleEmojiReact(myEmoji || "❤️");
+    } else {
+      void handleEmojiReact("❤️");
     }
-    onRefresh();
   };
 
   const handleDelete = async () => {
@@ -206,7 +288,7 @@ function PostCard({ post, profile, onRefresh }: { post:Post; profile:any; onRefr
   };
 
   const isAutoPost = post.type === "censo_auto";
-  const isConquista = post.type === "conquista";
+  const isConquista = post.type === "conquista" || post.type === "conquista_censo";
   const isOfficial = post.type === "comunicado" || post.type === "official" || post.type === "aviso";
 
   let cardBg = "#fff";
@@ -223,6 +305,14 @@ function PostCard({ post, profile, onRefresh }: { post:Post; profile:any; onRefr
     cardShadow = "0 4px 20px rgba(14,165,233,0.12)";
   }
 
+  // Identifica o rótulo da reação ativa
+  const activeReactionDef = REACTION_LIST.find(r => r.emoji === myEmoji);
+
+  // Emojis mais reagidos para o cluster
+  const topReactions = Object.entries(reactionsMap)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 3);
+
   return (
     <article style={{
       background: cardBg,
@@ -238,7 +328,7 @@ function PostCard({ post, profile, onRefresh }: { post:Post; profile:any; onRefr
           <Avatar name={post.author_name} size={40} />
           <div>
             <p style={{ fontWeight:800, fontSize:14, color:"#0f172a", margin:"0 0 2px" }}>{post.author_name}</p>
-            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
               <span style={{ fontSize:11, color:"#94a3b8" }}>{timeAgo(post.created_at)}</span>
               {isAutoPost && (
                 <span style={{
@@ -262,6 +352,16 @@ function PostCard({ post, profile, onRefresh }: { post:Post; profile:any; onRefr
                   padding:"2px 8px", borderRadius:99,
                   display:"inline-flex", alignItems:"center", gap:3
                 }}>📌 Comunicado Oficial</span>
+              )}
+              {post.tasRecomendacaoMotivo && (
+                <span style={{
+                  fontSize:10, fontWeight:700, color:"#7e22ce",
+                  background:"#f3e8ff", border:"1px solid #e9d5ff",
+                  padding:"2px 8px", borderRadius:99,
+                  display:"inline-flex", alignItems:"center", gap:3
+                }}>
+                  ✨ {post.tasRecomendacaoMotivo}
+                </span>
               )}
             </div>
           </div>
@@ -302,6 +402,26 @@ function PostCard({ post, profile, onRefresh }: { post:Post; profile:any; onRefr
         </div>
       </div>
 
+      {/* Motivo da Recomendação Algorítmica TAS */}
+      {post.tasRecomendacaoMotivo && (
+        <div style={{
+          margin: "0 18px 10px",
+          padding: "6px 12px",
+          borderRadius: 12,
+          background: "#f0fdf4",
+          border: "1px solid #bbf7d0",
+          display: "flex",
+          alignItems: "center",
+          gap: 7,
+          fontSize: 11,
+          fontWeight: 700,
+          color: "#166534"
+        }}>
+          <Sparkles style={{ width: 13, height: 13, color: "#16a34a", flexShrink: 0 }} />
+          <span>Sugerido para você: {post.tasRecomendacaoMotivo}</span>
+        </div>
+      )}
+
       {/* Content */}
       <div style={{ padding:"0 18px 14px" }}>
         {isConquista ? (
@@ -320,55 +440,83 @@ function PostCard({ post, profile, onRefresh }: { post:Post; profile:any; onRefr
         )}
       </div>
 
-      {/* Stats row */}
+      {/* Stats row com cluster de reações estilo Facebook */}
       {(likeCount > 0 || (post.comments_count||0) > 0) && (
-        <div style={{ padding:"0 18px 8px", display:"flex", alignItems:"center", gap:12 }}>
-          {likeCount > 0 && (
-            <span style={{ fontSize:12, color:"#64748b", display:"flex", alignItems:"center", gap:4 }}>
-              <span>❤️</span> {likeCount} {likeCount===1?"curtida":"curtidas"}
-            </span>
-          )}
+        <div style={{ padding:"0 18px 8px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:12 }}>
+          {likeCount > 0 ? (
+            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+              {/* Overlapping icons */}
+              <div style={{ display:"flex", alignItems:"center", marginRight:2 }}>
+                {topReactions.map(([emoji], idx) => (
+                  <span key={emoji} style={{
+                    fontSize:14, marginLeft: idx > 0 ? -4 : 0,
+                    filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.15))"
+                  }}>
+                    {emoji}
+                  </span>
+                ))}
+              </div>
+              <span style={{ fontSize:12, fontWeight:700, color:"#64748b" }}>
+                {likeCount} {likeCount === 1 ? "reação" : "reações"}
+              </span>
+            </div>
+          ) : <div />}
+
           {(post.comments_count||0) > 0 && (
             <button type="button" onClick={toggleComments}
               style={{ fontSize:12, color:"#64748b", background:"none", border:"none", cursor:"pointer",
-                padding:0, fontFamily:"inherit" }}>
+                padding:0, fontFamily:"inherit", fontWeight:600 }}>
               {post.comments_count} {post.comments_count===1?"comentário":"comentários"}
             </button>
           )}
         </div>
       )}
 
-      {/* Action bar */}
-      <div style={{ display:"flex", alignItems:"center", padding:"8px 12px", borderTop:"1px solid #f8fafc", gap:2, position:"relative" }}>
-        {/* Like */}
-        <button type="button" onClick={()=>void handleLike()} disabled={likeLoading}
-          style={{
-            flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:6,
-            padding:"9px 0", borderRadius:14, border:"none", cursor:"pointer", fontFamily:"inherit",
-            fontWeight:700, fontSize:13,
-            background: liked ? "#fff0f0" : "transparent",
-            color: liked ? "#e11d48" : "#64748b",
-            transition:"all 0.15s",
-          }}>
-          <Heart style={{ width:17, height:17, fill: liked?"#e11d48":"none", transition:"transform 0.15s",
-            transform: liked?"scale(1.2)":"scale(1)" }} />
-          Curtir
-        </button>
-
-        {/* Emoji react */}
-        <div style={{ position:"relative" }}>
-          <button type="button" onClick={()=>setShowEmoji(v=>!v)}
-            style={{ display:"flex", alignItems:"center", justifyContent:"center",
-              width:38, height:38, borderRadius:12, border:"none", cursor:"pointer",
-              background:showEmoji?"#f1f5f9":"transparent", color:"#64748b", transition:"all 0.15s" }}>
-            <Smile style={{width:17,height:17}}/>
+      {/* Action bar estilo Facebook */}
+      <div style={{ display:"flex", alignItems:"center", padding:"6px 12px", borderTop:"1px solid #f8fafc", gap:4, position:"relative" }}>
+        
+        {/* Like / Reação rápida */}
+        <div style={{ position:"relative", flex:1, display:"flex" }}
+          onMouseEnter={()=>setShowEmoji(true)}
+          onMouseLeave={()=>setShowEmoji(false)}
+        >
+          <button type="button" onClick={handleLike} disabled={likeLoading}
+            style={{
+              width:"100%", display:"flex", alignItems:"center", justifyContent:"center", gap:6,
+              padding:"9px 0", borderRadius:14, border:"none", cursor:"pointer", fontFamily:"inherit",
+              fontWeight:800, fontSize:13,
+              background: liked ? "#eff6ff" : "transparent",
+              color: activeReactionDef ? activeReactionDef.color : (liked ? "#e11d48" : "#64748b"),
+              transition:"all 0.15s",
+            }}>
+            {myEmoji ? (
+              <span style={{ fontSize:17, transform: liked ? "scale(1.2)" : "scale(1)", transition:"transform 0.15s" }}>
+                {myEmoji}
+              </span>
+            ) : (
+              <Heart style={{ width:17, height:17, fill: liked?"#e11d48":"none", transition:"transform 0.15s" }} />
+            )}
+            <span>{activeReactionDef ? activeReactionDef.label : "Reagir"}</span>
           </button>
+
+          {/* Facebook-style Hover Floating Reactions Bar */}
           {showEmoji && (
-            <div style={{ position:"absolute", bottom:"100%", left:"50%", transform:"translateX(-50%)", marginBottom:8, zIndex:30 }}>
-              <EmojiBar onPick={handleEmojiReact} />
+            <div style={{
+              position:"absolute", bottom:"100%", left:0, marginBottom:8,
+              zIndex:50, animation:"feedIn 0.2s ease",
+            }}>
+              <EmojiBar onPick={handleEmojiReact} currentEmoji={myEmoji} />
             </div>
           )}
         </div>
+
+        {/* Botão de abrir reações no toque móvel */}
+        <button type="button" onClick={()=>setShowEmoji(v=>!v)}
+          style={{ display:"flex", alignItems:"center", justifyContent:"center",
+            width:36, height:36, borderRadius:12, border:"none", cursor:"pointer",
+            background:showEmoji?"#eff6ff":"transparent", color:"#64748b", transition:"all 0.15s" }}>
+          <Smile style={{width:17,height:17}}/>
+        </button>
 
         {/* Comment */}
         <button type="button" onClick={toggleComments}
@@ -450,6 +598,8 @@ function PostSkeleton() {
 export function Feed() {
   const { profile } = useUserSession();
   const [posts, setPosts]           = useState<Post[]>([]);
+  const [feedTab, setFeedTab]       = useState<"para_voce" | "recentes" | "minha_turma" | "conquistas">("para_voce");
+  const [showIndicarModal, setShowIndicarModal] = useState(false);
   const [newPostContent, setNewPostContent] = useState("");
   const [imageUrl, setImageUrl]     = useState("");
   const [showImageInput, setShowImageInput] = useState(false);
@@ -460,27 +610,44 @@ export function Feed() {
   const lastSeenRef = useRef<string>(new Date().toISOString());
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const tasUser: TASUserProfile = React.useMemo(() => ({
+    id: profile.id,
+    nomeCompleto: profile.nomeCompleto || "Pesquisador",
+    papel: profile.papel || "entrevistador",
+    turmaOuCargo: profile.turmaOuCargo || "1º ADM CM",
+    genero: (profile as any).genero,
+  }), [profile]);
+
   const fetchPosts = useCallback(async (silent=false) => {
     if(!silent) setFetchingPosts(true);
     const [{ data: postsData }, { data: reactionsData }, { data: commentsCount }] = await Promise.all([
       supabase.from("lyka_posts").select("*").order("created_at",{ascending:false}).limit(60),
-      supabase.from("lyka_reactions").select("post_id, user_id"),
+      supabase.from("lyka_reactions").select("post_id, user_id, emoji"),
       supabase.from("lyka_comments").select("post_id"),
     ]);
 
     if (postsData) {
-      const rm: Record<number,{count:number;userLiked:boolean}> = {};
-      (reactionsData||[]).forEach((r:{post_id:number;user_id:string}) => {
-        if(!rm[r.post_id]) rm[r.post_id]={count:0,userLiked:false};
+      const rm: Record<number, { count: number; userLiked: boolean; userEmoji?: string; emojiMap: Record<string, number> }> = {};
+      (reactionsData || []).forEach((r: { post_id: number; user_id: string; emoji?: string }) => {
+        if (!rm[r.post_id]) rm[r.post_id] = { count: 0, userLiked: false, emojiMap: {} };
         rm[r.post_id].count++;
-        if(r.user_id===profile.id) rm[r.post_id].userLiked=true;
+        const e = r.emoji || "❤️";
+        rm[r.post_id].emojiMap[e] = (rm[r.post_id].emojiMap[e] || 0) + 1;
+        if (r.user_id === profile.id) {
+          rm[r.post_id].userLiked = true;
+          rm[r.post_id].userEmoji = e;
+        }
       });
-      const cm: Record<number,number> = {};
-      (commentsCount||[]).forEach((c:{post_id:number}) => { cm[c.post_id]=(cm[c.post_id]||0)+1; });
+      const cm: Record<number, number> = {};
+      (commentsCount || []).forEach((c: { post_id: number }) => { cm[c.post_id] = (cm[c.post_id] || 0) + 1; });
 
-      const enriched = postsData.map((p:Post) => ({
-        ...p, likes_count:rm[p.id]?.count??0, liked:rm[p.id]?.userLiked??false,
-        comments_count:cm[p.id]??0,
+      const enriched = postsData.map((p: any) => ({
+        ...p,
+        likes_count: rm[p.id]?.count ?? 0,
+        liked: rm[p.id]?.userLiked ?? false,
+        my_emoji: rm[p.id]?.userEmoji,
+        reactions_map: rm[p.id]?.emojiMap,
+        comments_count: cm[p.id] ?? 0,
       }));
       setPosts(enriched);
     }
@@ -557,6 +724,30 @@ export function Feed() {
     void fetchPosts();
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  const displayedPosts = React.useMemo(() => {
+    if (feedTab === "para_voce") {
+      return personalizarFeedTAS(posts, tasUser) as Post[];
+    }
+    if (feedTab === "recentes") {
+      return [...posts].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    }
+    if (feedTab === "minha_turma") {
+      const userTurma = (profile.turmaOuCargo || "").toUpperCase().trim();
+      const filtered = posts.filter(p => {
+        if (!userTurma) return true;
+        const cNorm = (p.content || "").toUpperCase();
+        const aNorm = (p.author_name || "").toUpperCase();
+        return cNorm.includes(userTurma) || aNorm.includes(userTurma);
+      });
+      return filtered.length > 0 ? filtered : posts;
+    }
+    if (feedTab === "conquistas") {
+      const filtered = posts.filter(p => p.type === "conquista" || p.type === "conquista_censo" || p.type === "censo_auto");
+      return filtered.length > 0 ? filtered : posts;
+    }
+    return posts;
+  }, [posts, feedTab, tasUser, profile.turmaOuCargo]);
 
   return (
     <div style={{ width:"100%", display:"flex", flexDirection:"column", alignItems:"center", paddingBottom:80 }}>
@@ -706,23 +897,142 @@ export function Feed() {
           </div>
         </div>
 
+        {/* Banner de Crescimento Viral e Indicação de Colegas (Estratégias de Crescimento Facebook) */}
+        <div style={{
+          background: "linear-gradient(135deg, #3730a3 0%, #4f46e5 50%, #7c3aed 100%)",
+          borderRadius: 20,
+          padding: "16px 20px",
+          color: "#fff",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 16,
+          boxShadow: "0 8px 24px rgba(79,70,229,0.22)",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: 14,
+              background: "rgba(255,255,255,0.18)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 22, flexShrink: 0
+            }}>
+              🤝
+            </div>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <h3 style={{ fontSize: 14, fontWeight: 900, margin: 0 }}>Cresça a Rede Científica</h3>
+                <span style={{ fontSize: 10, fontWeight: 900, background: "#fef08a", color: "#854d0e", padding: "2px 8px", borderRadius: 99 }}>
+                  +30 XP
+                </span>
+              </div>
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.85)", margin: "4px 0 0", lineHeight: 1.4 }}>
+                Indique colegas de sala pelo WhatsApp para entrevistarem e ganhe pontos no ranking!
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              registrarMetricaAB("cta_coleta_engajamento", "indicacao_amigo");
+              setShowIndicarModal(true);
+            }}
+            style={{
+              flexShrink: 0,
+              padding: "10px 16px",
+              borderRadius: 14,
+              background: "#fff",
+              color: "#4338ca",
+              fontWeight: 900,
+              fontSize: 12,
+              border: "none",
+              cursor: "pointer",
+              boxShadow: "0 2px 10px rgba(0,0,0,0.15)",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontFamily: "inherit",
+              whiteSpace: "nowrap"
+            }}
+          >
+            <Share2 style={{ width: 14, height: 14 }} />
+            Indicar Amigos
+          </button>
+        </div>
+
+        {/* Navegação de Abas do Feed (Sistemas de Recomendação Científico TAS) */}
+        <div style={{
+          display: "flex",
+          background: "#fff",
+          borderRadius: 18,
+          padding: 4,
+          border: "1px solid #e2e8f0",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
+          gap: 4
+        }}>
+          {[
+            { id: "para_voce", label: "✨ Para Você", desc: "Algoritmo TAS" },
+            { id: "recentes", label: "🕒 Recentes", desc: "Tempo real" },
+            { id: "minha_turma", label: "👥 Minha Turma", desc: profile.turmaOuCargo || "Minha Turma" },
+            { id: "conquistas", label: "🏆 Conquistas", desc: "Marcos" },
+          ].map((tab) => {
+            const active = feedTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => {
+                  setFeedTab(tab.id as any);
+                  registrarMetricaAB("cta_coleta_engajamento", "click_cta");
+                }}
+                style={{
+                  flex: 1,
+                  padding: "10px 6px",
+                  borderRadius: 14,
+                  border: "none",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  background: active ? "linear-gradient(135deg, #4f46e5, #6366f1)" : "transparent",
+                  color: active ? "#fff" : "#64748b",
+                  fontWeight: active ? 800 : 700,
+                  fontSize: 12,
+                  transition: "all 0.15s ease",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 2,
+                }}
+              >
+                <span>{tab.label}</span>
+                <span style={{ fontSize: 9, opacity: active ? 0.85 : 0.6, fontWeight: 500 }}>{tab.desc}</span>
+              </button>
+            );
+          })}
+        </div>
+
         {/* Posts */}
         {fetchingPosts ? (
           [1,2,3].map(i=><PostSkeleton key={i}/>)
-        ) : posts.length === 0 ? (
+        ) : displayedPosts.length === 0 ? (
           <div style={{background:"#fff",borderRadius:24,padding:"60px 30px",textAlign:"center",border:"1px solid #f1f5f9"}}>
             <Sparkles style={{width:40,height:40,color:"#6366f1",margin:"0 auto 16px",display:"block"}}/>
-            <p style={{fontWeight:800,fontSize:16,color:"#1e293b",margin:"0 0 8px"}}>Nenhuma publicação ainda</p>
-            <p style={{color:"#94a3b8",fontSize:14,margin:0}}>Seja o primeiro a compartilhar algo com a turma! 🚀</p>
+            <p style={{fontWeight:800,fontSize:16,color:"#1e293b",margin:"0 0 8px"}}>Nenhuma publicação encontrada</p>
+            <p style={{color:"#94a3b8",fontSize:14,margin:0}}>
+              {feedTab === "conquistas" ? "Ainda não há registros de conquistas de coletas." : "Seja o primeiro a compartilhar algo com a turma! 🚀"}
+            </p>
           </div>
         ) : (
-          posts.map((p,i)=>(
+          displayedPosts.map((p,i)=>(
             <div key={p.id} style={{animation:`feedIn 0.3s ease ${i*0.04}s both`}}>
               <PostCard post={p} profile={profile} onRefresh={()=>void fetchPosts(true)} />
             </div>
           ))
         )}
       </div>
+
+      <IndicarAmigosModal
+        isOpen={showIndicarModal}
+        onClose={() => setShowIndicarModal(false)}
+      />
     </div>
   );
 }

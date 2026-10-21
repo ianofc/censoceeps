@@ -36,3 +36,8 @@ lerna-debug.log*
 
 # Local Netlify folder
 .netlify
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class

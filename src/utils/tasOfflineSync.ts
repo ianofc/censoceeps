@@ -12,6 +12,9 @@ export const tasOfflineSync = {
     try {
       const drafts: any[] = JSON.parse(localStorage.getItem("censo_pending_queue") || "[]");
       const raw = data.data || data;
+      if (raw.nome_participante) {
+        raw.nome_participante = String(raw.nome_participante).trim().toUpperCase();
+      }
       const targetNorm = normalizeStr(raw.nome_participante);
 
       // Se já houver um rascunho com o mesmo participante na fila, atualiza em vez de duplicar
@@ -23,6 +26,7 @@ export const tasOfflineSync = {
       const newEntry = {
         id: existingIdx >= 0 ? drafts[existingIdx].id : `local-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         ...data,
+        ...(raw === data ? { nome_participante: raw.nome_participante } : {}),
         timestamp: new Date().toISOString()
       };
 
