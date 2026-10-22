@@ -60,11 +60,11 @@ export function Biblioteca() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    fetchItems();
+    void fetchItems();
   }, []);
 
   const handleDownloadClick = () => {
-    supabase.auth.getSession().then(({ data }) => {
+    void supabase.auth.getSession().then(({ data }) => {
       let uid = data.session?.user?.id;
       if (!uid && typeof window !== 'undefined') {
         try {
@@ -75,7 +75,7 @@ export function Biblioteca() {
       if (uid) {
         void badgeService.recordExplorationVisit(uid, 'biblioteca');
       }
-    });
+    }).catch(() => {});
   };
 
   const fetchItems = async () => {
@@ -178,6 +178,8 @@ export function Biblioteca() {
                         stroke="currentColor"
                         viewBox="0 0 24 24"
                         xmlns="http://www.w3.org/2000/svg"
+                        aria-hidden="true"
+                        role="presentation"
                       >
                         <path
                           strokeLinecap="round"

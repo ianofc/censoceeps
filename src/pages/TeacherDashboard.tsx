@@ -17,12 +17,10 @@ import {
   Filter, 
   Award, 
   RefreshCw, 
-  CheckCircle2, 
   Clock, 
   AlertCircle,
   FileSpreadsheet,
   AlertTriangle,
-  Share2,
   Sparkles,
   Send,
   Beaker,
@@ -53,7 +51,7 @@ export function TeacherDashboard() {
   const [avisoCopiadoId, setAvisoCopiadoId] = useState<string | null>(null);
 
   // Modal de Detalhes
-  const [selectedColeta, setSelectedColeta] = useState<any | null>(null);
+  const [selectedColeta, setSelectedColeta] = useState<any>(null);
 
   useEffect(() => {
     void fetchData();
@@ -196,7 +194,7 @@ export function TeacherDashboard() {
       const t = c.turma ? (c.serie ? `${c.serie} - ${c.turma}` : c.turma) : c.grupo_escolar;
       if (t) set.add(t);
     });
-    return Array.from(set).sort();
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'));
   }, [coletas]);
 
   // Coletas filtradas
@@ -316,7 +314,7 @@ export function TeacherDashboard() {
     link.setAttribute('download', `censo_ceep_auditoria_completa_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    link.remove();
     URL.revokeObjectURL(url);
   };
 
@@ -548,8 +546,8 @@ export function TeacherDashboard() {
                 className="p-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-700 outline-none max-w-[200px]"
               >
                 <option value="TODAS">Turma: Todas</option>
-                {turmasDisponiveis.map((t, idx) => (
-                  <option key={idx} value={t}>{t}</option>
+                {turmasDisponiveis.map((t) => (
+                  <option key={t} value={t}>{t}</option>
                 ))}
               </select>
 
@@ -842,7 +840,7 @@ export function TeacherDashboard() {
                           const nomeAmigavel = ent.nome_completo.split(' ')[0];
                           const msg = `Olá ${nomeAmigavel}! Tudo bem? A equipe do Censo CEEP Ada Lovelace está com tudo em campo e nossa sala já coletou dezenas de entrevistas. Estamos aqui para te apoiar a fazer sua primeira coleta hoje! Se precisar de dicas para abordar os colegas, conte comigo! 🚀📊`;
                           if (navigator.clipboard) {
-                            navigator.clipboard.writeText(msg);
+                            void navigator.clipboard.writeText(msg);
                             setAvisoCopiadoId(ent.id);
                             setTimeout(() => setAvisoCopiadoId(null), 3000);
                           }

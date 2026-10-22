@@ -2,16 +2,14 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase, salvarEntrevistaResiliente, nameKey, nameWords, isSimilarName } from '../lib/supabaseClient';
 import { tasOfflineSync, withTimeout, initBackgroundSync } from '../utils/tasOfflineSync';
-import { useUserSession, isStaffPapel } from '../hooks/useUserSession';
+import { useUserSession } from '../hooks/useUserSession';
 import { UserAvatar } from '../components/UserAvatar';
 import { ClipboardList, Send, AlertCircle, Loader2, Plus, CheckCircle, Award, Users, Heart, WifiOff, RefreshCw, Trophy, Sparkles, Target, Search, User } from 'lucide-react';
 import { AdinhaMascote } from '../components/AdinhaMascote';
 import { AnalyticsDashboard } from '../components/AnalyticsDashboard';
 import { CelebrationScreen } from '../components/CelebrationScreen';
 import { badgeService } from '../services/badgeService';
-import { AlunoAutocomplete, AlunoSelecionadoInfo } from '../components/AlunoAutocomplete';
 import { RecomendacaoColegasCard } from '../components/RecomendacaoColegasCard';
-import { getVarianteUsuario, registrarMetricaAB } from '../utils/abTesting';
 import listaAlunos from '../data/alunos.json';
 import catalogoAlunosLocal from '../data/alunos_turmas.json';
 
@@ -76,7 +74,7 @@ interface CensoItem {
 }
 
 export function Home() {
-  const { profile, isTeacher } = useUserSession(); 
+  const { profile } = useUserSession(); 
   
   const [showModalColeta, setShowModalColeta] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -261,7 +259,8 @@ export function Home() {
         // Deduplica entre pendentes locais e online pelo nome normalizado
         const onlineNames = new Set(minhasOnline.map((m) => normalizeStr(m.nome_participante)));
         const myPendingUnique = myPending.filter((p) => !onlineNames.has(normalizeStr(p.nome_participante)));
-        const combinadasMinhas = [...myPendingUnique.reverse(), ...minhasOnline];
+        const myPendingReversed = [...myPendingUnique].reverse();
+        const combinadasMinhas = [...myPendingReversed, ...minhasOnline];
 
         setMinhasEntrevistas(combinadasMinhas);
         setMyFichas(combinadasMinhas.length);
@@ -323,7 +322,8 @@ export function Home() {
 
       const cachedNames = new Set(cachedMinhas.map((m) => normalizeStr(m.nome_participante)));
       const myPendingUnique = myPending.filter((p) => !cachedNames.has(normalizeStr(p.nome_participante)));
-      const combinadasOffline = [...myPendingUnique.reverse(), ...cachedMinhas];
+      const myPendingOfflineReversed = [...myPendingUnique].reverse();
+      const combinadasOffline = [...myPendingOfflineReversed, ...cachedMinhas];
 
       setMinhasEntrevistas(combinadasOffline);
       if (combinadasOffline.length > 0) {
@@ -458,7 +458,8 @@ export function Home() {
       const existingInterview = (candidatos || []).find((r: any) => nameKey(r.nome_participante) === alvo);
       if (existingInterview) {
         const intName = (existingInterview as any).entrevistador?.nome_completo;
-        setErrorMsg(`O(A) participante "${nomeParticipante.trim()}" já foi entrevistado(a) anteriormente (${intName ? `por ${intName}` : 'no sistema'}). Para manter os dados estatísticos íntegros, cada pessoa só pode ser entrevistada uma vez.`);
+        const responsavelStr = intName ? `por ${intName}` : 'no sistema';
+        setErrorMsg(`O(A) participante "${nomeParticipante.trim()}" já foi entrevistado(a) anteriormente (${responsavelStr}). Para manter os dados estatísticos íntegros, cada pessoa só pode ser entrevistada uma vez.`);
         setLoading(false);
         return;
       }
@@ -607,8 +608,6 @@ export function Home() {
 
 
   const papelLow = (profile?.papel || '').toLowerCase();
-  const nomeLow = (profile?.nomeCompleto || '').toLowerCase();
-  const emailLow = (profile?.email || '').toLowerCase();
   const isAdminOrTeacher =
     papelLow === 'gestor' ||
     papelLow === 'admin' ||
@@ -1218,8 +1217,8 @@ export function Home() {
                             <span>Já existe(m) entrevista(s) com nome parecido. Confira se não é a mesma pessoa:</span>
                           </div>
                           <ul className="pl-6 list-disc space-y-0.5">
-                            {similares.slice(0, 5).map((r, idx) => (
-                              <li key={idx}>
+                            {similares.slice(0, 5).map((r) => (
+                              <li key={`${r.nome}-${r.entrevistador}`}>
                                 <strong className="uppercase">{r.nome}</strong>
                                 {descreverRegistro(r) && <span className="font-normal"> ({descreverRegistro(r)})</span>}
                                 <span className="font-normal"> por {r.entrevistador}</span>
@@ -1245,8 +1244,8 @@ export function Home() {
                             const jaFoiEntrevistado = entrevistadosExistentes.has(nameKey(nome));
                             return !ehEleMesmo && !jaFoiEntrevistado;
                           })
-                          .map((nome: string, idx: number) => (
-                            <option key={idx} value={nome} />
+                          .map((nome: string) => (
+                            <option key={nome} value={nome} />
                           ))}
                       </datalist>
                     </div>
@@ -1804,7 +1803,7 @@ export function Home() {
                     type="button"
                     onClick={() => {
                       const json = tasOfflineSync.exportDraftsAsJson();
-                      navigator.clipboard.writeText(json);
+                      void navigator.clipboard.writeText(json);
                       setRescueSuccessMsg("Backup copiado para a área de transferência com sucesso!");
                     }}
                     className="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl border-0 cursor-pointer shadow-sm flex items-center justify-center gap-1.5"
@@ -1822,10 +1821,11 @@ export function Home() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                <label htmlFor="rescue-json-input" className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
                   Restaurar / Importar Fichas de outro aparelho:
                 </label>
                 <textarea
+                  id="rescue-json-input"
                   rows={3}
                   placeholder="Cole aqui o JSON exportado de outro dispositivo (ex: do Chromebook da escola)..."
                   value={rescueJsonInput}

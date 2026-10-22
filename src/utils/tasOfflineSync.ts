@@ -6,6 +6,13 @@ function normalizeStr(s?: string) {
   return (s || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
+function generateSafeId(prefix = 'local'): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `${prefix}-${crypto.randomUUID()}`;
+  }
+  return `${prefix}-${Date.now()}`;
+}
+
 export function withTimeout<T = any>(promise: Promise<T> | PromiseLike<T>, ms = 7000): Promise<T> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('TIMEOUT_CONEXAO_LENTA')), ms);
@@ -39,7 +46,7 @@ export const tasOfflineSync = {
       });
 
       const newEntry = {
-        id: existingIdx >= 0 ? drafts[existingIdx].id : (data.id || `local-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`),
+        id: existingIdx >= 0 ? drafts[existingIdx].id : (data.id || generateSafeId('local')),
         ...data,
         ...(raw === data ? { nome_participante: raw.nome_participante } : {}),
         timestamp: new Date().toISOString()
@@ -139,7 +146,7 @@ export const tasOfflineSync = {
       const uniqueDraftsMap = new Map<string, any>();
       for (const draft of drafts) {
         const raw = draft.data || draft;
-        const key = normalizeStr(raw.nome_participante) || draft.id || `item-${Math.random()}`;
+        const key = normalizeStr(raw.nome_participante) || draft.id || generateSafeId('item');
         uniqueDraftsMap.set(key, draft);
       }
       const uniqueDrafts = Array.from(uniqueDraftsMap.values());
@@ -148,7 +155,7 @@ export const tasOfflineSync = {
 
       for (const draft of uniqueDrafts) {
         const rawPayload = draft.data || draft;
-        const draftId = draft.id || rawPayload.id || `local-${Math.random()}`;
+        const draftId = draft.id || rawPayload.id || generateSafeId('local');
 
         try {
           // Timeout de 7s por ficha para que conexões lentas (1 bit) não bloqueiem o lote inteiro

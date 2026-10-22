@@ -43,7 +43,7 @@ for a in alunos_raw:
     if norm not in lista_final_set:
         lista_final_set[norm] = nome
 
-lista_final = sorted(list(lista_final_set.values()), key=normalizar)
+lista_final = sorted(lista_final_set.values(), key=normalizar)
 
 print(f"Total original de alunos únicos: {len(alunos_raw)}")
 print(f"Total final após resolver variantes ortográficas: {len(lista_final)}")

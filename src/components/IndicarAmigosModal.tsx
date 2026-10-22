@@ -4,13 +4,13 @@ import catalogoAlunosLocal from '../data/alunos_turmas.json';
 import { registrarMetricaAB } from '../utils/abTesting';
 
 interface IndicarAmigosModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  minhaTurma?: string;
-  meuNome?: string;
+  readonly isOpen: boolean;
+  readonly onClose: () => void;
+  readonly minhaTurma?: string;
+  readonly meuNome?: string;
 }
 
-export function IndicarAmigosModal({ isOpen, onClose, minhaTurma = '1º ADM CM', meuNome = 'Colega' }: IndicarAmigosModalProps) {
+export function IndicarAmigosModal({ isOpen, onClose, minhaTurma = '1º ADM CM', meuNome = 'Colega' }: Readonly<IndicarAmigosModalProps>) {
   const [busca, setBusca] = useState('');
   const [indicados, setIndicados] = useState<Set<string>>(new Set());
   const [toastMsg, setToastMsg] = useState<string | null>(null);
