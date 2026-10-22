@@ -73,6 +73,318 @@ interface CensoItem {
   };
 }
 
+
+interface ValidationParams {
+  profileNome?: string;
+  nomeParticipante: string;
+  entrevistadosExistentes: Map<string, string>;
+  nomeSemSobrenome: boolean;
+  similares: RegistroEntrevistado[];
+  homonimoConfirmado: boolean;
+}
+
+function validateBasicInterview(params: ValidationParams): string | null {
+  const { profileNome, nomeParticipante, entrevistadosExistentes, nomeSemSobrenome, similares, homonimoConfirmado } = params;
+
+  if (profileNome && normalizeStr(nomeParticipante) === normalizeStr(profileNome)) {
+    return 'O(A) entrevistador(a) não pode entrevistar a si mesmo(a). Por favor, informe o nome do participante entrevistado.';
+  }
+
+  const jaFeito = entrevistadosExistentes.get(nameKey(nomeParticipante));
+  if (jaFeito) {
+    return `O(A) participante "${nomeParticipante.trim()}" já foi entrevistado(a) anteriormente (por ${jaFeito}). Cada pessoa só pode ser entrevistada uma única vez.`;
+  }
+
+  if (nomeSemSobrenome) {
+    return 'Informe o nome completo do(a) participante (nome e sobrenomes).';
+  }
+
+  if (similares.length > 0 && !homonimoConfirmado) {
+    return `Já existe entrevista com nome parecido (${similares[0].nome}). Confira se não é a mesma pessoa ou marque que é outra pessoa.`;
+  }
+
+  return null;
+}
+
+async function checkDuplicateOnline(
+  nomeParticipante: string,
+  homonimoConfirmado: boolean
+): Promise<{ errorMsg: string | null; similarOnline?: RegistroEntrevistado }> {
+  try {
+    const primeiraPalavra = nomeParticipante.trim().split(/\s+/)[0] || '';
+    const dupCheckResult = await withTimeout<any>(
+      supabase
+        .from('entrevistas')
+        .select('id, nome_participante, vinculo, serie, turma, entrevistador:pessoas(nome_completo)')
+        .ilike('nome_participante', `${primeiraPalavra}%`)
+        .limit(200),
+      4000
+    );
+    const candidatos = dupCheckResult?.data || [];
+    const alvo = nameKey(nomeParticipante);
+    const existing = (candidatos || []).find((r: any) => nameKey(r.nome_participante) === alvo);
+    if (existing) {
+      const intName = (existing as any).entrevistador?.nome_completo;
+      const responsavelStr = intName ? `por ${intName}` : 'no sistema';
+      return {
+        errorMsg: `O(A) participante "${nomeParticipante.trim()}" já foi entrevistado(a) anteriormente (${responsavelStr}). Para manter os dados estatísticos íntegros, cada pessoa só pode ser entrevistada uma vez.`,
+      };
+    }
+
+    const similar = (candidatos || []).find((r: any) => isSimilarName(r.nome_participante, nomeParticipante));
+    if (similar && !homonimoConfirmado) {
+      return {
+        errorMsg: `Já existe entrevista com nome parecido (${similar.nome_participante}). Confira se não é a mesma pessoa ou marque que é outra pessoa.`,
+        similarOnline: {
+          nome: similar.nome_participante,
+          entrevistador: (similar as any).entrevistador?.nome_completo || 'outro entrevistador',
+          vinculo: similar.vinculo,
+          serie: similar.serie,
+          turma: similar.turma,
+        },
+      };
+    }
+  } catch (checkErr) {
+    console.warn('Não foi possível checar duplicidade online, prosseguindo com verificação local:', checkErr);
+  }
+  return { errorMsg: null };
+}
+
+interface InterviewFormParams {
+  profile: any;
+  nomeParticipante: string;
+  contatoWhatsapp: string;
+  genero: string;
+  vinculo: string;
+  serie: string;
+  turma: string;
+  turno: string;
+  moraCom: string;
+  cidadeNatal: string;
+  localizacaoMoradia: string;
+  detalheLocalizacao: string;
+  tempoDeslocamento: string;
+  acessoInternet: string;
+  corRaca: string;
+  origemFamilia: string;
+  povoIndigena: string;
+  conheceAncestralidade: string;
+  jaConversouSobre: string;
+  ambientesConversa: string[];
+  corRacaInfluencia: string;
+  espacosInfluencia: string[];
+  riscoEvasao: string;
+  sofreuPreconceito: string;
+  locaisOcorrencia: string[];
+  formasOcorrencia: string[];
+  relatoSofreu: string;
+  relatoPresenciou: string;
+}
+
+function assembleInterviewPayload(form: InterviewFormParams) {
+  const isDocenteOuServidor = form.vinculo === 'PROFESSOR' || form.vinculo === 'FUNCIONARIO' || form.vinculo === 'GESTAO';
+  const defaultSerie = form.vinculo === 'PROFESSOR' ? 'Corpo Docente' : form.vinculo === 'GESTAO' ? 'Gestão' : 'Servidor(a)';
+  const defaultTurma = form.vinculo === 'PROFESSOR' ? 'Docente' : form.vinculo === 'GESTAO' ? 'Coordenação' : 'Funcionário';
+  const isIndigena = form.corRaca === 'Indígena' || form.origemFamilia === 'Predominantemente Indígena';
+
+  return {
+    id: `local-${Date.now()}`,
+    entrevistador_id: form.profile?.id || null,
+    interviewer_name: form.profile?.nomeCompleto || 'Pesquisador(a)',
+    nome_participante: form.nomeParticipante.trim().toUpperCase(),
+    contato_whatsapp: form.contatoWhatsapp,
+    genero: form.genero,
+    vinculo: form.vinculo,
+    serie: isDocenteOuServidor ? (form.serie || defaultSerie) : form.serie,
+    turma: isDocenteOuServidor ? (form.turma || defaultTurma) : form.turma,
+    turno: form.turno || 'Matutino',
+    mora_com: form.moraCom || null,
+    cidade_natal: form.cidadeNatal,
+    local_moradia: form.localizacaoMoradia,
+    detalhe_localizacao: form.localizacaoMoradia !== 'Sede de Seabra' ? (form.detalheLocalizacao.trim() || null) : null,
+    tempo_deslocamento: form.tempoDeslocamento || null,
+    acesso_internet: form.acessoInternet || null,
+    cor_raca: form.corRaca,
+    origem_familia: form.origemFamilia,
+    povo_indigena: isIndigena ? (form.povoIndigena.trim() || null) : null,
+    conhece_ancestralidade: form.conheceAncestralidade || null,
+    ja_conversou_sobre: form.jaConversouSobre || null,
+    ambientes_conversa: form.ambientesConversa,
+    cor_raca_influencia: form.corRacaInfluencia || null,
+    espacos_influencia: form.espacosInfluencia,
+    risco_evasao: form.riscoEvasao || null,
+    sofreu_preconceito: form.sofreuPreconceito,
+    locais_ocorrencia: form.sofreuPreconceito === 'Sim' ? form.locaisOcorrencia : [],
+    formas_ocorrencia: form.sofreuPreconceito === 'Sim' ? form.formasOcorrencia : [],
+    relato_preconceito: form.relatoSofreu || form.relatoPresenciou || null,
+    created_at: new Date().toISOString(),
+    synced: false
+  };
+}
+
+function unlockMilestoneBadges(profileId: string | undefined, total: number) {
+  if (!profileId) return;
+  if (total >= 1) void badgeService.unlockBadge(profileId, 'primeira_entrevista');
+  if (total >= 5) void badgeService.unlockBadge(profileId, 'meta_5_entrevistas');
+  if (total >= 10) void badgeService.unlockBadge(profileId, 'meta_10_entrevistas');
+  if (total >= 20) void badgeService.unlockBadge(profileId, 'adinha_campea_meta_20');
+}
+
+function parsePendingQueue(profile: any): { pending: CensoItem[]; myPending: CensoItem[] } {
+  const rawPending: any[] = JSON.parse(localStorage.getItem('censo_pending_queue') || '[]');
+  const pending: CensoItem[] = rawPending.map((item: any) => {
+    const r = item.data || item;
+    return {
+      ...r,
+      id: item.id || r.id || `local-${Date.now()}`,
+      interviewer_name: r.interviewer_name || profile?.nomeCompleto || 'Você (Offline)',
+      grupo_escolar: r.turma ? (r.serie ? `${r.serie} - ${r.turma}` : r.turma) : (r.grupo_escolar || 'Comunidade Escolar'),
+      created_at: r.created_at || item.timestamp || new Date().toISOString(),
+    };
+  });
+
+  const myPending = pending.filter((p) => {
+    if (!profile?.id) return true;
+    return (
+      p.entrevistador_id === profile.id ||
+      p.user_id === profile.id ||
+      p.entrevistador_id === 'offline-user' ||
+      !p.entrevistador_id
+    );
+  });
+
+  return { pending, myPending };
+}
+
+function buildEntrevistadosMaps(todasEntrevistas: any[], pending: CensoItem[]) {
+  const mapEntrevistados = new Map<string, string>();
+  (todasEntrevistas || []).forEach((row: any) => {
+    if (row.nome_participante) {
+      const intName = row.entrevistador?.nome_completo || 'outro entrevistador';
+      mapEntrevistados.set(nameKey(row.nome_participante), intName);
+    }
+  });
+  pending.forEach((raw: any) => {
+    if (raw.nome_participante) {
+      mapEntrevistados.set(nameKey(raw.nome_participante), raw.interviewer_name || 'você (salvo offline)');
+    }
+  });
+
+  const registros: RegistroEntrevistado[] = [
+    ...(todasEntrevistas || []).map((row: any) => ({
+      nome: row.nome_participante || '',
+      entrevistador: row.entrevistador?.nome_completo || 'outro entrevistador',
+      vinculo: row.vinculo,
+      serie: row.serie,
+      turma: row.turma,
+    })),
+    ...pending.map((raw: any) => ({
+      nome: raw.nome_participante || '',
+      entrevistador: raw.interviewer_name || 'você (salvo offline)',
+      vinculo: raw.vinculo,
+      serie: raw.serie,
+      turma: raw.turma,
+    })),
+  ].filter((r) => r.nome);
+
+  return { mapEntrevistados, registros };
+}
+
+function buildMinhasEntrevistas(todasEntrevistas: any[], myPending: CensoItem[], profile: any): CensoItem[] {
+  if (!profile?.id) return [];
+
+  const minhasOnline: CensoItem[] = (todasEntrevistas || [])
+    .filter((r: any) => r.entrevistador_id === profile.id)
+    .map((r: any) => ({
+      ...r,
+      interviewer_name: r.entrevistador?.nome_completo || profile.nomeCompleto || 'Você',
+      grupo_escolar: r.turma ? (r.serie ? `${r.serie} - ${r.turma}` : r.turma) : 'Comunidade Escolar',
+    }));
+
+  try {
+    localStorage.setItem(`censo_my_interviews_cache_${profile.id}`, JSON.stringify(minhasOnline));
+  } catch {
+    // ignora
+  }
+
+  const onlineNames = new Set(minhasOnline.map((m) => normalizeStr(m.nome_participante)));
+  const myPendingUnique = myPending.filter((p) => !onlineNames.has(normalizeStr(p.nome_participante)));
+  const myPendingReversed = [...myPendingUnique].reverse();
+  return [...myPendingReversed, ...minhasOnline];
+}
+
+function restoreOfflineState(profile: any, pending: CensoItem[], myPending: CensoItem[]) {
+  const mapEntrevistados = new Map<string, string>();
+  pending.forEach((raw: any) => {
+    if (raw.nome_participante) {
+      mapEntrevistados.set(nameKey(raw.nome_participante), raw.interviewer_name || 'você (salvo offline)');
+    }
+  });
+
+  let cachedMinhas: CensoItem[] = [];
+  if (profile?.id) {
+    try {
+      const cachedStr = localStorage.getItem(`censo_my_interviews_cache_${profile.id}`);
+      if (cachedStr) {
+        cachedMinhas = JSON.parse(cachedStr);
+        cachedMinhas.forEach((c) => {
+          if (c.nome_participante) {
+            mapEntrevistados.set(nameKey(c.nome_participante), c.interviewer_name || profile.nomeCompleto || 'você');
+          }
+        });
+      }
+    } catch {
+      // ignora
+    }
+  }
+
+  const cachedNames = new Set(cachedMinhas.map((m) => normalizeStr(m.nome_participante)));
+  const myPendingUnique = myPending.filter((p) => !cachedNames.has(normalizeStr(p.nome_participante)));
+  const myPendingOfflineReversed = [...myPendingUnique].reverse();
+  const combinadasOffline = [...myPendingOfflineReversed, ...cachedMinhas];
+
+  const registros: RegistroEntrevistado[] = [...pending, ...cachedMinhas]
+    .filter((r: any) => r.nome_participante)
+    .map((r: any) => ({
+      nome: r.nome_participante,
+      entrevistador: r.interviewer_name || 'você',
+      vinculo: r.vinculo,
+      serie: r.serie,
+      turma: r.turma,
+    }));
+
+  return { mapEntrevistados, combinadasOffline, registros };
+}
+
+function findAlunoInCatalogo(valNormLookup: string): AlunoCatalogoInfo | null {
+  const exato = CATALOGO_ALUNOS_MAP.get(valNormLookup);
+  if (exato) return exato;
+  if (valNormLookup.length >= 4) {
+    for (const item of CATALOGO_ALUNOS_MAP.values()) {
+      const itemNorm = normalizeStr(item.nome_completo);
+      if (itemNorm === valNormLookup || (valNormLookup.length >= 8 && itemNorm.includes(valNormLookup))) {
+        return item;
+      }
+    }
+  }
+  return null;
+}
+
+function checkNomeParticipanteConflict(
+  val: string,
+  profileNome: string | undefined,
+  entrevistadosExistentes: Map<string, string>
+): string | null {
+  const valNorm = normalizeStr(val);
+  if (profileNome && valNorm === normalizeStr(profileNome)) {
+    return 'Atenção: O(A) entrevistador(a) não pode entrevistar a si mesmo(a).';
+  }
+  if (entrevistadosExistentes.has(nameKey(val))) {
+    return `Atenção: "${val.trim()}" já foi entrevistado(a) anteriormente (por ${entrevistadosExistentes.get(nameKey(val))}).`;
+  }
+  return null;
+}
+
 export function Home() {
   const { profile } = useUserSession(); 
   
@@ -163,28 +475,8 @@ export function Home() {
   };
 
   const fetchDashboardData = useCallback(async () => {
-    const rawPending: any[] = JSON.parse(localStorage.getItem('censo_pending_queue') || '[]');
-    const pending: CensoItem[] = rawPending.map((item: any) => {
-      const r = item.data || item;
-      return {
-        ...r,
-        id: item.id || r.id || `local-${Date.now()}`,
-        interviewer_name: r.interviewer_name || profile?.nomeCompleto || 'Você (Offline)',
-        grupo_escolar: r.turma ? (r.serie ? `${r.serie} - ${r.turma}` : r.turma) : (r.grupo_escolar || 'Comunidade Escolar'),
-        created_at: r.created_at || item.timestamp || new Date().toISOString(),
-      };
-    });
+    const { pending, myPending } = parsePendingQueue(profile);
     setPendingSyncCount(pending.length);
-
-    const myPending = pending.filter((p) => {
-      if (!profile?.id) return true;
-      return (
-        p.entrevistador_id === profile.id ||
-        p.user_id === profile.id ||
-        p.entrevistador_id === 'offline-user' ||
-        !p.entrevistador_id
-      );
-    });
 
     try {
       const queries: PromiseLike<any>[] = [
@@ -207,73 +499,22 @@ export function Home() {
         throw errTotal || errTodas;
       }
 
-      // Popula mapa de pessoas já entrevistadas
-      const mapEntrevistados = new Map<string, string>();
-      (todasEntrevistas || []).forEach((row: any) => {
-        if (row.nome_participante) {
-          const intName = row.entrevistador?.nome_completo || 'outro entrevistador';
-          mapEntrevistados.set(nameKey(row.nome_participante), intName);
-        }
-      });
-      pending.forEach((raw: any) => {
-        if (raw.nome_participante) {
-          mapEntrevistados.set(nameKey(raw.nome_participante), raw.interviewer_name || 'você (salvo offline)');
-        }
-      });
+      const { mapEntrevistados, registros } = buildEntrevistadosMaps(todasEntrevistas, pending);
       setEntrevistadosExistentes(mapEntrevistados);
+      setRegistrosEntrevistados(registros);
 
-      setRegistrosEntrevistados([
-        ...(todasEntrevistas || []).map((row: any) => ({
-          nome: row.nome_participante || '',
-          entrevistador: row.entrevistador?.nome_completo || 'outro entrevistador',
-          vinculo: row.vinculo,
-          serie: row.serie,
-          turma: row.turma,
-        })),
-        ...pending.map((raw: any) => ({
-          nome: raw.nome_participante || '',
-          entrevistador: raw.interviewer_name || 'você (salvo offline)',
-          vinculo: raw.vinculo,
-          serie: raw.serie,
-          turma: raw.turma,
-        })),
-      ].filter((r) => r.nome));
-
-      // Filtra as entrevistas feitas pelo próprio usuário logado
       if (profile?.id) {
-        const minhasOnline: CensoItem[] = (todasEntrevistas || [])
-          .filter((r: any) => r.entrevistador_id === profile.id)
-          .map((r: any) => ({
-            ...r,
-            interviewer_name: r.entrevistador?.nome_completo || profile.nomeCompleto || 'Você',
-            grupo_escolar: r.turma ? (r.serie ? `${r.serie} - ${r.turma}` : r.turma) : 'Comunidade Escolar',
-          }));
-
-        // Salva no cache local para continuar visível mesmo se a internet cair depois
-        try {
-          localStorage.setItem(`censo_my_interviews_cache_${profile.id}`, JSON.stringify(minhasOnline));
-        } catch {
-          // ignora
-        }
-
-        // Deduplica entre pendentes locais e online pelo nome normalizado
-        const onlineNames = new Set(minhasOnline.map((m) => normalizeStr(m.nome_participante)));
-        const myPendingUnique = myPending.filter((p) => !onlineNames.has(normalizeStr(p.nome_participante)));
-        const myPendingReversed = [...myPendingUnique].reverse();
-        const combinadasMinhas = [...myPendingReversed, ...minhasOnline];
-
+        const combinadasMinhas = buildMinhasEntrevistas(todasEntrevistas, myPending, profile);
         setMinhasEntrevistas(combinadasMinhas);
         setMyFichas(combinadasMinhas.length);
       }
 
-      // Atualiza lista sugerida incluindo alunos e professores/servidores (sempre em MAIÚSCULO)
       if (pessoasDb && pessoasDb.length > 0) {
         const nomesPessoas = pessoasDb.map((p: any) => (p.nome_completo || '').trim().toUpperCase()).filter(Boolean);
         const combinada = Array.from(new Set([...listaAlunos.map((a: string) => a.trim().toUpperCase()), ...nomesPessoas]));
         setListaSugerida(combinada);
       }
 
-      // Contagem de turmas distintas
       const turmasUnicas = new Set(
         (todasEntrevistas || [])
           .map((r: any) => `${r.serie || ''} - ${r.turma || ''}`.trim())
@@ -291,39 +532,10 @@ export function Home() {
         interviewer_name: r.entrevistador?.nome_completo || 'Pesquisador(a)',
         grupo_escolar: r.turma ? (r.serie ? `${r.serie} - ${r.turma}` : r.turma) : 'Comunidade Escolar'
       }));
-      const reversedPending = [...pending].reverse();
-      setAtividadesRecentes([...reversedPending, ...serverData].slice(0, 10));
+      setAtividadesRecentes([...[...pending].reverse(), ...serverData].slice(0, 10));
     } catch (err) {
       console.warn("Modo Offline ativado / Erro de conexão com Supabase:", err);
-      const mapEntrevistados = new Map<string, string>();
-      pending.forEach((raw: any) => {
-        if (raw.nome_participante) {
-          mapEntrevistados.set(nameKey(raw.nome_participante), raw.interviewer_name || 'você (salvo offline)');
-        }
-      });
-
-      // Restaura as entrevistas do aluno do cache local para não sumirem quando a internet cair!
-      let cachedMinhas: CensoItem[] = [];
-      if (profile?.id) {
-        try {
-          const cachedStr = localStorage.getItem(`censo_my_interviews_cache_${profile.id}`);
-          if (cachedStr) {
-            cachedMinhas = JSON.parse(cachedStr);
-            cachedMinhas.forEach((c) => {
-              if (c.nome_participante) {
-                mapEntrevistados.set(nameKey(c.nome_participante), c.interviewer_name || profile.nomeCompleto || 'você');
-              }
-            });
-          }
-        } catch {
-          // ignora
-        }
-      }
-
-      const cachedNames = new Set(cachedMinhas.map((m) => normalizeStr(m.nome_participante)));
-      const myPendingUnique = myPending.filter((p) => !cachedNames.has(normalizeStr(p.nome_participante)));
-      const myPendingOfflineReversed = [...myPendingUnique].reverse();
-      const combinadasOffline = [...myPendingOfflineReversed, ...cachedMinhas];
+      const { mapEntrevistados, combinadasOffline, registros } = restoreOfflineState(profile, pending, myPending);
 
       setMinhasEntrevistas(combinadasOffline);
       if (combinadasOffline.length > 0) {
@@ -331,17 +543,7 @@ export function Home() {
       }
 
       setEntrevistadosExistentes(mapEntrevistados);
-      setRegistrosEntrevistados(
-        [...pending, ...cachedMinhas]
-          .filter((r: any) => r.nome_participante)
-          .map((r: any) => ({
-            nome: r.nome_participante,
-            entrevistador: r.interviewer_name || 'você',
-            vinculo: r.vinculo,
-            serie: r.serie,
-            turma: r.turma,
-          }))
-      );
+      setRegistrosEntrevistados(registros);
       setAtividadesRecentes(combinadasOffline.length > 0 ? combinadasOffline.slice(0, 10) : [...pending].reverse());
       setStats(prev => ({
         ...prev,
@@ -409,129 +611,66 @@ export function Home() {
     setLoading(true);
     setErrorMsg(null);
 
-    // 1. O entrevistador não pode entrevistar a si mesmo
-    if (
-      profile?.nomeCompleto &&
-      normalizeStr(nomeParticipante) === normalizeStr(profile.nomeCompleto)
-    ) {
-      setErrorMsg('O(A) entrevistador(a) não pode entrevistar a si mesmo(a). Por favor, informe o nome do participante entrevistado.');
+    const basicErr = validateBasicInterview({
+      profileNome: profile?.nomeCompleto,
+      nomeParticipante,
+      entrevistadosExistentes,
+      nomeSemSobrenome,
+      similares,
+      homonimoConfirmado,
+    });
+
+    if (basicErr) {
+      setErrorMsg(basicErr);
       setLoading(false);
       return;
     }
 
-    // 2. Não permitir duplicidade de participante no censo (checa memória local primeiro)
-    const jaFeito = entrevistadosExistentes.get(nameKey(nomeParticipante));
-    if (jaFeito) {
-      setErrorMsg(`O(A) participante "${nomeParticipante.trim()}" já foi entrevistado(a) anteriormente (por ${jaFeito}). Cada pessoa só pode ser entrevistada uma única vez.`);
-      setLoading(false);
-      return;
-    }
-
-    // 3. Nome precisa ter ao menos nome e sobrenome
-    if (nomeSemSobrenome) {
-      setErrorMsg('Informe o nome completo do(a) participante (nome e sobrenomes).');
-      setLoading(false);
-      return;
-    }
-
-    // 4. Nome parecido com entrevista existente exige confirmação de homônimo
-    if (similares.length > 0 && !homonimoConfirmado) {
-      setErrorMsg(`Já existe entrevista com nome parecido (${similares[0].nome}). Confira se não é a mesma pessoa ou marque que é outra pessoa.`);
-      setLoading(false);
-      return;
-    }
-
-    // 5. Checa duplicidade online no Supabase para garantir concorrência (com timeout de 4s para conexões lentas)
-    try {
-      const primeiraPalavra = nomeParticipante.trim().split(/\s+/)[0] || '';
-      const dupCheckResult = await withTimeout<any>(
-        supabase
-          .from('entrevistas')
-          .select('id, nome_participante, vinculo, serie, turma, entrevistador:pessoas(nome_completo)')
-          .ilike('nome_participante', `${primeiraPalavra}%`)
-          .limit(200),
-        4000
-      );
-      const candidatos = dupCheckResult?.data || [];
-
-      const alvo = nameKey(nomeParticipante);
-      const existingInterview = (candidatos || []).find((r: any) => nameKey(r.nome_participante) === alvo);
-      if (existingInterview) {
-        const intName = (existingInterview as any).entrevistador?.nome_completo;
-        const responsavelStr = intName ? `por ${intName}` : 'no sistema';
-        setErrorMsg(`O(A) participante "${nomeParticipante.trim()}" já foi entrevistado(a) anteriormente (${responsavelStr}). Para manter os dados estatísticos íntegros, cada pessoa só pode ser entrevistada uma vez.`);
-        setLoading(false);
-        return;
+    const { errorMsg: dupErr, similarOnline } = await checkDuplicateOnline(nomeParticipante, homonimoConfirmado);
+    if (dupErr) {
+      if (similarOnline) {
+        setRegistrosEntrevistados((prev) => [...prev, similarOnline]);
       }
-
-      const similarOnline = (candidatos || []).find((r: any) => isSimilarName(r.nome_participante, nomeParticipante));
-      if (similarOnline && !homonimoConfirmado) {
-        setRegistrosEntrevistados((prev) => [
-          ...prev,
-          {
-            nome: similarOnline.nome_participante,
-            entrevistador: (similarOnline as any).entrevistador?.nome_completo || 'outro entrevistador',
-            vinculo: similarOnline.vinculo,
-            serie: similarOnline.serie,
-            turma: similarOnline.turma,
-          },
-        ]);
-        setErrorMsg(`Já existe entrevista com nome parecido (${similarOnline.nome_participante}). Confira se não é a mesma pessoa ou marque que é outra pessoa.`);
-        setLoading(false);
-        return;
-      }
-    } catch (checkErr) {
-      console.warn('Não foi possível checar duplicidade online, prosseguindo com verificação local:', checkErr);
+      setErrorMsg(dupErr);
+      setLoading(false);
+      return;
     }
 
-    const isDocenteOuServidor = vinculo === 'PROFESSOR' || vinculo === 'FUNCIONARIO' || vinculo === 'GESTAO';
-    const rawFicha = {
-      id: `local-${Date.now()}`,
-      entrevistador_id: profile?.id || null,
-      interviewer_name: profile?.nomeCompleto || 'Pesquisador(a)',
-      nome_participante: nomeParticipante.trim().toUpperCase(),
-      contato_whatsapp: contatoWhatsapp,
+    const rawFicha = assembleInterviewPayload({
+      profile,
+      nomeParticipante,
+      contatoWhatsapp,
       genero,
       vinculo,
-      serie: isDocenteOuServidor ? (serie || (vinculo === 'PROFESSOR' ? 'Corpo Docente' : vinculo === 'GESTAO' ? 'Gestão' : 'Servidor(a)')) : serie,
-      turma: isDocenteOuServidor ? (turma || (vinculo === 'PROFESSOR' ? 'Docente' : vinculo === 'GESTAO' ? 'Coordenação' : 'Funcionário')) : turma,
-      turno: turno || 'Matutino',
-      mora_com: moraCom || null,
-      cidade_natal: cidadeNatal,
-      local_moradia: localizacaoMoradia,
-      detalhe_localizacao: localizacaoMoradia !== 'Sede de Seabra' ? (detalheLocalizacao.trim() || null) : null,
-      tempo_deslocamento: tempoDeslocamento || null,
-      acesso_internet: acessoInternet || null,
-      cor_raca: corRaca,
-      origem_familia: origemFamilia,
-      povo_indigena: (corRaca === 'Indígena' || origemFamilia === 'Predominantemente Indígena') ? (povoIndigena.trim() || null) : null,
-      conhece_ancestralidade: conheceAncestralidade || null,
-      ja_conversou_sobre: jaConversouSobre || null,
-      ambientes_conversa: ambientesConversa,
-      cor_raca_influencia: corRacaInfluencia || null,
-      espacos_influencia: espacosInfluencia,
-      risco_evasao: riscoEvasao || null,
-      sofreu_preconceito: sofreuPreconceito,
-      locais_ocorrencia: sofreuPreconceito === 'Sim' ? locaisOcorrencia : [],
-      formas_ocorrencia: sofreuPreconceito === 'Sim' ? formasOcorrencia : [],
-      relato_preconceito: relatoSofreu || relatoPresenciou || null,
-      created_at: new Date().toISOString(),
-      synced: false
-    };
+      serie,
+      turma,
+      turno,
+      moraCom,
+      cidadeNatal,
+      localizacaoMoradia,
+      detalheLocalizacao,
+      tempoDeslocamento,
+      acessoInternet,
+      corRaca,
+      origemFamilia,
+      povoIndigena,
+      conheceAncestralidade,
+      jaConversouSobre,
+      ambientesConversa,
+      corRacaInfluencia,
+      espacosInfluencia,
+      riscoEvasao,
+      sofreuPreconceito,
+      locaisOcorrencia,
+      formasOcorrencia,
+      relatoSofreu,
+      relatoPresenciou,
+    });
 
     const novoTotal = myFichas + 1;
     setMyFichas(novoTotal);
+    unlockMilestoneBadges(profile?.id, novoTotal);
 
-    // Desbloqueia insígnias de progresso científico se aplicável
-    if (profile?.id) {
-      if (novoTotal >= 1) void badgeService.unlockBadge(profile.id, 'primeira_entrevista');
-      if (novoTotal >= 5) void badgeService.unlockBadge(profile.id, 'meta_5_entrevistas');
-      if (novoTotal >= 10) void badgeService.unlockBadge(profile.id, 'meta_10_entrevistas');
-      if (novoTotal >= 20) void badgeService.unlockBadge(profile.id, 'adinha_campea_meta_20');
-    }
-
-    // 1. SALVAMENTO ANTECIPADO E IMEDIATO NO DISPOSITIVO (OFFLINE-FIRST)
-    // Garante que mesmo com 1 bit de rede, queda de bateria ou fechamento da aba, os dados NUNCA se percam.
     tasOfflineSync.saveDraftOffline(rawFicha);
     const existingQueue: any[] = JSON.parse(localStorage.getItem('censo_pending_queue') || '[]');
     setPendingSyncCount(existingQueue.length);
@@ -541,11 +680,9 @@ export function Home() {
         throw new Error("Dispositivo offline. Ficha retida com segurança localmente.");
       }
 
-      // Timeout de 7s para evitar travamento em conexões de 1 bit / WiFi instável da escola
       const res = await withTimeout(salvarEntrevistaResiliente(rawFicha, profile?.id), 7000);
       if (res.error) throw res.error;
 
-      // Sucesso na nuvem: remove da fila pendente local
       tasOfflineSync.removeDraft(rawFicha.id);
       const afterQueue: any[] = JSON.parse(localStorage.getItem('censo_pending_queue') || '[]');
       setPendingSyncCount(afterQueue.length);
@@ -567,7 +704,6 @@ export function Home() {
         setSuccess(false);
         setShowModalColeta(false);
         if (novoTotal >= 20) {
-          // Dispara celebração da Adinha Campeã com confetes e fanfare!
           window.dispatchEvent(new CustomEvent('abrir-celebracao-meta-20', { detail: { count: novoTotal } }));
         }
       }, novoTotal >= 20 ? 800 : 2000);
@@ -604,6 +740,72 @@ export function Home() {
     setPresenciouPreconceito('Não');
     setRelatoPresenciou('');
   };
+
+  const handleNomeParticipanteChange = (valRaw: string) => {
+    const val = valRaw.toUpperCase();
+    setNomeParticipante(val);
+    setHomonimoConfirmado(false);
+
+    const valNormLookup = normalizeStr(val);
+    const alunoInfo = findAlunoInCatalogo(valNormLookup);
+
+    if (alunoInfo) {
+      setAlunoAutopreenchido(alunoInfo);
+      if (alunoInfo.turma) setTurma(alunoInfo.turma);
+      if (alunoInfo.serie) setSerie(alunoInfo.serie);
+      if (alunoInfo.turno) setTurno(alunoInfo.turno);
+      const ehTec = (alunoInfo.serie || '').toLowerCase().includes('técnico') || (alunoInfo.turma_codigo || '').includes('PROSUB');
+      setVinculo(ehTec ? 'ESTUDANTE_TECNICO' : 'ESTUDANTE_REGULAR');
+      if (navigator.onLine) {
+        void supabase
+          .from('alunos_escola')
+          .select('serie, turma, turno')
+          .eq('nome_normalizado', valNormLookup.toUpperCase())
+          .maybeSingle()
+          .then(({ data: dbAluno }) => {
+            if (dbAluno) {
+              if (dbAluno.turma) setTurma(dbAluno.turma);
+              if (dbAluno.serie) setSerie(dbAluno.serie);
+              if (dbAluno.turno) setTurno(dbAluno.turno);
+            }
+          });
+      }
+    } else {
+      setAlunoAutopreenchido(null);
+    }
+
+    setErrorMsg(checkNomeParticipanteConflict(val, profile?.nomeCompleto, entrevistadosExistentes));
+  };
+
+  const listaExibida = useMemo(() => {
+    if (abaAtividades !== 'minhas') {
+      return atividadesRecentes;
+    }
+    const q = normalizeStr(buscaMinhas.trim());
+    if (!q) return minhasEntrevistas;
+    return minhasEntrevistas.filter((item) => (
+      normalizeStr(item.nome_participante).includes(q) ||
+      normalizeStr(item.grupo_escolar).includes(q) ||
+      normalizeStr(item.turma).includes(q)
+    ));
+  }, [abaAtividades, atividadesRecentes, buscaMinhas, minhasEntrevistas]);
+
+  const opcoesDatalist = useMemo(() => {
+    return listaSugerida.filter((nome: string) => {
+      const n = normalizeStr(nome);
+      const ehEleMesmo = profile?.nomeCompleto && n === normalizeStr(profile.nomeCompleto);
+      const jaFoiEntrevistado = entrevistadosExistentes.has(nameKey(nome));
+      return !ehEleMesmo && !jaFoiEntrevistado;
+    });
+  }, [listaSugerida, profile?.nomeCompleto, entrevistadosExistentes]);
+
+  const isSubmitDisabled =
+    loading ||
+    Boolean(profile?.nomeCompleto && normalizeStr(nomeParticipante) === normalizeStr(profile.nomeCompleto)) ||
+    Boolean(nomeParticipante && entrevistadosExistentes.has(nameKey(nomeParticipante))) ||
+    nomeSemSobrenome ||
+    (similares.length > 0 && !homonimoConfirmado);
+
 
 
 
@@ -1008,59 +1210,41 @@ export function Home() {
 
           {fetchingData && minhasEntrevistas.length === 0 && atividadesRecentes.length === 0 ? (
             <div className="py-8 text-center text-xs text-slate-400 animate-pulse font-semibold">Carregando registros...</div>
-          ) : (() => {
-            const listaExibida = abaAtividades === 'minhas'
-              ? minhasEntrevistas.filter((item) => {
-                  if (!buscaMinhas.trim()) return true;
-                  const q = normalizeStr(buscaMinhas);
-                  return (
-                    normalizeStr(item.nome_participante).includes(q) ||
-                    normalizeStr(item.grupo_escolar).includes(q) ||
-                    normalizeStr(item.turma).includes(q)
-                  );
-                })
-              : atividadesRecentes;
-
-            if (listaExibida.length === 0) {
-              return (
-                <div className="py-12 text-center text-xs text-slate-400 font-semibold">
-                  {abaAtividades === 'minhas'
-                    ? 'Nenhuma entrevista encontrada. Clique em "+ Nova Ficha de Coleta" acima para registrar!'
-                    : 'Nenhuma ficha registrada ainda.'}
-                </div>
-              );
-            }
-
-            return (
-              <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
-                {listaExibida.map((item, idx) => (
-                  <div key={item.id || idx} className="p-4 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 transition rounded-2xl border border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <span className="p-2.5 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-xl font-black text-xs min-w-[36px] text-center">
-                        {abaAtividades === 'minhas' ? `#${listaExibida.length - idx}` : <CheckCircle className="w-4 h-4 mx-auto" />}
-                      </span>
-                      <div>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 flex-wrap">
-                          <span className="uppercase">{(item.nome_participante || '').toUpperCase()}</span>
-                          {item.id?.toString().startsWith('local-') ? (
-                            <span className="text-[10px] bg-amber-500/20 text-amber-600 px-2 py-0.5 rounded-md font-semibold">Pendente Nuvem</span>
-                          ) : (
-                            <span className="text-[10px] bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-md font-semibold">Salva</span>
-                          )}
-                        </h4>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                          Turma/Setor: {item.grupo_escolar || item.turma || 'Não informada'} • Entrevistador(a): {item.interviewer_name || profile?.nomeCompleto || 'Você'}
-                        </p>
-                      </div>
-                    </div>
-                    <span className="text-[11px] font-bold text-slate-400 bg-white dark:bg-slate-900 px-3 py-1 rounded-lg border border-slate-200 dark:border-slate-700 shrink-0">
-                      {item.created_at ? new Date(item.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recente'}
+          ) : listaExibida.length === 0 ? (
+            <div className="py-12 text-center text-xs text-slate-400 font-semibold">
+              {abaAtividades === 'minhas'
+                ? 'Nenhuma entrevista encontrada. Clique em "+ Nova Ficha de Coleta" acima para registrar!'
+                : 'Nenhuma ficha registrada ainda.'}
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
+              {listaExibida.map((item, idx) => (
+                <div key={item.id || idx} className="p-4 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 transition rounded-2xl border border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <span className="p-2.5 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-xl font-black text-xs min-w-[36px] text-center">
+                      {abaAtividades === 'minhas' ? `#${listaExibida.length - idx}` : <CheckCircle className="w-4 h-4 mx-auto" />}
                     </span>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 flex-wrap">
+                        <span className="uppercase">{(item.nome_participante || '').toUpperCase()}</span>
+                        {item.id?.toString().startsWith('local-') ? (
+                          <span className="text-[10px] bg-amber-500/20 text-amber-600 px-2 py-0.5 rounded-md font-semibold">Pendente Nuvem</span>
+                        ) : (
+                          <span className="text-[10px] bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-md font-semibold">Salva</span>
+                        )}
+                      </h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                        Turma/Setor: {item.grupo_escolar || item.turma || 'Não informada'} • Entrevistador(a): {item.interviewer_name || profile?.nomeCompleto || 'Você'}
+                      </p>
+                    </div>
                   </div>
-                ))}
-              </div>
-            );
-          })()}
+                  <span className="text-[11px] font-bold text-slate-400 bg-white dark:bg-slate-900 px-3 py-1 rounded-lg border border-slate-200 dark:border-slate-700 shrink-0">
+                    {item.created_at ? new Date(item.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recente'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
       </div>
@@ -1121,55 +1305,7 @@ export function Home() {
                         list="lista-alunos-ceep"
                         placeholder="NOME COMPLETO..."
                         value={nomeParticipante}
-                        onChange={(e) => {
-                          const val = e.target.value.toUpperCase();
-                          setNomeParticipante(val);
-                          setHomonimoConfirmado(false);
-                          const valNormLookup = normalizeStr(val);
-                          let alunoInfo = CATALOGO_ALUNOS_MAP.get(valNormLookup);
-                          if (!alunoInfo && valNormLookup.length >= 4) {
-                            for (const item of CATALOGO_ALUNOS_MAP.values()) {
-                              const itemNorm = normalizeStr(item.nome_completo);
-                              if (itemNorm === valNormLookup || (valNormLookup.length >= 8 && itemNorm.includes(valNormLookup))) {
-                                alunoInfo = item;
-                                break;
-                              }
-                            }
-                          }
-
-                          if (alunoInfo) {
-                            setAlunoAutopreenchido(alunoInfo);
-                            if (alunoInfo.turma) setTurma(alunoInfo.turma);
-                            if (alunoInfo.serie) setSerie(alunoInfo.serie);
-                            if (alunoInfo.turno) setTurno(alunoInfo.turno);
-                            const ehTec = (alunoInfo.serie || '').toLowerCase().includes('técnico') || (alunoInfo.turma_codigo || '').includes('PROSUB');
-                            setVinculo(ehTec ? 'ESTUDANTE_TECNICO' : 'ESTUDANTE_REGULAR');
-                            if (navigator.onLine) {
-                              void supabase
-                                .from('alunos_escola')
-                                .select('serie, turma, turno')
-                                .eq('nome_normalizado', valNormLookup.toUpperCase())
-                                .maybeSingle()
-                                .then(({ data: dbAluno }) => {
-                                  if (dbAluno) {
-                                    if (dbAluno.turma) setTurma(dbAluno.turma);
-                                    if (dbAluno.serie) setSerie(dbAluno.serie);
-                                    if (dbAluno.turno) setTurno(dbAluno.turno);
-                                  }
-                                });
-                            }
-                          } else {
-                            setAlunoAutopreenchido(null);
-                          }
-                          const valNorm = normalizeStr(val);
-                          if (profile?.nomeCompleto && valNorm === normalizeStr(profile.nomeCompleto)) {
-                            setErrorMsg('Atenção: O(A) entrevistador(a) não pode entrevistar a si mesmo(a).');
-                          } else if (entrevistadosExistentes.has(nameKey(val))) {
-                            setErrorMsg(`Atenção: "${val.trim()}" já foi entrevistado(a) anteriormente (por ${entrevistadosExistentes.get(nameKey(val))}).`);
-                          } else {
-                            setErrorMsg(null);
-                          }
-                        }}
+                        onChange={(e) => handleNomeParticipanteChange(e.target.value)}
                         className={`w-full p-3 bg-white dark:bg-slate-800 border rounded-xl text-sm font-semibold outline-none transition-colors uppercase ${
                           (profile?.nomeCompleto && normalizeStr(nomeParticipante) === normalizeStr(profile.nomeCompleto)) ||
                           entrevistadosExistentes.has(nameKey(nomeParticipante))
@@ -1237,16 +1373,9 @@ export function Home() {
                       )}
 
                       <datalist id="lista-alunos-ceep">
-                        {listaSugerida
-                          .filter((nome: string) => {
-                            const n = normalizeStr(nome);
-                            const ehEleMesmo = profile?.nomeCompleto && n === normalizeStr(profile.nomeCompleto);
-                            const jaFoiEntrevistado = entrevistadosExistentes.has(nameKey(nome));
-                            return !ehEleMesmo && !jaFoiEntrevistado;
-                          })
-                          .map((nome: string) => (
-                            <option key={nome} value={nome} />
-                          ))}
+                        {opcoesDatalist.map((nome: string) => (
+                          <option key={nome} value={nome} />
+                        ))}
                       </datalist>
                     </div>
 
@@ -1744,13 +1873,7 @@ export function Home() {
                   </button>
                   <button
                     type="submit"
-                    disabled={
-                      loading ||
-                      Boolean(profile?.nomeCompleto && normalizeStr(nomeParticipante) === normalizeStr(profile.nomeCompleto)) ||
-                      Boolean(nomeParticipante && entrevistadosExistentes.has(nameKey(nomeParticipante))) ||
-                      nomeSemSobrenome ||
-                      (similares.length > 0 && !homonimoConfirmado)
-                    }
+                    disabled={isSubmitDisabled}
                     className="bg-cyan-600 hover:bg-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-3 rounded-xl text-xs font-bold flex items-center gap-2 shadow-md cursor-pointer border-0"
                   >
                     {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" /> Salvar Ficha do Censo</>}

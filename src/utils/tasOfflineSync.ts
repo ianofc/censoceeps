@@ -142,40 +142,8 @@ export const tasOfflineSync = {
     console.info(`[TAS SARA] Despertando Sincronização: ${drafts.length} fichas pendentes encontradas.`);
 
     try {
-      // Deduplica rascunhos em memória antes de sincronizar
-      const uniqueDraftsMap = new Map<string, any>();
-      for (const draft of drafts) {
-        const raw = draft.data || draft;
-        const key = normalizeStr(raw.nome_participante) || draft.id || generateSafeId('item');
-        uniqueDraftsMap.set(key, draft);
-      }
-      const uniqueDrafts = Array.from(uniqueDraftsMap.values());
-
-      const successfulSyncIds = new Set<string>();
-
-      for (const draft of uniqueDrafts) {
-        const rawPayload = draft.data || draft;
-        const draftId = draft.id || rawPayload.id || generateSafeId('local');
-
-        try {
-          // Timeout de 7s por ficha para que conexões lentas (1 bit) não bloqueiem o lote inteiro
-          const { error } = await withTimeout(salvarEntrevistaResiliente(rawPayload, pesquisadorId), 7000);
-
-          if (!error) {
-            successfulSyncIds.add(draftId);
-            if (draft.id) successfulSyncIds.add(draft.id);
-            if (rawPayload.id) successfulSyncIds.add(rawPayload.id);
-
-            // Persiste imediatamente a remoção de cada ficha bem-sucedida para resiliência incremental
-            tasOfflineSync.removeDraft(draftId);
-          } else {
-            console.error(`[TAS SARA] Erro ao sincronizar ficha ${draftId}:`, error);
-          }
-        } catch (itemErr) {
-          console.error(`[TAS SARA] Timeout/Falha na ficha ${draftId}:`, itemErr);
-        }
-      }
-
+      const uniqueDrafts = getDeduplicatedDrafts(drafts);
+      const successfulSyncIds = await syncDraftsSequentially(uniqueDrafts, pesquisadorId);
       const remainingDrafts = tasOfflineSync.getDrafts();
 
       console.info(`[TAS SARA] Sincronização concluída! ${successfulSyncIds.size} fichas processadas. Restantes: ${remainingDrafts.length}`);
@@ -192,6 +160,52 @@ export const tasOfflineSync = {
     }
   }
 };
+
+function getDeduplicatedDrafts(drafts: any[]): any[] {
+  const uniqueDraftsMap = new Map<string, any>();
+  for (const draft of drafts) {
+    const raw = draft.data || draft;
+    const key = normalizeStr(raw.nome_participante) || draft.id || generateSafeId('item');
+    uniqueDraftsMap.set(key, draft);
+  }
+  return Array.from(uniqueDraftsMap.values());
+}
+
+async function syncSingleDraft(draft: any, pesquisadorId?: string): Promise<string[]> {
+  const rawPayload = draft.data || draft;
+  const draftId = draft.id || rawPayload.id || generateSafeId('local');
+  const ids: string[] = [];
+
+  try {
+    const { error } = await withTimeout(salvarEntrevistaResiliente(rawPayload, pesquisadorId), 7000);
+    if (!error) {
+      ids.push(draftId);
+      if (draft.id) ids.push(draft.id);
+      if (rawPayload.id) ids.push(rawPayload.id);
+      tasOfflineSync.removeDraft(draftId);
+    } else {
+      console.error(`[TAS SARA] Erro ao sincronizar ficha ${draftId}:`, error);
+    }
+  } catch (itemErr) {
+    console.error(`[TAS SARA] Timeout/Falha na ficha ${draftId}:`, itemErr);
+  }
+
+  return ids;
+}
+
+async function syncDraftsSequentially(drafts: any[], pesquisadorId?: string): Promise<Set<string>> {
+  const successfulSyncIds = new Set<string>();
+
+  const processNext = async (index: number): Promise<void> => {
+    if (index >= drafts.length) return;
+    const syncedIds = await syncSingleDraft(drafts[index], pesquisadorId);
+    syncedIds.forEach((id) => successfulSyncIds.add(id));
+    return processNext(index + 1);
+  };
+
+  await processNext(0);
+  return successfulSyncIds;
+}
 
 /**
  * Ativa sincronização periódica a cada 25s em segundo plano se houver rascunhos pendentes.
