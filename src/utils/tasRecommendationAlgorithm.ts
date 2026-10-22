@@ -13,6 +13,7 @@ export interface TASUserProfile {
   turmaOuCargo: string;
   genero?: string;
   totalFichas?: number;
+  interesses?: Record<string, number>;
 }
 
 export interface PostFeed {
@@ -128,7 +129,72 @@ export function calcularScoreTAS(post: PostFeed, user: TASUserProfile): { score:
     motivo = '✨ Sua publicação';
   }
 
+  // 9. Retroalimentação por Afinidade de Interesses das Enquetes e Opiniões Estudantis
+  const interesses = user.interesses || {};
+  const tagsInteresse: Record<string, string[]> = {
+    tecnologia: ['TECNOLOGIA', 'PROGRAMACAO', 'IA', 'ALGORITMO', 'COMPUTACAO', 'INFORMATICA', 'ROBO'],
+    alimentacao: ['MERENDA', 'REFEITORIO', 'ALIMENTACAO', 'LANCHE', 'FRUTA'],
+    transporte: ['TRANSPORTE', 'ONIBUS', 'DESLOCAMENTO', 'DISTANCIA', 'RURAL'],
+    ciencias: ['CIENCIA', 'FEIRA', 'PESQUISA', 'PROJETO', 'LOVELACE', 'CENSO', 'ESTATISTICA'],
+    vestibular: ['VESTIBULAR', 'ENEM', 'UNIVERSIDADE', 'UNEB', 'CURSO', 'FACULDADE'],
+    estudos: ['ESTUDO', 'LIVRO', 'AULA', 'BIBLIOTECA', 'MONITORIA'],
+  };
+
+  const postTokens = new Set(postContent.split(/[\s,.;:!?()/-]+/));
+
+  for (const [tema, palavras] of Object.entries(tagsInteresse)) {
+    const pesoTema = interesses[tema] || 0;
+    if (pesoTema > 0) {
+      const match = palavras.some(p => {
+        const pNorm = norm(p);
+        if (pNorm.length <= 3) {
+          return postTokens.has(pNorm);
+        }
+        return postContent.includes(pNorm);
+      });
+      if (match) {
+        score += Math.min(pesoTema * 35, 140);
+        motivo = motivo || `🎯 Conteúdo alinhado aos seus interesses (${tema})`;
+      }
+    }
+  }
+
+  // 10. Priorização de Notícias Educacionais e Oportunidades Curadas
+  if ((post as any).is_external_news || post.type === 'noticia_curada') {
+    score += 65;
+    motivo = motivo || '📰 Oportunidade e Notícia para o CEEP';
+  }
+
   return { score: Math.round(score), motivo };
+}
+
+/**
+ * Registra o tempo de tela (dwell time) em um post para retroalimentar o modelo de atenção implícito
+ */
+export function registrarDwellTimeTAS(postId: number, seconds: number, postCategory?: string) {
+  if (seconds < 2) return;
+  try {
+    const dwellMap: Record<string, number> = JSON.parse(localStorage.getItem('censo_tas_dwell_time') || '{}');
+    dwellMap[String(postId)] = (dwellMap[String(postId)] || 0) + seconds;
+    localStorage.setItem('censo_tas_dwell_time', JSON.stringify(dwellMap));
+
+    if (postCategory && seconds >= 4) {
+      const userInterests: Record<string, number> = JSON.parse(localStorage.getItem('censo_tas_user_interests') || '{}');
+      userInterests[postCategory] = (userInterests[postCategory] || 0) + 1;
+      localStorage.setItem('censo_tas_user_interests', JSON.stringify(userInterests));
+    }
+  } catch {}
+}
+
+/**
+ * Carrega o vetor de interesses atual do aluno extraído das enquetes e leituras
+ */
+export function carregarInteressesUsuarioTAS(): Record<string, number> {
+  try {
+    return JSON.parse(localStorage.getItem('censo_tas_user_interests') || '{}');
+  } catch {
+    return {};
+  }
 }
 
 /**

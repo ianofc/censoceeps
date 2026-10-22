@@ -9,9 +9,16 @@ import {
   Share2, Award, Flame, ThumbsUp, Compass, Bookmark,
   CheckCircle2, BarChart3, HelpCircle, Smartphone
 } from "lucide-react";
-import { personalizarFeedTAS, TASUserProfile } from "../utils/tasRecommendationAlgorithm";
+import {
+  personalizarFeedTAS,
+  TASUserProfile,
+  registrarDwellTimeTAS,
+  carregarInteressesUsuarioTAS
+} from "../utils/tasRecommendationAlgorithm";
 import { IndicarAmigosModal } from "../components/IndicarAmigosModal";
 import { registrarMetricaAB } from "../utils/abTesting";
+import { StudentPulseCard } from "../components/Feed/StudentPulseCard";
+import { tasFeedScraperService } from "../services/tasFeedScraperService";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function timeAgo(d: string) {
@@ -178,6 +185,17 @@ function PostCard({ post, profile, onRefresh }: { post:Post; profile:any; onRefr
     setMyEmoji(post.my_emoji || (post.liked ? "❤️" : null));
     setReactionsMap(post.reactions_map || {});
   }, [post.liked, post.likes_count, post.my_emoji, post.reactions_map]);
+
+  // TAS Algoritmo: Rastreia tempo de tela implícito (Dwell Time)
+  useEffect(() => {
+    const start = Date.now();
+    return () => {
+      const elapsedSeconds = Math.floor((Date.now() - start) / 1000);
+      if (elapsedSeconds >= 3) {
+        registrarDwellTimeTAS(post.id, elapsedSeconds, (post as any).news_category);
+      }
+    };
+  }, [post.id]);
 
   const loadComments = async () => {
     setLoadingComments(true);
@@ -834,127 +852,7 @@ function StoryModal({ story, onClose }: { story: StoryItem | null; onClose: () =
   );
 }
 
-function CommunityPollCard() {
-  const [selectedOption, setSelectedOption] = useState<number | null>(() => {
-    try {
-      const v = localStorage.getItem("censo_feed_poll_vote_v1");
-      return v !== null ? Number(v) : null;
-    } catch {
-      return null;
-    }
-  });
 
-  const pollData = {
-    id: "poll_turno_acessibilidade",
-    question: "Em qual turno você encontrou maior facilidade para entrevistar colegas no CEEP?",
-    options: [
-      { text: "☀️ Matutino (Cursos Técnicos Integrados)", votes: 34 },
-      { text: "🌤️ Vespertino (Ensino Médio e Geral)", votes: 21 },
-      { text: "🌙 Noturno (Prosub e Jovens Adultos)", votes: 16 },
-      { text: "🤝 Todos com ótima receptividade", votes: 12 },
-    ],
-  };
-
-  const handleVote = (idx: number) => {
-    if (selectedOption !== null) return;
-    setSelectedOption(idx);
-    try {
-      localStorage.setItem("censo_feed_poll_vote_v1", String(idx));
-    } catch {}
-  };
-
-  const totalVotes = pollData.options.reduce((s, o) => s + o.votes, 0) + (selectedOption !== null ? 1 : 0);
-
-  return (
-    <div style={{
-      background: "#fff",
-      borderRadius: 24,
-      border: "1.5px solid #e0e7ff",
-      padding: "18px 20px",
-      boxShadow: "0 4px 20px rgba(99, 102, 241, 0.08)",
-      position: "relative",
-      overflow: "hidden"
-    }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 18 }}>🗳️</span>
-          <div>
-            <h4 style={{ margin: 0, fontSize: 14, fontWeight: 900, color: "#1e1b4b" }}>
-              Enquete Científica da Comunidade
-            </h4>
-            <span style={{ fontSize: 11, color: "#6366f1", fontWeight: 700 }}>
-              Pesquisa de Campo · Projeto Ada Lovelace
-            </span>
-          </div>
-        </div>
-        <span style={{
-          fontSize: 11, fontWeight: 800, background: "#ede9fe", color: "#6366f1",
-          padding: "3px 10px", borderRadius: 99
-        }}>
-          {totalVotes} votos
-        </span>
-      </div>
-
-      <p style={{ fontSize: 13, fontWeight: 700, color: "#334155", margin: "0 0 14px", lineHeight: 1.5 }}>
-        {pollData.question}
-      </p>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {pollData.options.map((opt, idx) => {
-          const isSelected = selectedOption === idx;
-          const votesCount = opt.votes + (isSelected ? 1 : 0);
-          const pct = Math.round((votesCount / Math.max(1, totalVotes)) * 100);
-
-          return (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => handleVote(idx)}
-              style={{
-                width: "100%",
-                padding: "10px 14px",
-                borderRadius: 14,
-                border: isSelected ? "2px solid #6366f1" : "1.5px solid #f1f5f9",
-                background: isSelected ? "#f5f3ff" : "#f8fafc",
-                cursor: selectedOption !== null ? "default" : "pointer",
-                textAlign: "left",
-                position: "relative",
-                overflow: "hidden",
-                transition: "all 0.2s ease",
-                fontFamily: "inherit",
-              }}
-            >
-              {selectedOption !== null && (
-                <div style={{
-                  position: "absolute", left: 0, top: 0, bottom: 0,
-                  width: `${pct}%`,
-                  background: isSelected ? "rgba(99, 102, 241, 0.18)" : "rgba(226, 232, 240, 0.6)",
-                  transition: "width 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
-                  zIndex: 0
-                }} />
-              )}
-              <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span style={{ fontSize: 13, fontWeight: isSelected ? 800 : 600, color: isSelected ? "#4338ca" : "#334155" }}>
-                  {opt.text}
-                </span>
-                {selectedOption !== null && (
-                  <span style={{ fontSize: 12, fontWeight: 800, color: isSelected ? "#4338ca" : "#64748b", marginLeft: 8 }}>
-                    {pct}%
-                  </span>
-                )}
-              </div>
-            </button>
-          );
-        })}
-      </div>
-
-      <div style={{ marginTop: 12, display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 11, color: "#94a3b8" }}>
-        <span>{selectedOption !== null ? "✅ Seu voto foi registrado com sucesso." : "Toque em uma opção para votar"}</span>
-        <span>Atualizado ao vivo</span>
-      </div>
-    </div>
-  );
-}
 
 // ─── Skeleton ────────────────────────────────────────────────────────────────
 function PostSkeleton() {
@@ -982,7 +880,7 @@ export function Feed() {
   const [activeStory, setActiveStory] = useState<StoryItem | null>(null);
   const [posts, setPosts]           = useState<Post[]>([]);
 
-  const [feedTab, setFeedTab]       = useState<"para_voce" | "recentes" | "minha_turma" | "conquistas">("para_voce");
+  const [feedTab, setFeedTab]       = useState<"para_voce" | "recentes" | "minha_turma" | "conquistas" | "noticias">("para_voce");
   const [showIndicarModal, setShowIndicarModal] = useState(false);
   const [newPostContent, setNewPostContent] = useState("");
   const [imageUrl, setImageUrl]     = useState("");
@@ -1000,17 +898,21 @@ export function Feed() {
     papel: profile.papel || "entrevistador",
     turmaOuCargo: profile.turmaOuCargo || "1º ADM CM",
     genero: (profile as any).genero,
+    interesses: carregarInteressesUsuarioTAS(),
   }), [profile]);
 
   const fetchPosts = useCallback(async (silent=false) => {
     if(!silent) setFetchingPosts(true);
-    const [{ data: postsData }, { data: reactionsData }, { data: commentsCount }] = await Promise.all([
+    const [{ data: postsData }, { data: reactionsData }, { data: commentsCount }, curatedNews] = await Promise.all([
       supabase.from("lyka_posts").select("*").order("created_at",{ascending:false}).limit(60),
       supabase.from("lyka_reactions").select("post_id, user_id, emoji"),
       supabase.from("lyka_comments").select("post_id"),
+      tasFeedScraperService.getCuratedNews(),
     ]);
 
-    if (postsData) {
+    const newsFeedPosts = tasFeedScraperService.convertNewsToFeedPosts(curatedNews);
+
+    if (postsData || newsFeedPosts.length > 0) {
       const rm: Record<number, { count: number; userLiked: boolean; userEmoji?: string; emojiMap: Record<string, number> }> = {};
       (reactionsData || []).forEach((r: { post_id: number; user_id: string; emoji?: string }) => {
         if (!rm[r.post_id]) rm[r.post_id] = { count: 0, userLiked: false, emojiMap: {} };
@@ -1025,7 +927,7 @@ export function Feed() {
       const cm: Record<number, number> = {};
       (commentsCount || []).forEach((c: { post_id: number }) => { cm[c.post_id] = (cm[c.post_id] || 0) + 1; });
 
-      const enriched = postsData.map((p: any) => ({
+      const enriched = (postsData || []).map((p: any) => ({
         ...p,
         likes_count: rm[p.id]?.count ?? 0,
         liked: rm[p.id]?.userLiked ?? false,
@@ -1033,7 +935,7 @@ export function Feed() {
         reactions_map: rm[p.id]?.emojiMap,
         comments_count: cm[p.id] ?? 0,
       }));
-      setPosts(enriched);
+      setPosts([...enriched, ...(newsFeedPosts as any)]);
     }
     setFetchingPosts(false);
   }, [profile.id]);
@@ -1128,6 +1030,10 @@ export function Feed() {
     }
     if (feedTab === "conquistas") {
       const filtered = posts.filter(p => p.type === "conquista" || p.type === "conquista_censo" || p.type === "censo_auto");
+      return filtered.length > 0 ? filtered : posts;
+    }
+    if (feedTab === "noticias") {
+      const filtered = posts.filter(p => (p as any).is_external_news || p.type === "noticia_curada");
       return filtered.length > 0 ? filtered : posts;
     }
     return posts;
@@ -1360,6 +1266,7 @@ export function Feed() {
             { id: "para_voce", label: "✨ Para Você", desc: "Algoritmo TAS" },
             { id: "recentes", label: "🕒 Recentes", desc: "Tempo real" },
             { id: "minha_turma", label: "👥 Minha Turma", desc: profile.turmaOuCargo || "Minha Turma" },
+            { id: "noticias", label: "📰 Oportunidades", desc: "Mural CEEP" },
             { id: "conquistas", label: "🏆 Conquistas", desc: "Marcos" },
           ].map((tab) => {
             const active = feedTab === tab.id;
@@ -1373,7 +1280,7 @@ export function Feed() {
                 }}
                 style={{
                   flex: 1,
-                  padding: "10px 6px",
+                  padding: "10px 4px",
                   borderRadius: 14,
                   border: "none",
                   cursor: "pointer",
@@ -1381,7 +1288,7 @@ export function Feed() {
                   background: active ? "linear-gradient(135deg, #4f46e5, #6366f1)" : "transparent",
                   color: active ? "#fff" : "#64748b",
                   fontWeight: active ? 800 : 700,
-                  fontSize: 12,
+                  fontSize: 11,
                   transition: "all 0.15s ease",
                   display: "flex",
                   flexDirection: "column",
@@ -1396,8 +1303,13 @@ export function Feed() {
           })}
         </div>
 
-        {/* Enquete Interativa da Comunidade (Engajamento Real Estilo Instagram/X) */}
-        <CommunityPollCard />
+        {/* Radar de Pulso Estudantil e Escuta Ativa (Retroalimenta o Algoritmo TAS) */}
+        <StudentPulseCard
+          userName={profile.nomeCompleto}
+          userRole={profile.papel}
+          userTurma={profile.turmaOuCargo}
+          onOpinionSubmitted={() => void fetchPosts(true)}
+        />
 
         {/* Posts */}
         {fetchingPosts ? (
