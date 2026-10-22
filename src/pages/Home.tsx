@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase, salvarEntrevistaResiliente, nameKey, nameWords, isSimilarName } from '../lib/supabaseClient';
-import { tasOfflineSync } from '../utils/tasOfflineSync';
+import { tasOfflineSync, withTimeout, initBackgroundSync } from '../utils/tasOfflineSync';
 import { useUserSession, isStaffPapel } from '../hooks/useUserSession';
 import { UserAvatar } from '../components/UserAvatar';
 import { ClipboardList, Send, AlertCircle, Loader2, Plus, CheckCircle, Award, Users, Heart, WifiOff, RefreshCw, Trophy, Sparkles, Target, Search, User } from 'lucide-react';
@@ -86,6 +86,9 @@ export function Home() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
   const [pendingSyncCount, setPendingSyncCount] = useState<number>(0);
+  const [showRescueModal, setShowRescueModal] = useState<boolean>(false);
+  const [rescueJsonInput, setRescueJsonInput] = useState<string>('');
+  const [rescueSuccessMsg, setRescueSuccessMsg] = useState<string | null>(null);
   
   const [likesCount, setLikesCount] = useState(0);
 
@@ -377,12 +380,16 @@ export function Home() {
 
     void fetchDashboardData();
 
+    // Ativa sincronização em segundo plano periódica a cada 25s
+    const unsubBgSync = initBackgroundSync(profile?.id);
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('censo-sync-complete', handleSyncComplete);
+      unsubBgSync();
     };
-  }, [fetchDashboardData, syncPendingData]);
+  }, [fetchDashboardData, syncPendingData, profile?.id]);
 
   // Load likes received
   useEffect(() => {
@@ -434,14 +441,18 @@ export function Home() {
       return;
     }
 
-    // 5. Checa duplicidade online no Supabase para garantir concorrência (filtra pelo 1º nome)
+    // 5. Checa duplicidade online no Supabase para garantir concorrência (com timeout de 4s para conexões lentas)
     try {
       const primeiraPalavra = nomeParticipante.trim().split(/\s+/)[0] || '';
-      const { data: candidatos } = await supabase
-        .from('entrevistas')
-        .select('id, nome_participante, vinculo, serie, turma, entrevistador:pessoas(nome_completo)')
-        .ilike('nome_participante', `${primeiraPalavra}%`)
-        .limit(200);
+      const dupCheckResult = await withTimeout<any>(
+        supabase
+          .from('entrevistas')
+          .select('id, nome_participante, vinculo, serie, turma, entrevistador:pessoas(nome_completo)')
+          .ilike('nome_participante', `${primeiraPalavra}%`)
+          .limit(200),
+        4000
+      );
+      const candidatos = dupCheckResult?.data || [];
 
       const alvo = nameKey(nomeParticipante);
       const existingInterview = (candidatos || []).find((r: any) => nameKey(r.nome_participante) === alvo);
@@ -518,26 +529,35 @@ export function Home() {
       if (novoTotal >= 20) void badgeService.unlockBadge(profile.id, 'adinha_campea_meta_20');
     }
 
+    // 1. SALVAMENTO ANTECIPADO E IMEDIATO NO DISPOSITIVO (OFFLINE-FIRST)
+    // Garante que mesmo com 1 bit de rede, queda de bateria ou fechamento da aba, os dados NUNCA se percam.
+    tasOfflineSync.saveDraftOffline(rawFicha);
+    const existingQueue: any[] = JSON.parse(localStorage.getItem('censo_pending_queue') || '[]');
+    setPendingSyncCount(existingQueue.length);
+
     try {
       if (!navigator.onLine) {
-        throw new Error("Dispositivo offline. Salvando localmente...");
+        throw new Error("Dispositivo offline. Ficha retida com segurança localmente.");
       }
 
-      const { error } = await salvarEntrevistaResiliente(rawFicha, profile?.id);
-      if (error) throw error;
+      // Timeout de 7s para evitar travamento em conexões de 1 bit / WiFi instável da escola
+      const res = await withTimeout(salvarEntrevistaResiliente(rawFicha, profile?.id), 7000);
+      if (res.error) throw res.error;
+
+      // Sucesso na nuvem: remove da fila pendente local
+      tasOfflineSync.removeDraft(rawFicha.id);
+      const afterQueue: any[] = JSON.parse(localStorage.getItem('censo_pending_queue') || '[]');
+      setPendingSyncCount(afterQueue.length);
 
       setSavedOffline(false);
       setSuccess(true);
       resetForm();
       void fetchDashboardData();
     } catch (err) {
-      console.warn('Salvando em modo de segurança offline (Local Storage):', err);
-      tasOfflineSync.saveDraftOffline(rawFicha);
-      const existingQueue: any[] = JSON.parse(localStorage.getItem('censo_pending_queue') || '[]');
-      setPendingSyncCount(existingQueue.length);
+      console.warn('Ficha gravada com 100% de segurança no aparelho (aguardando envio para a nuvem):', err);
       setSavedOffline(true);
       setSuccess(true);
-      setErrorMsg("Sem conexão com a nuvem. Ficha salva com segurança no seu dispositivo e será sincronizada assim que online!");
+      setErrorMsg("Conexão instável ou offline: Ficha gravada com 100% de segurança no aparelho! Sincronizará automaticamente assim que houver sinal.");
       resetForm();
       void fetchDashboardData();
     } finally {
@@ -619,19 +639,38 @@ export function Home() {
           </div>
         )}
 
-        {isOnline && pendingSyncCount > 0 && (
-          <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-4 flex items-center justify-between gap-4 text-emerald-600 dark:text-emerald-400">
+        {/* Banner de Sincronização e Resgate de Dados */}
+        {pendingSyncCount > 0 && (
+          <div className="bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-blue-500/10 border border-amber-500/30 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-slate-800 dark:text-slate-200 shadow-sm animate-in fade-in">
             <div className="flex items-center gap-3">
-              <RefreshCw className="w-5 h-5 shrink-0 animate-spin" />
-              <p className="text-xs font-bold">Conexão restabelecida! Sincronizando {pendingSyncCount} ficha(s) pendente(s) com o Supabase...</p>
+              <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              </div>
+              <div>
+                <p className="text-xs font-black">
+                  {pendingSyncCount} {pendingSyncCount === 1 ? 'ficha gravada' : 'fichas gravadas'} com segurança no aparelho aguardando nuvem
+                </p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Dados 100% seguros contra desligamento ou conexão de 1 bit.
+                </p>
+              </div>
             </div>
-            <button 
-              type="button" 
-              onClick={() => void syncPendingData()}
-              className="px-3 py-1 bg-emerald-600 text-white text-xs rounded-xl font-bold border-0 cursor-pointer"
-            >
-              Sincronizar Agora
-            </button>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={() => setShowRescueModal(true)}
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs rounded-xl font-bold border-0 cursor-pointer transition-colors"
+              >
+                💾 Backup / Resgate
+              </button>
+              <button 
+                type="button" 
+                onClick={() => void syncPendingData()}
+                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs rounded-xl font-black border-0 cursor-pointer shadow-sm flex items-center gap-1.5 transition-colors"
+              >
+                <RefreshCw className="w-3.5 h-3.5" /> Subir Agora
+              </button>
+            </div>
           </div>
         )}
 
@@ -1722,6 +1761,103 @@ export function Home() {
 
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Resgate e Backup de Fichas Offline */}
+      {showRescueModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-lg">
+                  💾
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 dark:text-white">Central de Resgate & Backup Offline</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Proteção contra perda de dados em aparelhos da escola</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setShowRescueModal(false); setRescueSuccessMsg(null); }}
+                className="text-slate-400 hover:text-slate-600 text-lg font-bold bg-transparent border-0 cursor-pointer p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Fichas salvas neste aparelho:</span>
+                  <span className="text-xs font-black bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 px-2.5 py-0.5 rounded-full">
+                    {tasOfflineSync.getDrafts().length} fichas
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed mb-3">
+                  Se você estiver usando um Chromebook ou tablet compartilhado da escola, copie o backup em JSON abaixo para garantir que seus dados nunca se percam!
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const json = tasOfflineSync.exportDraftsAsJson();
+                      navigator.clipboard.writeText(json);
+                      setRescueSuccessMsg("Backup copiado para a área de transferência com sucesso!");
+                    }}
+                    className="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl border-0 cursor-pointer shadow-sm flex items-center justify-center gap-1.5"
+                  >
+                    📋 Copiar Backup (JSON)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void syncPendingData()}
+                    className="py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl border-0 cursor-pointer shadow-sm flex items-center justify-center gap-1.5"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" /> Subir Agora
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                  Restaurar / Importar Fichas de outro aparelho:
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Cole aqui o JSON exportado de outro dispositivo (ex: do Chromebook da escola)..."
+                  value={rescueJsonInput}
+                  onChange={(e) => setRescueJsonInput(e.target.value)}
+                  className="w-full p-3 text-xs font-mono bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-indigo-500"
+                />
+                <button
+                  type="button"
+                  disabled={!rescueJsonInput.trim()}
+                  onClick={() => {
+                    const imported = tasOfflineSync.importDraftsFromJson(rescueJsonInput.trim());
+                    if (imported > 0) {
+                      setPendingSyncCount(tasOfflineSync.getDrafts().length);
+                      setRescueSuccessMsg(`${imported} ficha(s) restaurada(s) no aparelho com sucesso!`);
+                      setRescueJsonInput('');
+                      void syncPendingData();
+                    } else {
+                      setRescueSuccessMsg("Erro: formato de JSON inválido ou vazio.");
+                    }
+                  }}
+                  className="w-full py-2 bg-slate-800 hover:bg-slate-900 disabled:opacity-40 text-white text-xs font-bold rounded-xl border-0 cursor-pointer"
+                >
+                  📥 Importar e Sincronizar Fichas
+                </button>
+              </div>
+
+              {rescueSuccessMsg && (
+                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold text-emerald-700 dark:text-emerald-300 text-center animate-in fade-in">
+                  {rescueSuccessMsg}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

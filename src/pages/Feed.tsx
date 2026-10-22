@@ -6,7 +6,8 @@ import {
   Sparkles, Send, Heart, MessageCircle,
   MoreHorizontal, Trash2, TrendingUp, Zap,
   ChevronDown, ChevronUp, X, Smile, Link, Users,
-  Share2, Award, Flame, ThumbsUp, Compass
+  Share2, Award, Flame, ThumbsUp, Compass, Bookmark,
+  CheckCircle2, BarChart3, HelpCircle, Smartphone
 } from "lucide-react";
 import { personalizarFeedTAS, TASUserProfile } from "../utils/tasRecommendationAlgorithm";
 import { IndicarAmigosModal } from "../components/IndicarAmigosModal";
@@ -43,6 +44,22 @@ export const REACTION_LIST: ReactionItem[] = [
   { key: "wow",   emoji: "😮", label: "Uau",    color: "#0891b2" },
   { key: "sad",   emoji: "😢", label: "Força",  color: "#475569" },
 ];
+
+/**
+ * Normaliza qualquer chave de reação para seu emoji visual UTF-8 correspondente,
+ * prevenindo que textos literais como "heart" ou "like" sejam renderizados em tela.
+ */
+export function normalizeEmoji(val?: string | null): string {
+  if (!val) return "❤️";
+  const trimmed = val.trim();
+  const found = REACTION_LIST.find(
+    (r) => r.key === trimmed || r.emoji === trimmed || r.label.toLowerCase() === trimmed.toLowerCase()
+  );
+  if (found) return found.emoji;
+  if (/\p{Extended_Pictographic}/u.test(trimmed)) return trimmed;
+  return "❤️";
+}
+
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 function Avatar({ name, url="", size=40 }: { name:string; url?:string; size?:number }) {
@@ -308,10 +325,12 @@ function PostCard({ post, profile, onRefresh }: { post:Post; profile:any; onRefr
   // Identifica o rótulo da reação ativa
   const activeReactionDef = REACTION_LIST.find(r => r.emoji === myEmoji);
 
-  // Emojis mais reagidos para o cluster
+  // Emojis mais reagidos para o cluster normalizados
   const topReactions = Object.entries(reactionsMap)
+    .map(([rawKey, count]) => [normalizeEmoji(rawKey), count] as [string, number])
     .sort(([, a], [, b]) => b - a)
     .slice(0, 3);
+
 
   return (
     <article style={{
@@ -447,14 +466,17 @@ function PostCard({ post, profile, onRefresh }: { post:Post; profile:any; onRefr
             <div style={{ display:"flex", alignItems:"center", gap:6 }}>
               {/* Overlapping icons */}
               <div style={{ display:"flex", alignItems:"center", marginRight:2 }}>
-                {topReactions.map(([emoji], idx) => (
-                  <span key={emoji} style={{
-                    fontSize:14, marginLeft: idx > 0 ? -4 : 0,
-                    filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.15))"
-                  }}>
-                    {emoji}
-                  </span>
-                ))}
+                {topReactions.map(([emoji], idx) => {
+                  const norm = normalizeEmoji(emoji);
+                  return (
+                    <span key={`${norm}-${idx}`} style={{
+                      fontSize:14, marginLeft: idx > 0 ? -4 : 0,
+                      filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.15))"
+                    }}>
+                      {norm}
+                    </span>
+                  );
+                })}
               </div>
               <span style={{ fontSize:12, fontWeight:700, color:"#64748b" }}>
                 {likeCount} {likeCount === 1 ? "reação" : "reações"}
@@ -574,6 +596,366 @@ function PostCard({ post, profile, onRefresh }: { post:Post; profile:any; onRefr
   );
 }
 
+// ─── Instagram Stories & Enquetes da Comunidade ──────────────────────────────
+export interface StoryItem {
+  id: string;
+  author: string;
+  role: string;
+  avatarUrl?: string;
+  gradient: string;
+  headline: string;
+  text: string;
+  time: string;
+  tag: string;
+}
+
+const STORIES_LIST: StoryItem[] = [
+  {
+    id: "ian-orientador",
+    author: "Prof. Ian Santos",
+    role: "Coordenador Científico",
+    gradient: "linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)",
+    headline: "Dica de Campo: O Turno Noturno 🌙",
+    text: "Alunos do Noturno: os estudantes que trabalham durante o dia têm relatos riquíssimos sobre tempo de deslocamento e pertencimento escolar. Aproveitem o intervalo!",
+    time: "2h atrás",
+    tag: "Orientação Oficial",
+  },
+  {
+    id: "adinha-etica",
+    author: "Adinha Lovelace",
+    role: "Mascote & IA do Censo",
+    gradient: "linear-gradient(45deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%)",
+    headline: "Ética e Sigilo em 1º Lugar 🔒",
+    text: "Nosso compromisso é científico e com a LGPD. Respostas sensíveis nunca devem ser expostas individualmente. Parabéns pela postura empática nas abordagens!",
+    time: "3h atrás",
+    tag: "Boas Práticas",
+  },
+  {
+    id: "taylon-meta20",
+    author: "Taylon Willian",
+    role: "Entrevistador 1º ADM",
+    gradient: "linear-gradient(45deg, #f59e0b 0%, #ef4444 50%, #ec4899 100%)",
+    headline: "Rumo à Meta 20! 🏆",
+    text: "A turma do 1º ADM CM está acelerando na coleta de campo. Quem já garantiu a insígnia da Adinha Campeã manda um salve aqui no Feed!",
+    time: "4h atrás",
+    tag: "Top Entrevistadores",
+  },
+  {
+    id: "ceep-comunidade",
+    author: "CEEP Seabra",
+    role: "Direção Escolar",
+    gradient: "linear-gradient(45deg, #10b981 0%, #06b6d4 50%, #3b82f6 100%)",
+    headline: "Ciência que Transforma a Escola 🏫",
+    text: "Cada ficha preenchida vira diagnóstico real para melhorias no refeitório, transporte e projetos pedagógicos do CEEP Seabra.",
+    time: "6h atrás",
+    tag: "Comunidade",
+  },
+  {
+    id: "amostra-diversidade",
+    author: "Comissão Étnica",
+    role: "Pesquisa Social",
+    gradient: "linear-gradient(45deg, #8b5cf6 0%, #d946ef 50%, #f43f5e 100%)",
+    headline: "Mapeando Nossas Raízes 🌍",
+    text: "Já mapeamos estudantes de mais de 12 povoados e comunidades tradicionais da Chapada Diamantina. Nossa pluralidade é nosso maior patrimônio!",
+    time: "8h atrás",
+    tag: "Pertencimento",
+  },
+];
+
+function StoriesBar({ onOpenStory }: { onOpenStory: (story: StoryItem) => void }) {
+  return (
+    <div style={{
+      background: "#fff",
+      borderRadius: 24,
+      padding: "14px 16px",
+      border: "1px solid #f1f5f9",
+      boxShadow: "0 2px 12px rgba(0,0,0,0.03)",
+      overflowX: "auto",
+      display: "flex",
+      alignItems: "center",
+      gap: 16,
+      scrollbarWidth: "none",
+    }}>
+      {STORIES_LIST.map((story) => (
+        <button
+          key={story.id}
+          type="button"
+          onClick={() => onOpenStory(story)}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 6,
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: 0,
+            flexShrink: 0,
+            fontFamily: "inherit",
+          }}
+        >
+          {/* Instagram gradient ring */}
+          <div style={{
+            padding: 2.5,
+            borderRadius: "50%",
+            background: story.gradient,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+            transition: "transform 0.15s ease",
+          }}>
+            <div style={{
+              padding: 2,
+              borderRadius: "50%",
+              background: "#fff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}>
+              <Avatar name={story.author} size={52} url={story.avatarUrl} />
+            </div>
+          </div>
+          <span style={{
+            fontSize: 11,
+            fontWeight: 700,
+            color: "#1e293b",
+            maxWidth: 68,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            textAlign: "center"
+          }}>
+            {story.author.split(" ")[0]}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function StoryModal({ story, onClose }: { story: StoryItem | null; onClose: () => void }) {
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    if (!story) {
+      setProgress(0);
+      return;
+    }
+    const start = Date.now();
+    const duration = 6000;
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - start;
+      const p = Math.min(100, (elapsed / duration) * 100);
+      setProgress(p);
+      if (p >= 100) {
+        clearInterval(interval);
+        onClose();
+      }
+    }, 50);
+    return () => clearInterval(interval);
+  }, [story, onClose]);
+
+  if (!story) return null;
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 100,
+      background: "rgba(15, 23, 42, 0.88)",
+      backdropFilter: "blur(8px)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      padding: 16
+    }}>
+      <div style={{
+        width: "100%", maxWidth: 420,
+        background: "#0f172a",
+        borderRadius: 28,
+        border: "1px solid rgba(255,255,255,0.15)",
+        overflow: "hidden",
+        boxShadow: "0 20px 50px rgba(0,0,0,0.6)",
+        position: "relative",
+        color: "#fff",
+        display: "flex", flexDirection: "column"
+      }}>
+        {/* Progress bar */}
+        <div style={{ height: 3, background: "rgba(255,255,255,0.2)", width: "100%" }}>
+          <div style={{ height: "100%", background: "#fff", width: `${progress}%`, transition: "width 0.05s linear" }} />
+        </div>
+
+        {/* Header */}
+        <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ padding: 2, borderRadius: "50%", background: story.gradient }}>
+              <Avatar name={story.author} size={38} url={story.avatarUrl} />
+            </div>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <strong style={{ fontSize: 13, color: "#fff" }}>{story.author}</strong>
+                <span style={{ fontSize: 10, background: "rgba(255,255,255,0.15)", padding: "1px 6px", borderRadius: 99 }}>
+                  {story.tag}
+                </span>
+              </div>
+              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.6)" }}>{story.role} · {story.time}</span>
+            </div>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Fechar story"
+            style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", padding: 6 }}>
+            <X style={{ width: 20, height: 20 }} />
+          </button>
+        </div>
+
+        {/* Story Body */}
+        <div style={{
+          padding: "30px 24px 40px",
+          minHeight: 240,
+          background: "linear-gradient(180deg, rgba(30,41,59,0.5) 0%, rgba(15,23,42,1) 100%)",
+          display: "flex", flexDirection: "column", justifyContent: "center",
+          textAlign: "center"
+        }}>
+          <h3 style={{ fontSize: 20, fontWeight: 900, marginBottom: 14, color: "#f8fafc" }}>
+            {story.headline}
+          </h3>
+          <p style={{ fontSize: 15, lineHeight: 1.7, color: "rgba(255,255,255,0.9)", margin: 0 }}>
+            "{story.text}"
+          </p>
+        </div>
+
+        {/* Action bar */}
+        <div style={{ padding: "14px 20px", borderTop: "1px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>Censo CEEP · Ada Lovelace</span>
+          <button type="button" onClick={onClose}
+            style={{
+              padding: "6px 16px", borderRadius: 99,
+              background: "rgba(255,255,255,0.15)", border: "none",
+              color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer"
+            }}>
+            Avançar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CommunityPollCard() {
+  const [selectedOption, setSelectedOption] = useState<number | null>(() => {
+    try {
+      const v = localStorage.getItem("censo_feed_poll_vote_v1");
+      return v !== null ? Number(v) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const pollData = {
+    id: "poll_turno_acessibilidade",
+    question: "Em qual turno você encontrou maior facilidade para entrevistar colegas no CEEP?",
+    options: [
+      { text: "☀️ Matutino (Cursos Técnicos Integrados)", votes: 34 },
+      { text: "🌤️ Vespertino (Ensino Médio e Geral)", votes: 21 },
+      { text: "🌙 Noturno (Prosub e Jovens Adultos)", votes: 16 },
+      { text: "🤝 Todos com ótima receptividade", votes: 12 },
+    ],
+  };
+
+  const handleVote = (idx: number) => {
+    if (selectedOption !== null) return;
+    setSelectedOption(idx);
+    try {
+      localStorage.setItem("censo_feed_poll_vote_v1", String(idx));
+    } catch {}
+  };
+
+  const totalVotes = pollData.options.reduce((s, o) => s + o.votes, 0) + (selectedOption !== null ? 1 : 0);
+
+  return (
+    <div style={{
+      background: "#fff",
+      borderRadius: 24,
+      border: "1.5px solid #e0e7ff",
+      padding: "18px 20px",
+      boxShadow: "0 4px 20px rgba(99, 102, 241, 0.08)",
+      position: "relative",
+      overflow: "hidden"
+    }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 18 }}>🗳️</span>
+          <div>
+            <h4 style={{ margin: 0, fontSize: 14, fontWeight: 900, color: "#1e1b4b" }}>
+              Enquete Científica da Comunidade
+            </h4>
+            <span style={{ fontSize: 11, color: "#6366f1", fontWeight: 700 }}>
+              Pesquisa de Campo · Projeto Ada Lovelace
+            </span>
+          </div>
+        </div>
+        <span style={{
+          fontSize: 11, fontWeight: 800, background: "#ede9fe", color: "#6366f1",
+          padding: "3px 10px", borderRadius: 99
+        }}>
+          {totalVotes} votos
+        </span>
+      </div>
+
+      <p style={{ fontSize: 13, fontWeight: 700, color: "#334155", margin: "0 0 14px", lineHeight: 1.5 }}>
+        {pollData.question}
+      </p>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {pollData.options.map((opt, idx) => {
+          const isSelected = selectedOption === idx;
+          const votesCount = opt.votes + (isSelected ? 1 : 0);
+          const pct = Math.round((votesCount / Math.max(1, totalVotes)) * 100);
+
+          return (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => handleVote(idx)}
+              style={{
+                width: "100%",
+                padding: "10px 14px",
+                borderRadius: 14,
+                border: isSelected ? "2px solid #6366f1" : "1.5px solid #f1f5f9",
+                background: isSelected ? "#f5f3ff" : "#f8fafc",
+                cursor: selectedOption !== null ? "default" : "pointer",
+                textAlign: "left",
+                position: "relative",
+                overflow: "hidden",
+                transition: "all 0.2s ease",
+                fontFamily: "inherit",
+              }}
+            >
+              {selectedOption !== null && (
+                <div style={{
+                  position: "absolute", left: 0, top: 0, bottom: 0,
+                  width: `${pct}%`,
+                  background: isSelected ? "rgba(99, 102, 241, 0.18)" : "rgba(226, 232, 240, 0.6)",
+                  transition: "width 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
+                  zIndex: 0
+                }} />
+              )}
+              <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 13, fontWeight: isSelected ? 800 : 600, color: isSelected ? "#4338ca" : "#334155" }}>
+                  {opt.text}
+                </span>
+                {selectedOption !== null && (
+                  <span style={{ fontSize: 12, fontWeight: 800, color: isSelected ? "#4338ca" : "#64748b", marginLeft: 8 }}>
+                    {pct}%
+                  </span>
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ marginTop: 12, display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 11, color: "#94a3b8" }}>
+        <span>{selectedOption !== null ? "✅ Seu voto foi registrado com sucesso." : "Toque em uma opção para votar"}</span>
+        <span>Atualizado ao vivo</span>
+      </div>
+    </div>
+  );
+}
+
 // ─── Skeleton ────────────────────────────────────────────────────────────────
 function PostSkeleton() {
   return (
@@ -597,7 +979,9 @@ function PostSkeleton() {
 // ─── Main Feed ───────────────────────────────────────────────────────────────
 export function Feed() {
   const { profile } = useUserSession();
+  const [activeStory, setActiveStory] = useState<StoryItem | null>(null);
   const [posts, setPosts]           = useState<Post[]>([]);
+
   const [feedTab, setFeedTab]       = useState<"para_voce" | "recentes" | "minha_turma" | "conquistas">("para_voce");
   const [showIndicarModal, setShowIndicarModal] = useState(false);
   const [newPostContent, setNewPostContent] = useState("");
@@ -631,7 +1015,7 @@ export function Feed() {
       (reactionsData || []).forEach((r: { post_id: number; user_id: string; emoji?: string }) => {
         if (!rm[r.post_id]) rm[r.post_id] = { count: 0, userLiked: false, emojiMap: {} };
         rm[r.post_id].count++;
-        const e = r.emoji || "❤️";
+        const e = normalizeEmoji(r.emoji || "❤️");
         rm[r.post_id].emojiMap[e] = (rm[r.post_id].emojiMap[e] || 0) + 1;
         if (r.user_id === profile.id) {
           rm[r.post_id].userLiked = true;
@@ -795,6 +1179,9 @@ export function Feed() {
             </div>
           </div>
         </div>
+
+        {/* Instagram Stories Carousel */}
+        <StoriesBar onOpenStory={(story) => setActiveStory(story)} />
 
         {/* New posts banner */}
         {newPostsBanner > 0 && (
@@ -1009,6 +1396,9 @@ export function Feed() {
           })}
         </div>
 
+        {/* Enquete Interativa da Comunidade (Engajamento Real Estilo Instagram/X) */}
+        <CommunityPollCard />
+
         {/* Posts */}
         {fetchingPosts ? (
           [1,2,3].map(i=><PostSkeleton key={i}/>)
@@ -1028,6 +1418,12 @@ export function Feed() {
           ))
         )}
       </div>
+
+      {/* Story Viewer Modal */}
+      <StoryModal
+        story={activeStory}
+        onClose={() => setActiveStory(null)}
+      />
 
       <IndicarAmigosModal
         isOpen={showIndicarModal}

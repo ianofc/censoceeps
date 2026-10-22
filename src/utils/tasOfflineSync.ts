@@ -6,8 +6,23 @@ function normalizeStr(s?: string) {
   return (s || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
+export function withTimeout<T = any>(promise: Promise<T> | PromiseLike<T>, ms = 7000): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('TIMEOUT_CONEXAO_LENTA')), ms);
+    Promise.resolve(promise)
+      .then((val) => {
+        clearTimeout(timer);
+        resolve(val);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+}
+
 export const tasOfflineSync = {
-  // Salva no LocalStorage quando não há rede garantindo que não haja duplicidade de participante
+  // Salva no LocalStorage antes de qualquer requisição garantindo que não haja perda nem duplicidade
   saveDraftOffline: (data: any) => {
     try {
       const drafts: any[] = JSON.parse(localStorage.getItem("censo_pending_queue") || "[]");
@@ -24,7 +39,7 @@ export const tasOfflineSync = {
       });
 
       const newEntry = {
-        id: existingIdx >= 0 ? drafts[existingIdx].id : `local-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        id: existingIdx >= 0 ? drafts[existingIdx].id : (data.id || `local-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`),
         ...data,
         ...(raw === data ? { nome_participante: raw.nome_participante } : {}),
         timestamp: new Date().toISOString()
@@ -43,6 +58,21 @@ export const tasOfflineSync = {
     }
   },
 
+  // Remove um rascunho após confirmação de sucesso na nuvem
+  removeDraft: (id: string) => {
+    try {
+      const drafts: any[] = JSON.parse(localStorage.getItem("censo_pending_queue") || "[]");
+      const remaining = drafts.filter((d: any) => d.id !== id && d.data?.id !== id);
+      if (remaining.length === 0) {
+        localStorage.removeItem("censo_pending_queue");
+      } else {
+        localStorage.setItem("censo_pending_queue", JSON.stringify(remaining));
+      }
+    } catch (e) {
+      console.error("[TAS Offline] Erro ao remover rascunho do storage:", e);
+    }
+  },
+
   // Obtem rascunhos pendentes
   getDrafts: (): any[] => {
     try {
@@ -52,7 +82,45 @@ export const tasOfflineSync = {
     }
   },
 
-  // Sincroniza com o Supabase quando a rede volta com lock contra concorrência
+  // Exporta a fila pendente atual como JSON legível para backup ou resgate
+  exportDraftsAsJson: (): string => {
+    return localStorage.getItem("censo_pending_queue") || "[]";
+  },
+
+  // Importa e mescla rascunhos resgatados de outros aparelhos (ex: Chromebooks da escola)
+  importDrafts: (newDrafts: any[]): number => {
+    try {
+      const existing: any[] = JSON.parse(localStorage.getItem("censo_pending_queue") || "[]");
+      const combined = [...existing];
+      newDrafts.forEach((nd) => {
+        const raw = nd.data || nd;
+        const norm = normalizeStr(raw.nome_participante);
+        if (!norm) return;
+        const idx = combined.findIndex((c) => normalizeStr(c.data?.nome_participante || c.nome_participante) === norm);
+        if (idx >= 0) {
+          combined[idx] = nd;
+        } else {
+          combined.push(nd);
+        }
+      });
+      localStorage.setItem("censo_pending_queue", JSON.stringify(combined));
+      return combined.length;
+    } catch {
+      return 0;
+    }
+  },
+
+  importDraftsFromJson: (jsonStr: string): number => {
+    try {
+      const parsed = JSON.parse(jsonStr);
+      if (!Array.isArray(parsed)) return 0;
+      return tasOfflineSync.importDrafts(parsed);
+    } catch {
+      return 0;
+    }
+  },
+
+  // Sincroniza com o Supabase quando a rede volta com lock contra concorrência e timeout individual
   syncOfflineData: async (pesquisadorId?: string): Promise<{ syncedCount: number; remainingCount: number }> => {
     if (isSyncing) {
       console.info("[TAS SARA] Sincronização já em andamento. Ignorando chamada concorrente.");
@@ -82,30 +150,28 @@ export const tasOfflineSync = {
         const rawPayload = draft.data || draft;
         const draftId = draft.id || rawPayload.id || `local-${Math.random()}`;
 
-        const { error } = await salvarEntrevistaResiliente(rawPayload, pesquisadorId);
+        try {
+          // Timeout de 7s por ficha para que conexões lentas (1 bit) não bloqueiem o lote inteiro
+          const { error } = await withTimeout(salvarEntrevistaResiliente(rawPayload, pesquisadorId), 7000);
 
-        if (!error) {
-          successfulSyncIds.add(draftId);
-          if (draft.id) successfulSyncIds.add(draft.id);
-          if (rawPayload.id) successfulSyncIds.add(rawPayload.id);
-        } else {
-          console.error(`[TAS SARA] Erro ao sincronizar ficha ${draftId}:`, error);
+          if (!error) {
+            successfulSyncIds.add(draftId);
+            if (draft.id) successfulSyncIds.add(draft.id);
+            if (rawPayload.id) successfulSyncIds.add(rawPayload.id);
+
+            // Persiste imediatamente a remoção de cada ficha bem-sucedida para resiliência incremental
+            tasOfflineSync.removeDraft(draftId);
+          } else {
+            console.error(`[TAS SARA] Erro ao sincronizar ficha ${draftId}:`, error);
+          }
+        } catch (itemErr) {
+          console.error(`[TAS SARA] Timeout/Falha na ficha ${draftId}:`, itemErr);
         }
       }
 
-      const remainingDrafts = drafts.filter((d: any) => {
-        const id1 = d.id;
-        const id2 = d.data?.id;
-        return (!id1 || !successfulSyncIds.has(id1)) && (!id2 || !successfulSyncIds.has(id2));
-      });
+      const remainingDrafts = tasOfflineSync.getDrafts();
 
-      if (remainingDrafts.length === 0) {
-        localStorage.removeItem("censo_pending_queue");
-      } else {
-        localStorage.setItem("censo_pending_queue", JSON.stringify(remainingDrafts));
-      }
-
-      console.info(`[TAS SARA] Sincronização concluída! ${successfulSyncIds.size} fichas processadas.`);
+      console.info(`[TAS SARA] Sincronização concluída! ${successfulSyncIds.size} fichas processadas. Restantes: ${remainingDrafts.length}`);
 
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('censo-sync-complete', {
@@ -119,3 +185,18 @@ export const tasOfflineSync = {
     }
   }
 };
+
+/**
+ * Ativa sincronização periódica a cada 25s em segundo plano se houver rascunhos pendentes.
+ */
+export function initBackgroundSync(pesquisadorId?: string): () => void {
+  if (typeof window === 'undefined') return () => {};
+  const interval = setInterval(() => {
+    const drafts = tasOfflineSync.getDrafts();
+    if (drafts.length > 0 && navigator.onLine) {
+      void tasOfflineSync.syncOfflineData(pesquisadorId);
+    }
+  }, 25000);
+  return () => clearInterval(interval);
+}
+
