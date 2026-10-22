@@ -7,6 +7,7 @@ import {
   Rss, Heart, RefreshCw, Medal, Crown, Flame,
   ChevronUp, Shield, Award, TrendingUp, Search
 } from "lucide-react";
+import { ColegaProfileModal, ColegaProfileData } from "../components/ColegaProfileModal";
 
 // ─── XP CONFIG ───────────────────────────────────────────────────────────────
 const XP_FICHA   = 100;   // por ficha coletada
@@ -90,14 +91,14 @@ function PlayerAvatar({ player, size=44 }: { player: Player; size?: number }) {
 }
 
 // ─── PODIUM CARD ─────────────────────────────────────────────────────────────
-function PodiumCard({ player, rank }: { player: Player; rank: 1|2|3 }) {
+function PodiumCard({ player, rank, onClick }: { player: Player; rank: 1|2|3; onClick?: () => void }) {
   const nivel = getNivel(player.xp);
   const configs = {
-    1: { height:170, crown:"#F59E0B", bg:"linear-gradient(180deg,#FEF3C7,#fff)", border:"#FDE68A",
+    1: { height:185, crown:"#F59E0B", bg:"linear-gradient(180deg,#FEF3C7,#fff)", border:"#FDE68A",
          label:"🥇 1º Lugar", labelColor:"#92400e", shadow:"0 12px 40px rgba(245,158,11,0.3)" },
-    2: { height:130, crown:"#94a3b8", bg:"linear-gradient(180deg,#f1f5f9,#fff)", border:"#e2e8f0",
+    2: { height:148, crown:"#94a3b8", bg:"linear-gradient(180deg,#f1f5f9,#fff)", border:"#e2e8f0",
          label:"🥈 2º Lugar", labelColor:"#475569", shadow:"0 8px 24px rgba(0,0,0,0.08)" },
-    3: { height:110, crown:"#cd7c2e", bg:"linear-gradient(180deg,#fef9ec,#fff)", border:"#fde68a",
+    3: { height:130, crown:"#cd7c2e", bg:"linear-gradient(180deg,#fef9ec,#fff)", border:"#fde68a",
          label:"🥉 3º Lugar", labelColor:"#92400e", shadow:"0 8px 24px rgba(205,124,46,0.2)" },
   };
   const c = configs[rank];
@@ -105,11 +106,16 @@ function PodiumCard({ player, rank }: { player: Player; rank: 1|2|3 }) {
 
   return (
     <div 
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      title={`Ver perfil de ${player.nome} e curtir`}
       style={{
         display:"flex", flexDirection:"column", alignItems:"center",
-        justifyContent:"flex-end", flex:1, transition: "transform 0.2s",
+        justifyContent:"flex-end", flex:1, transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+        cursor: "pointer", userSelect: "none"
       }}
-      onMouseEnter={e => e.currentTarget.style.transform = "translateY(-4px)"}
+      onMouseEnter={e => e.currentTarget.style.transform = "translateY(-6px)"}
       onMouseLeave={e => e.currentTarget.style.transform = "translateY(0)"}
     >
       {/* Avatar + crown */}
@@ -160,14 +166,15 @@ function PodiumCard({ player, rank }: { player: Player; rank: 1|2|3 }) {
         background:c.bg, border:`1.5px solid ${c.border}`,
         borderRadius:"12px 12px 0 0",
         display:"flex", flexDirection:"column",
-        alignItems:"center", justifyContent:"center", gap:4,
-        boxShadow:c.shadow, padding:"12px 8px",
+        alignItems:"center", justifyContent:"center", gap:3,
+        boxShadow:c.shadow, padding:"10px 6px",
       }}>
         <span style={{ fontSize:11, fontWeight:700, color:c.labelColor }}>{c.label}</span>
-        <div style={{ display:"flex", flexDirection:"column", gap:3, width:"100%", padding:"0 8px" }}>
+        <div style={{ display:"flex", flexDirection:"column", gap:2, width:"100%", padding:"0 6px" }}>
           <StatPill icon="📋" value={player.fichas} label="fichas" color="#7c3aed" />
-          <StatPill icon="💬" value={player.msgs} label="msgs" color="#3b82f6" />
           <StatPill icon="📰" value={player.posts} label="posts" color="#10b981" />
+          <StatPill icon="💬" value={player.msgs} label="msgs" color="#3b82f6" />
+          <StatPill icon="❤️" value={player.likes} label="curtidas" color="#f43f5e" />
         </div>
       </div>
     </div>
@@ -184,7 +191,7 @@ function StatPill({ icon, value, label, color }: { icon:string; value:number; la
 }
 
 // ─── ROW ─────────────────────────────────────────────────────────────────────
-function RankRow({ player, rank, isMe }: { player: Player; rank: number; isMe: boolean }) {
+function RankRow({ player, rank, isMe, onClick }: { player: Player; rank: number; isMe: boolean; onClick?: () => void }) {
   const nivel = getNivel(player.xp);
   const progress = xpProgress(player.xp);
   const nextNivel = getNextNivel(player.xp);
@@ -194,6 +201,10 @@ function RankRow({ player, rank, isMe }: { player: Player; rank: number; isMe: b
 
   return (
     <div 
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      title={`Ver perfil de ${player.nome} e curtir`}
       style={{
         background: isMe
           ? "linear-gradient(90deg,rgba(124,58,237,0.06),rgba(67,56,202,0.04))"
@@ -207,19 +218,20 @@ function RankRow({ player, rank, isMe }: { player: Player; rank: number; isMe: b
           : isMe
           ? "0 2px 12px rgba(124,58,237,0.08)"
           : "0 1px 4px rgba(0,0,0,0.03)",
-        cursor: "default"
+        cursor: "pointer",
+        userSelect: "none"
       }}
       onMouseEnter={e => {
-        if (!isMe && rank > 3) {
-          e.currentTarget.style.transform = "scale(1.01)";
-          e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.06)";
-        }
+        e.currentTarget.style.transform = "translateY(-2px)";
+        e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.08)";
       }}
       onMouseLeave={e => {
-        if (!isMe && rank > 3) {
-          e.currentTarget.style.transform = "scale(1)";
-          e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.03)";
-        }
+        e.currentTarget.style.transform = "translateY(0)";
+        e.currentTarget.style.boxShadow = rank <= 3
+          ? `0 4px 20px ${rankColor}22`
+          : isMe
+          ? "0 2px 12px rgba(124,58,237,0.08)"
+          : "0 1px 4px rgba(0,0,0,0.03)";
       }}
     >
       {/* Rank number */}
@@ -282,23 +294,28 @@ function RankRow({ player, rank, isMe }: { player: Player; rank: number; isMe: b
       </div>
 
       {/* Stats */}
-      <div style={{ display: "flex", gap: 12, flexShrink: 0 }}>
-        <div style={{ textAlign: "center" }}>
+      <div style={{ display: "flex", gap: 10, flexShrink: 0 }}>
+        <div style={{ textAlign: "center", minWidth: 34 }}>
           <p style={{ fontWeight: 900, fontSize: 15, color: "#7c3aed", margin: 0 }}>{player.fichas}</p>
           <p style={{ fontSize: 9, color: "#94a3b8", margin: 0, fontWeight: 600 }}>FICHAS</p>
         </div>
-        <div style={{ textAlign: "center" }}>
+        <div style={{ textAlign: "center", minWidth: 34 }}>
+          <p style={{ fontWeight: 900, fontSize: 15, color: "#10b981", margin: 0 }}>{player.posts}</p>
+          <p style={{ fontSize: 9, color: "#94a3b8", margin: 0, fontWeight: 600 }}>POSTS</p>
+        </div>
+        <div style={{ textAlign: "center", minWidth: 34 }}>
           <p style={{ fontWeight: 900, fontSize: 15, color: "#3b82f6", margin: 0 }}>{player.msgs}</p>
           <p style={{ fontSize: 9, color: "#94a3b8", margin: 0, fontWeight: 600 }}>MSGS</p>
         </div>
-        <div style={{ textAlign: "center" }}>
-          <p style={{ fontWeight: 900, fontSize: 15, color: "#10b981", margin: 0 }}>{player.posts}</p>
-          <p style={{ fontSize: 9, color: "#94a3b8", margin: 0, fontWeight: 600 }}>POSTS</p>
+        <div style={{ textAlign: "center", minWidth: 34 }}>
+          <p style={{ fontWeight: 900, fontSize: 15, color: "#f43f5e", margin: 0 }}>{player.likes}</p>
+          <p style={{ fontSize: 9, color: "#94a3b8", margin: 0, fontWeight: 600 }}>LIKES</p>
         </div>
       </div>
     </div>
   );
 }
+
 
 // ─── MAIN ─────────────────────────────────────────────────────────────────────
 export function Ranking() {
@@ -308,6 +325,7 @@ export function Ranking() {
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [animIn, setAnimIn] = useState(false);
   const [search, setSearch] = useState("");
+  const [selectedColega, setSelectedColega] = useState<ColegaProfileData | null>(null);
 
   const fetchRanking = useCallback(async () => {
     setLoading(true);
@@ -404,10 +422,19 @@ export function Ranking() {
         };
       });
 
-      // Sort: by XP desc, then fichas desc, then alphabetically (so empty ranking is A-Z)
+      // Critérios de Desempate Meritocráticos e Transparentes:
+      // 1. Maior pontuação total de XP
+      // 2. Maior número de fichas coletadas no censo (trabalho principal de campo)
+      // 3. Maior número de posts no feed (produção de conteúdo científico - desempata Lais com 2 posts vs Isadora com 1)
+      // 4. Maior número de curtidas/reconhecimento da comunidade escolar
+      // 5. Maior número de mensagens trocadas no Lyka Chat
+      // 6. Ordem alfabética estrita como critério final
       ranked.sort((a, b) => {
         if (b.xp !== a.xp) return b.xp - a.xp;
         if (b.fichas !== a.fichas) return b.fichas - a.fichas;
+        if (b.posts !== a.posts) return b.posts - a.posts;
+        if (b.likes !== a.likes) return b.likes - a.likes;
+        if (b.msgs !== a.msgs) return b.msgs - a.msgs;
         return a.nome.localeCompare(b.nome, "pt-BR");
       });
       setPlayers(ranked);
@@ -433,11 +460,25 @@ export function Ranking() {
     return () => { void supabase.removeChannel(ch); };
   }, [fetchRanking]);
 
-  const myRank = players.findIndex(p => p.id === profile.id) + 1;
-  const myPlayer = players.find(p => p.id === profile.id);
   const top3 = players.slice(0, 3);
   const rest = players.slice(3);
   const totalXP = players.reduce((s, p) => s + p.xp, 0);
+  const myRank = players.findIndex((p) => p.id === profile?.id) + 1;
+  const myPlayer = players.find((p) => p.id === profile?.id);
+
+  const openColega = (p: Player) => {
+    setSelectedColega({
+      id: p.id,
+      nome_completo: p.nome,
+      papel: p.papel,
+      avatar_url: p.avatar_url,
+      fichas: p.fichas,
+      posts: p.posts,
+      msgs: p.msgs,
+      likes: p.likes,
+      xp: p.xp
+    });
+  };
 
   const filteredPlayers = search.trim()
     ? players.filter(p => {
@@ -598,9 +639,9 @@ export function Ranking() {
                 <span style={{ fontSize:12, color:"#94a3b8", fontWeight:500 }}>· Top 3 desta temporada</span>
               </div>
               <div style={{ display:"flex", alignItems:"flex-end", gap:8 }}>
-                {top3[1] && <PodiumCard player={top3[1]} rank={2} />}
-                {top3[0] && <PodiumCard player={top3[0]} rank={1} />}
-                {top3[2] && <PodiumCard player={top3[2]} rank={3} />}
+                {top3[1] && <PodiumCard player={top3[1]} rank={2} onClick={() => openColega(top3[1])} />}
+                {top3[0] && <PodiumCard player={top3[0]} rank={1} onClick={() => openColega(top3[0])} />}
+                {top3[2] && <PodiumCard player={top3[2]} rank={3} onClick={() => openColega(top3[2])} />}
               </div>
             </div>
           )}
@@ -642,7 +683,7 @@ export function Ranking() {
                     const realRank = players.findIndex(x => x.id === p.id) + 1;
                     return (
                       <div key={p.id}>
-                        <RankRow player={p} rank={realRank} isMe={p.id === profile.id} />
+                        <RankRow player={p} rank={realRank} isMe={p.id === profile.id} onClick={() => openColega(p)} />
                       </div>
                     );
                   })
@@ -652,7 +693,7 @@ export function Ranking() {
                   {/* Top 3 in list too */}
                   {top3.map((p, i) => (
                     <div key={p.id} style={{ animation: animIn ? `rankIn 0.4s ease ${i*0.05}s both` : "none" }}>
-                      <RankRow player={p} rank={i+1} isMe={p.id === profile.id} />
+                      <RankRow player={p} rank={i+1} isMe={p.id === profile.id} onClick={() => openColega(p)} />
                     </div>
                   ))}
 
@@ -668,7 +709,7 @@ export function Ranking() {
 
                   {rest.map((p, i) => (
                     <div key={p.id} style={{ animation: animIn ? `rankIn 0.4s ease ${(i+3)*0.04}s both` : "none" }}>
-                      <RankRow player={p} rank={i+4} isMe={p.id === profile.id} />
+                      <RankRow player={p} rank={i+4} isMe={p.id === profile.id} onClick={() => openColega(p)} />
                     </div>
                   ))}
                 </>
@@ -704,6 +745,14 @@ export function Ranking() {
           </div>
         </>
       )}
+
+      {/* ── MODAL DE PERFIL DO COLEGA & CURTIDAS ── */}
+      <ColegaProfileModal
+        colega={selectedColega}
+        onClose={() => setSelectedColega(null)}
+        onLikeChanged={() => void fetchRanking()}
+      />
+
     </div>
   );
 }

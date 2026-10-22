@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { useUserSession } from "../hooks/useUserSession";
 import { badgeService } from "../services/badgeService";
@@ -7,7 +8,8 @@ import {
   MoreHorizontal, Trash2, TrendingUp, Zap,
   ChevronDown, ChevronUp, X, Smile, Link, Users,
   Share2, Award, Flame, ThumbsUp, Compass, Bookmark,
-  CheckCircle2, BarChart3, HelpCircle, Smartphone
+  CheckCircle2, BarChart3, HelpCircle, Smartphone,
+  Plus, ChevronLeft, ChevronRight
 } from "lucide-react";
 import {
   personalizarFeedTAS,
@@ -19,6 +21,7 @@ import { IndicarAmigosModal } from "../components/IndicarAmigosModal";
 import { registrarMetricaAB } from "../utils/abTesting";
 import { StudentPulseCard } from "../components/Feed/StudentPulseCard";
 import { tasFeedScraperService } from "../services/tasFeedScraperService";
+import { ColegaProfileModal, ColegaProfileData } from "../components/ColegaProfileModal";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function timeAgo(d: string) {
@@ -138,14 +141,23 @@ function EmojiBar({ onPick, currentEmoji }: { onPick: (e:string)=>void; currentE
 }
 
 // ─── Comment ─────────────────────────────────────────────────────────────────
-function CommentRow({ c, myId, onDelete }: { c:Comment; myId:string; onDelete:()=>void }) {
+function CommentRow({ c, myId, onDelete, onOpenProfile }: { c:Comment; myId:string; onDelete:()=>void; onOpenProfile?:(name:string, userId?:string)=>void }) {
   const isMe = c.user_id === myId;
   return (
     <div style={{ display:"flex", gap:10, alignItems:"flex-start", padding:"10px 0", borderBottom:"1px solid #f8fafc" }}>
-      <Avatar name={c.author_name} size={28} />
+      <div onClick={() => onOpenProfile?.(c.author_name, c.user_id)} style={{ cursor: onOpenProfile ? "pointer" : "default" }} title="Ver perfil do colega">
+        <Avatar name={c.author_name} size={28} />
+      </div>
       <div style={{ flex:1, minWidth:0 }}>
         <div style={{ background:"#f8fafc", borderRadius:12, padding:"8px 12px" }}>
-          <span style={{ fontWeight:800, fontSize:12, color:"#1e293b", marginRight:6 }}>{c.author_name}</span>
+          <span 
+            onClick={() => onOpenProfile?.(c.author_name, c.user_id)}
+            style={{ fontWeight:800, fontSize:12, color:"#1e293b", marginRight:6, cursor: onOpenProfile ? "pointer" : "default" }}
+            onMouseEnter={e => { if (onOpenProfile) e.currentTarget.style.textDecoration = "underline"; }}
+            onMouseLeave={e => { e.currentTarget.style.textDecoration = "none"; }}
+          >
+            {c.author_name}
+          </span>
           <span style={{ fontSize:13, color:"#374151", lineHeight:1.5 }}>{c.content}</span>
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:12, marginTop:4 }}>
@@ -163,7 +175,7 @@ function CommentRow({ c, myId, onDelete }: { c:Comment; myId:string; onDelete:()
 }
 
 // ─── Post Card ───────────────────────────────────────────────────────────────
-function PostCard({ post, profile, onRefresh }: { post:Post; profile:any; onRefresh:()=>void }) {
+function PostCard({ post, profile, onRefresh, onOpenProfile }: { post:Post; profile:any; onRefresh:()=>void; onOpenProfile?:(name:string, userId?:string)=>void }) {
   const isMe = post.user_id === profile?.id;
   const [liked, setLiked]           = useState(post.liked ?? false);
   const [likeCount, setLikeCount]   = useState(post.likes_count ?? 0);
@@ -361,10 +373,20 @@ function PostCard({ post, profile, onRefresh }: { post:Post; profile:any; onRefr
     }}>
       {/* Header */}
       <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", padding:"16px 18px 12px" }}>
-        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+        <div 
+          onClick={() => onOpenProfile?.(post.author_name, post.user_id)}
+          style={{ display:"flex", alignItems:"center", gap:12, cursor: onOpenProfile ? "pointer" : "default" }}
+          title="Ver perfil do colega e curtir"
+        >
           <Avatar name={post.author_name} size={40} />
           <div>
-            <p style={{ fontWeight:800, fontSize:14, color:"#0f172a", margin:"0 0 2px" }}>{post.author_name}</p>
+            <p 
+              style={{ fontWeight:800, fontSize:14, color:"#0f172a", margin:"0 0 2px" }}
+              onMouseEnter={e => { if (onOpenProfile) e.currentTarget.style.textDecoration = "underline"; }}
+              onMouseLeave={e => { e.currentTarget.style.textDecoration = "none"; }}
+            >
+              {post.author_name}
+            </p>
             <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
               <span style={{ fontSize:11, color:"#94a3b8" }}>{timeAgo(post.created_at)}</span>
               {isAutoPost && (
@@ -580,7 +602,7 @@ function PostCard({ post, profile, onRefresh }: { post:Post; profile:any; onRefr
             <>
               {comments.map(c => (
                 <CommentRow key={c.id} c={c} myId={profile.id}
-                  onDelete={()=>void handleDeleteComment(c.id)} />
+                  onDelete={()=>void handleDeleteComment(c.id)} onOpenProfile={onOpenProfile} />
               ))}
               {/* New comment input */}
               <form onSubmit={e=>void handleSendComment(e)}
@@ -614,10 +636,11 @@ function PostCard({ post, profile, onRefresh }: { post:Post; profile:any; onRefr
   );
 }
 
-// ─── Instagram Stories & Enquetes da Comunidade ──────────────────────────────
+// ─── Instagram / Telegram Stories da Comunidade ──────────────────────────────
 export interface StoryItem {
   id: string;
   author: string;
+  authorId?: string;
   role: string;
   avatarUrl?: string;
   gradient: string;
@@ -625,9 +648,34 @@ export interface StoryItem {
   text: string;
   time: string;
   tag: string;
+  likesCount?: number;
 }
 
-const STORIES_LIST: StoryItem[] = [
+const DEFAULT_STORIES: StoryItem[] = [
+  {
+    id: "lais-destaque",
+    author: "Lais Santos",
+    authorId: "lais-oficial",
+    role: "Pesquisadora Top 1",
+    gradient: "linear-gradient(45deg, #ec4899 0%, #f43f5e 50%, #f59e0b 100%)",
+    headline: "Rumo ao Topo com a Turma! 🌟",
+    text: "Muito feliz em ver nossa pesquisa avançando no CEEP! Cada post e conversa ajuda a entender as necessidades reais dos estudantes.",
+    time: "1h atrás",
+    tag: "Destaque do Pódio",
+    likesCount: 14,
+  },
+  {
+    id: "isadora-campo",
+    author: "Isadora Silva",
+    authorId: "isadora-oficial",
+    role: "Pesquisadora de Campo",
+    gradient: "linear-gradient(45deg, #06b6d4 0%, #3b82f6 50%, #6366f1 100%)",
+    headline: "Histórias que Inspiram 📚",
+    text: "Mapear o perfil dos alunos do CEEP Seabra nos mostra como a nossa escola é rica em diversidade e talento científico!",
+    time: "2h atrás",
+    tag: "Pesquisa CEEP",
+    likesCount: 19,
+  },
   {
     id: "ian-orientador",
     author: "Prof. Ian Santos",
@@ -637,6 +685,7 @@ const STORIES_LIST: StoryItem[] = [
     text: "Alunos do Noturno: os estudantes que trabalham durante o dia têm relatos riquíssimos sobre tempo de deslocamento e pertencimento escolar. Aproveitem o intervalo!",
     time: "2h atrás",
     tag: "Orientação Oficial",
+    likesCount: 28,
   },
   {
     id: "adinha-etica",
@@ -647,6 +696,7 @@ const STORIES_LIST: StoryItem[] = [
     text: "Nosso compromisso é científico e com a LGPD. Respostas sensíveis nunca devem ser expostas individualmente. Parabéns pela postura empática nas abordagens!",
     time: "3h atrás",
     tag: "Boas Práticas",
+    likesCount: 42,
   },
   {
     id: "taylon-meta20",
@@ -657,6 +707,7 @@ const STORIES_LIST: StoryItem[] = [
     text: "A turma do 1º ADM CM está acelerando na coleta de campo. Quem já garantiu a insígnia da Adinha Campeã manda um salve aqui no Feed!",
     time: "4h atrás",
     tag: "Top Entrevistadores",
+    likesCount: 31,
   },
   {
     id: "ceep-comunidade",
@@ -667,38 +718,120 @@ const STORIES_LIST: StoryItem[] = [
     text: "Cada ficha preenchida vira diagnóstico real para melhorias no refeitório, transporte e projetos pedagógicos do CEEP Seabra.",
     time: "6h atrás",
     tag: "Comunidade",
-  },
-  {
-    id: "amostra-diversidade",
-    author: "Comissão Étnica",
-    role: "Pesquisa Social",
-    gradient: "linear-gradient(45deg, #8b5cf6 0%, #d946ef 50%, #f43f5e 100%)",
-    headline: "Mapeando Nossas Raízes 🌍",
-    text: "Já mapeamos estudantes de mais de 12 povoados e comunidades tradicionais da Chapada Diamantina. Nossa pluralidade é nosso maior patrimônio!",
-    time: "8h atrás",
-    tag: "Pertencimento",
+    likesCount: 25,
   },
 ];
 
-function StoriesBar({ onOpenStory }: { onOpenStory: (story: StoryItem) => void }) {
+function StoriesBar({
+  stories,
+  userProfile,
+  onOpenStory,
+  onCreateStory,
+}: {
+  stories: StoryItem[];
+  userProfile?: any;
+  onOpenStory: (index: number) => void;
+  onCreateStory: () => void;
+}) {
   return (
-    <div style={{
-      background: "#fff",
-      borderRadius: 24,
-      padding: "14px 16px",
-      border: "1px solid #f1f5f9",
-      boxShadow: "0 2px 12px rgba(0,0,0,0.03)",
-      overflowX: "auto",
-      display: "flex",
-      alignItems: "center",
-      gap: 16,
-      scrollbarWidth: "none",
-    }}>
-      {STORIES_LIST.map((story) => (
+    <div
+      style={{
+        background: "#fff",
+        borderRadius: 24,
+        padding: "14px 16px",
+        border: "1px solid #f1f5f9",
+        boxShadow: "0 2px 12px rgba(0,0,0,0.03)",
+        overflowX: "auto",
+        display: "flex",
+        alignItems: "center",
+        gap: 16,
+        scrollbarWidth: "none",
+      }}
+    >
+      {/* Botão Telegram / Instagram: Criar meu Story */}
+      <button
+        type="button"
+        onClick={onCreateStory}
+        title="Publicar seu story de pesquisa"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 6,
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          padding: 0,
+          flexShrink: 0,
+          fontFamily: "inherit",
+        }}
+      >
+        <div style={{ position: "relative" }}>
+          <div
+            style={{
+              padding: 2.5,
+              borderRadius: "50%",
+              background: "#e2e8f0",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+            }}
+          >
+            <div
+              style={{
+                padding: 2,
+                borderRadius: "50%",
+                background: "#fff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Avatar name={userProfile?.nomeCompleto || "Você"} size={52} url={userProfile?.avatarUrl} />
+            </div>
+          </div>
+          <div
+            style={{
+              position: "absolute",
+              bottom: 0,
+              right: 0,
+              width: 22,
+              height: 22,
+              borderRadius: "50%",
+              background: "linear-gradient(135deg, #0284c7, #2563eb)",
+              color: "#fff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "2px solid #fff",
+              fontSize: 14,
+              fontWeight: 900,
+              boxShadow: "0 2px 6px rgba(37,99,235,0.4)",
+            }}
+          >
+            +
+          </div>
+        </div>
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: 800,
+            color: "#2563eb",
+            maxWidth: 68,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            textAlign: "center",
+          }}
+        >
+          Seu Story
+        </span>
+      </button>
+
+      {/* Lista de Stories da Comunidade */}
+      {stories.map((story, idx) => (
         <button
           key={story.id}
           type="button"
-          onClick={() => onOpenStory(story)}
+          onClick={() => onOpenStory(idx)}
           style={{
             display: "flex",
             flexDirection: "column",
@@ -712,35 +845,43 @@ function StoriesBar({ onOpenStory }: { onOpenStory: (story: StoryItem) => void }
             fontFamily: "inherit",
           }}
         >
-          {/* Instagram gradient ring */}
-          <div style={{
-            padding: 2.5,
-            borderRadius: "50%",
-            background: story.gradient,
-            boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
-            transition: "transform 0.15s ease",
-          }}>
-            <div style={{
-              padding: 2,
+          {/* Anel Gradiente Instagram / Telegram */}
+          <div
+            style={{
+              padding: 2.5,
               borderRadius: "50%",
-              background: "#fff",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}>
+              background: story.gradient,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+              transition: "transform 0.15s ease",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.06)")}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+          >
+            <div
+              style={{
+                padding: 2,
+                borderRadius: "50%",
+                background: "#fff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
               <Avatar name={story.author} size={52} url={story.avatarUrl} />
             </div>
           </div>
-          <span style={{
-            fontSize: 11,
-            fontWeight: 700,
-            color: "#1e293b",
-            maxWidth: 68,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-            textAlign: "center"
-          }}>
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: "#1e293b",
+              maxWidth: 68,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              textAlign: "center",
+            }}
+          >
             {story.author.split(" ")[0]}
           </span>
         </button>
@@ -749,108 +890,695 @@ function StoriesBar({ onOpenStory }: { onOpenStory: (story: StoryItem) => void }
   );
 }
 
-function StoryModal({ story, onClose }: { story: StoryItem | null; onClose: () => void }) {
+function StoryModal({
+  stories,
+  initialIndex,
+  onClose,
+  onOpenProfile,
+}: {
+  stories: StoryItem[];
+  initialIndex: number | null;
+  onClose: () => void;
+  onOpenProfile?: (authorName: string, authorId?: string) => void;
+}) {
+  const navigate = useNavigate();
+  const [currentIndex, setCurrentIndex] = useState(initialIndex ?? 0);
   const [progress, setProgress] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const [reactionsBurst, setReactionsBurst] = useState<{ id: number; emoji: string; left: number }[]>([]);
+  const [storyLikes, setStoryLikes] = useState<Record<string, number>>({});
+  const [replyText, setReplyText] = useState("");
 
   useEffect(() => {
-    if (!story) {
+    if (initialIndex !== null) {
+      setCurrentIndex(initialIndex);
       setProgress(0);
-      return;
     }
-    const start = Date.now();
-    const duration = 6000;
-    const interval = setInterval(() => {
-      const elapsed = Date.now() - start;
-      const p = Math.min(100, (elapsed / duration) * 100);
-      setProgress(p);
-      if (p >= 100) {
-        clearInterval(interval);
-        onClose();
-      }
-    }, 50);
-    return () => clearInterval(interval);
-  }, [story, onClose]);
+  }, [initialIndex]);
 
-  if (!story) return null;
+  const activeStory = initialIndex !== null && stories[currentIndex] ? stories[currentIndex] : null;
+
+  // Auto-avanço com barra de progresso contínua
+  useEffect(() => {
+    if (!activeStory || isPaused) return;
+
+    const duration = 6000;
+    const intervalTime = 50;
+    const step = (intervalTime / duration) * 100;
+
+    const timer = setInterval(() => {
+      setProgress((prev) => {
+        if (prev + step >= 100) {
+          clearInterval(timer);
+          // Avança para o próximo story ou fecha se for o último
+          if (currentIndex + 1 < stories.length) {
+            setCurrentIndex((c) => c + 1);
+            return 0;
+          } else {
+            onClose();
+            return 100;
+          }
+        }
+        return prev + step;
+      });
+    }, intervalTime);
+
+    return () => clearInterval(timer);
+  }, [activeStory, currentIndex, isPaused, stories.length, onClose]);
+
+  // Teclado (Escape, Seta Esquerda, Seta Direita)
+  useEffect(() => {
+    if (!activeStory) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft") handlePrev();
+      if (e.key === "ArrowRight") handleNext();
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [activeStory, currentIndex]);
+
+  if (!activeStory) return null;
+
+  const handlePrev = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex((c) => c - 1);
+      setProgress(0);
+    } else {
+      setProgress(0);
+    }
+  };
+
+  const handleNext = () => {
+    if (currentIndex + 1 < stories.length) {
+      setCurrentIndex((c) => c + 1);
+      setProgress(0);
+    } else {
+      onClose();
+    }
+  };
+
+  const handleEmojiReact = (emoji: string) => {
+    const burst = Array.from({ length: 6 }, (_, i) => ({
+      id: Date.now() + i,
+      emoji,
+      left: 20 + Math.random() * 60,
+    }));
+    setReactionsBurst((prev) => [...prev, ...burst]);
+    setTimeout(() => {
+      setReactionsBurst([]);
+    }, 1200);
+
+    setStoryLikes((prev) => ({
+      ...prev,
+      [activeStory.id]: (prev[activeStory.id] || activeStory.likesCount || 0) + 1,
+    }));
+  };
+
+  const handleSendReply = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!replyText.trim()) return;
+    onClose();
+    // Abre conversa privada no Lyka Chat
+    navigate(`/lyka-chat?dm=${encodeURIComponent(activeStory.authorId || activeStory.author)}&dmName=${encodeURIComponent(activeStory.author)}`);
+  };
+
+  const likesDisplay = storyLikes[activeStory.id] ?? (activeStory.likesCount || 0);
 
   return (
-    <div style={{
-      position: "fixed", inset: 0, zIndex: 100,
-      background: "rgba(15, 23, 42, 0.88)",
-      backdropFilter: "blur(8px)",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      padding: 16
-    }}>
-      <div style={{
-        width: "100%", maxWidth: 420,
-        background: "#0f172a",
-        borderRadius: 28,
-        border: "1px solid rgba(255,255,255,0.15)",
-        overflow: "hidden",
-        boxShadow: "0 20px 50px rgba(0,0,0,0.6)",
-        position: "relative",
-        color: "#fff",
-        display: "flex", flexDirection: "column"
-      }}>
-        {/* Progress bar */}
-        <div style={{ height: 3, background: "rgba(255,255,255,0.2)", width: "100%" }}>
-          <div style={{ height: "100%", background: "#fff", width: `${progress}%`, transition: "width 0.05s linear" }} />
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        background: "rgba(15, 23, 42, 0.92)",
+        backdropFilter: "blur(12px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 16,
+      }}
+    >
+      <style>{`
+        @keyframes storyBurst {
+          0% { transform: translateY(0) scale(0.6); opacity: 1; }
+          100% { transform: translateY(-110px) scale(1.4); opacity: 0; }
+        }
+      `}</style>
+
+      {/* Botão Seta Anterior (Desktop) */}
+      {currentIndex > 0 && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); handlePrev(); }}
+          style={{
+            position: "absolute",
+            left: 24,
+            width: 44,
+            height: 44,
+            borderRadius: "50%",
+            background: "rgba(255,255,255,0.15)",
+            border: "none",
+            color: "#fff",
+            cursor: "pointer",
+            display: "none",
+            alignItems: "center",
+            justifyContent: "center",
+            backdropFilter: "blur(6px)",
+            zIndex: 100,
+          }}
+          className="md:flex"
+        >
+          <ChevronLeft style={{ width: 24, height: 24 }} />
+        </button>
+      )}
+
+      {/* Cartão Central do Story */}
+      <div
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={() => setIsPaused(true)}
+        onMouseUp={() => setIsPaused(false)}
+        onTouchStart={() => setIsPaused(true)}
+        onTouchEnd={() => setIsPaused(false)}
+        style={{
+          width: "100%",
+          maxWidth: 420,
+          background: "#0f172a",
+          borderRadius: 28,
+          border: "1px solid rgba(255,255,255,0.18)",
+          overflow: "hidden",
+          boxShadow: "0 25px 60px rgba(0,0,0,0.7)",
+          position: "relative",
+          color: "#fff",
+          display: "flex",
+          flexDirection: "column",
+          minHeight: 520,
+        }}
+      >
+        {/* Barra de Progresso Segmentada (Instagram / Telegram) */}
+        <div style={{ display: "flex", gap: 4, padding: "14px 16px 8px", width: "100%", zIndex: 10 }}>
+          {stories.map((s, idx) => (
+            <div
+              key={s.id}
+              style={{
+                flex: 1,
+                height: 3,
+                background: "rgba(255,255,255,0.25)",
+                borderRadius: 99,
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  height: "100%",
+                  background: "#ffffff",
+                  width: idx < currentIndex ? "100%" : idx === currentIndex ? `${progress}%` : "0%",
+                  transition: idx === currentIndex ? "width 0.05s linear" : "none",
+                }}
+              />
+            </div>
+          ))}
         </div>
 
-        {/* Header */}
-        <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ padding: 2, borderRadius: "50%", background: story.gradient }}>
-              <Avatar name={story.author} size={38} url={story.avatarUrl} />
+        {/* Cabeçalho do Story com Acesso Rápido ao Perfil */}
+        <div
+          style={{
+            padding: "8px 16px 12px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            zIndex: 10,
+          }}
+        >
+          <div
+            onClick={() => onOpenProfile?.(activeStory.author, activeStory.authorId)}
+            style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
+            title="Ver perfil do autor e curtir"
+          >
+            <div style={{ padding: 2, borderRadius: "50%", background: activeStory.gradient }}>
+              <Avatar name={activeStory.author} size={38} url={activeStory.avatarUrl} />
             </div>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <strong style={{ fontSize: 13, color: "#fff" }}>{story.author}</strong>
-                <span style={{ fontSize: 10, background: "rgba(255,255,255,0.15)", padding: "1px 6px", borderRadius: 99 }}>
-                  {story.tag}
+                <strong style={{ fontSize: 13, color: "#fff" }}>{activeStory.author}</strong>
+                <span
+                  style={{
+                    fontSize: 10,
+                    background: "rgba(255,255,255,0.2)",
+                    padding: "2px 8px",
+                    borderRadius: 99,
+                    fontWeight: 800,
+                  }}
+                >
+                  {activeStory.tag}
                 </span>
               </div>
-              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.6)" }}>{story.role} · {story.time}</span>
+              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.65)" }}>
+                {activeStory.role} · {activeStory.time}
+              </span>
             </div>
           </div>
-          <button type="button" onClick={onClose} aria-label="Fechar story"
-            style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", padding: 6 }}>
-            <X style={{ width: 20, height: 20 }} />
-          </button>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button
+              type="button"
+              onClick={() => onOpenProfile?.(activeStory.author, activeStory.authorId)}
+              style={{
+                background: "rgba(255,255,255,0.18)",
+                border: "none",
+                color: "#fff",
+                fontSize: 11,
+                fontWeight: 800,
+                padding: "5px 10px",
+                borderRadius: 99,
+                cursor: "pointer",
+              }}
+            >
+              Ver Perfil
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Fechar story"
+              style={{
+                background: "none",
+                border: "none",
+                color: "#fff",
+                cursor: "pointer",
+                padding: 4,
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <X style={{ width: 20, height: 20 }} />
+            </button>
+          </div>
         </div>
 
-        {/* Story Body */}
-        <div style={{
-          padding: "30px 24px 40px",
-          minHeight: 240,
-          background: "linear-gradient(180deg, rgba(30,41,59,0.5) 0%, rgba(15,23,42,1) 100%)",
-          display: "flex", flexDirection: "column", justifyContent: "center",
-          textAlign: "center"
-        }}>
-          <h3 style={{ fontSize: 20, fontWeight: 900, marginBottom: 14, color: "#f8fafc" }}>
-            {story.headline}
-          </h3>
-          <p style={{ fontSize: 15, lineHeight: 1.7, color: "rgba(255,255,255,0.9)", margin: 0 }}>
-            "{story.text}"
-          </p>
-        </div>
-
-        {/* Action bar */}
-        <div style={{ padding: "14px 20px", borderTop: "1px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>Censo CEEP · Ada Lovelace</span>
-          <button type="button" onClick={onClose}
+        {/* Corpo do Story com Áreas de Toque Esquerda/Direita */}
+        <div style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column" }}>
+          {/* Toque Esquerda (Voltar) */}
+          <div
+            onClick={handlePrev}
             style={{
-              padding: "6px 16px", borderRadius: 99,
-              background: "rgba(255,255,255,0.15)", border: "none",
-              color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer"
-            }}>
-            Avançar
+              position: "absolute",
+              top: 0,
+              bottom: 0,
+              left: 0,
+              width: "30%",
+              zIndex: 5,
+              cursor: "pointer",
+            }}
+            title="História anterior"
+          />
+          {/* Toque Direita (Avançar) */}
+          <div
+            onClick={handleNext}
+            style={{
+              position: "absolute",
+              top: 0,
+              bottom: 0,
+              right: 0,
+              width: "70%",
+              zIndex: 5,
+              cursor: "pointer",
+            }}
+            title="Próxima história"
+          />
+
+          {/* Partículas de Reação Flutuantes */}
+          {reactionsBurst.map((r) => (
+            <div
+              key={r.id}
+              style={{
+                position: "absolute",
+                bottom: 80,
+                left: `${r.left}%`,
+                fontSize: 26,
+                animation: "storyBurst 1.1s ease-out forwards",
+                pointerEvents: "none",
+                zIndex: 20,
+              }}
+            >
+              {r.emoji}
+            </div>
+          ))}
+
+          {/* Conteúdo Visual do Story */}
+          <div
+            style={{
+              flex: 1,
+              padding: "40px 26px",
+              background: "linear-gradient(180deg, rgba(30,41,59,0.7) 0%, rgba(15,23,42,1) 100%)",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              alignItems: "center",
+              textAlign: "center",
+              userSelect: "none",
+            }}
+          >
+            <div
+              style={{
+                width: 50,
+                height: 50,
+                borderRadius: 18,
+                background: activeStory.gradient,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 22,
+                marginBottom: 18,
+                boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
+              }}
+            >
+              ✨
+            </div>
+            <h3
+              style={{
+                fontSize: 21,
+                fontWeight: 900,
+                marginBottom: 14,
+                color: "#f8fafc",
+                lineHeight: 1.3,
+                letterSpacing: "-0.3px",
+              }}
+            >
+              {activeStory.headline}
+            </h3>
+            <p
+              style={{
+                fontSize: 15,
+                lineHeight: 1.7,
+                color: "rgba(255,255,255,0.92)",
+                margin: 0,
+                maxWidth: 340,
+              }}
+            >
+              "{activeStory.text}"
+            </p>
+
+            {likesDisplay > 0 && (
+              <div
+                style={{
+                  marginTop: 22,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "4px 12px",
+                  borderRadius: 99,
+                  background: "rgba(255,255,255,0.1)",
+                  fontSize: 12,
+                  fontWeight: 800,
+                  color: "#fda4af",
+                }}
+              >
+                <span>❤️ {likesDisplay} reações recebidas</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Barra de Reação & Resposta no Estilo Telegram Stories */}
+        <div
+          style={{
+            padding: "12px 16px 16px",
+            borderTop: "1px solid rgba(255,255,255,0.12)",
+            background: "rgba(15,23,42,0.95)",
+            zIndex: 10,
+          }}
+        >
+          {/* Quick Reaction Emojis */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            {["❤️", "🔥", "👏", "💡", "🚀"].map((em) => (
+              <button
+                key={em}
+                type="button"
+                onClick={() => handleEmojiReact(em)}
+                style={{
+                  background: "rgba(255,255,255,0.12)",
+                  border: "none",
+                  fontSize: 20,
+                  width: 38,
+                  height: 38,
+                  borderRadius: "50%",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "transform 0.15s, background 0.15s",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.2)")}
+                onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+              >
+                {em}
+              </button>
+            ))}
+          </div>
+
+          {/* Quick Reply Form */}
+          <form onSubmit={handleSendReply} style={{ display: "flex", gap: 8 }}>
+            <input
+              type="text"
+              placeholder={`Responder a ${activeStory.author.split(" ")[0]} no Lyka...`}
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+              style={{
+                flex: 1,
+                background: "rgba(255,255,255,0.12)",
+                border: "1px solid rgba(255,255,255,0.2)",
+                borderRadius: 99,
+                padding: "8px 14px",
+                color: "#fff",
+                fontSize: 12,
+                outline: "none",
+              }}
+            />
+            <button
+              type="submit"
+              disabled={!replyText.trim()}
+              style={{
+                padding: "8px 14px",
+                borderRadius: 99,
+                background: replyText.trim() ? "linear-gradient(135deg, #0284c7, #2563eb)" : "rgba(255,255,255,0.1)",
+                color: "#fff",
+                border: "none",
+                fontWeight: 800,
+                fontSize: 12,
+                cursor: replyText.trim() ? "pointer" : "default",
+              }}
+            >
+              Enviar
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {/* Botão Seta Próximo (Desktop) */}
+      {currentIndex + 1 < stories.length && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); handleNext(); }}
+          style={{
+            position: "absolute",
+            right: 24,
+            width: 44,
+            height: 44,
+            borderRadius: "50%",
+            background: "rgba(255,255,255,0.15)",
+            border: "none",
+            color: "#fff",
+            cursor: "pointer",
+            display: "none",
+            alignItems: "center",
+            justifyContent: "center",
+            backdropFilter: "blur(6px)",
+            zIndex: 100,
+          }}
+          className="md:flex"
+        >
+          <ChevronRight style={{ width: 24, height: 24 }} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function CreateStoryModal({
+  isOpen,
+  onClose,
+  onPublish,
+  userName,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onPublish: (story: StoryItem) => void;
+  userName: string;
+}) {
+  const [headline, setHeadline] = useState("");
+  const [text, setText] = useState("");
+  const [selectedGrad, setSelectedGrad] = useState(0);
+
+  const GRADIENTS = [
+    "linear-gradient(45deg, #ec4899 0%, #f43f5e 50%, #f59e0b 100%)",
+    "linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)",
+    "linear-gradient(45deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%)",
+    "linear-gradient(45deg, #10b981 0%, #06b6d4 50%, #3b82f6 100%)",
+    "linear-gradient(45deg, #8b5cf6 0%, #d946ef 50%, #f43f5e 100%)",
+  ];
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!headline.trim() || !text.trim()) return;
+
+    const newStory: StoryItem = {
+      id: `story-${Date.now()}`,
+      author: userName || "Pesquisador Censo",
+      role: "Pesquisador CEEP",
+      gradient: GRADIENTS[selectedGrad],
+      headline: headline.trim(),
+      text: text.trim(),
+      time: "agora",
+      tag: "Relato de Campo",
+      likesCount: 0,
+    };
+
+    onPublish(newStory);
+    setHeadline("");
+    setText("");
+    onClose();
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        background: "rgba(15, 23, 42, 0.75)",
+        backdropFilter: "blur(8px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 16,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "#fff",
+          borderRadius: 24,
+          width: "100%",
+          maxWidth: 420,
+          padding: 24,
+          boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <h3 style={{ fontSize: 17, fontWeight: 900, color: "#0f172a", margin: 0 }}>
+            Publicar Story no Feed ✨
+          </h3>
+          <button type="button" onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}>
+            <X style={{ width: 18, height: 18 }} />
           </button>
         </div>
+
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+              Título ou Destaque
+            </label>
+            <input
+              type="text"
+              placeholder="Ex: Achado do intervalo no pátio 🔍"
+              value={headline}
+              onChange={(e) => setHeadline(e.target.value)}
+              required
+              style={{
+                width: "100%",
+                padding: "10px 14px",
+                borderRadius: 12,
+                border: "1.5px solid #e2e8f0",
+                fontSize: 13,
+                outline: "none",
+                fontFamily: "inherit",
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+              Mensagem / Relato do Story
+            </label>
+            <textarea
+              rows={3}
+              placeholder="Compartilhe uma dica de campo, reflexão científica ou novidade da coleta..."
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              required
+              style={{
+                width: "100%",
+                padding: "10px 14px",
+                borderRadius: 12,
+                border: "1.5px solid #e2e8f0",
+                fontSize: 13,
+                outline: "none",
+                fontFamily: "inherit",
+                resize: "none",
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", marginBottom: 6 }}>
+              Estilo da Borda
+            </label>
+            <div style={{ display: "flex", gap: 10 }}>
+              {GRADIENTS.map((g, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setSelectedGrad(idx)}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: "50%",
+                    background: g,
+                    border: selectedGrad === idx ? "3px solid #0f172a" : "2px solid transparent",
+                    cursor: "pointer",
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            style={{
+              marginTop: 6,
+              padding: "12px",
+              borderRadius: 14,
+              border: "none",
+              background: "linear-gradient(135deg, #0284c7, #2563eb)",
+              color: "#fff",
+              fontWeight: 800,
+              fontSize: 14,
+              cursor: "pointer",
+              boxShadow: "0 4px 14px rgba(37,99,235,0.3)",
+            }}
+          >
+            Publicar Story
+          </button>
+        </form>
       </div>
     </div>
   );
 }
+
 
 
 
@@ -877,8 +1605,39 @@ function PostSkeleton() {
 // ─── Main Feed ───────────────────────────────────────────────────────────────
 export function Feed() {
   const { profile } = useUserSession();
-  const [activeStory, setActiveStory] = useState<StoryItem | null>(null);
+  const [storiesList, setStoriesList] = useState<StoryItem[]>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("censo_custom_stories") || "[]");
+      return [...saved, ...DEFAULT_STORIES];
+    } catch {
+      return DEFAULT_STORIES;
+    }
+  });
+  const [activeStoryIndex, setActiveStoryIndex] = useState<number | null>(null);
+  const [showCreateStory, setShowCreateStory] = useState(false);
+  const [selectedColega, setSelectedColega] = useState<ColegaProfileData | null>(null);
   const [posts, setPosts]           = useState<Post[]>([]);
+
+  const handleOpenColegaProfile = async (authorName: string, userId?: string) => {
+    let pessoaData: any = null;
+    if (userId && userId !== "censo-bot" && userId !== "bot") {
+      const { data } = await supabase.from("pessoas").select("*").eq("id", userId).maybeSingle();
+      pessoaData = data;
+    }
+    if (!pessoaData && authorName) {
+      const { data } = await supabase.from("pessoas").select("*").ilike("nome_completo", authorName).maybeSingle();
+      pessoaData = data;
+    }
+
+    setSelectedColega({
+      id: pessoaData?.id || userId || "aluno",
+      nome_completo: pessoaData?.nome_completo || authorName,
+      avatar_url: pessoaData?.avatar_url,
+      papel: pessoaData?.papel,
+      turma_ou_cargo: pessoaData?.turma_ou_cargo,
+      bio: pessoaData?.bio,
+    });
+  };
 
   const [feedTab, setFeedTab]       = useState<"para_voce" | "recentes" | "minha_turma" | "conquistas" | "noticias">("para_voce");
   const [showIndicarModal, setShowIndicarModal] = useState(false);
@@ -1086,8 +1845,13 @@ export function Feed() {
           </div>
         </div>
 
-        {/* Instagram Stories Carousel */}
-        <StoriesBar onOpenStory={(story) => setActiveStory(story)} />
+        {/* Instagram / Telegram Stories Carousel */}
+        <StoriesBar
+          stories={storiesList}
+          userProfile={profile}
+          onOpenStory={(idx) => setActiveStoryIndex(idx)}
+          onCreateStory={() => setShowCreateStory(true)}
+        />
 
         {/* New posts banner */}
         {newPostsBanner > 0 && (
@@ -1325,7 +2089,7 @@ export function Feed() {
         ) : (
           displayedPosts.map((p,i)=>(
             <div key={p.id} style={{animation:`feedIn 0.3s ease ${i*0.04}s both`}}>
-              <PostCard post={p} profile={profile} onRefresh={()=>void fetchPosts(true)} />
+              <PostCard post={p} profile={profile} onRefresh={()=>void fetchPosts(true)} onOpenProfile={handleOpenColegaProfile} />
             </div>
           ))
         )}
@@ -1333,8 +2097,32 @@ export function Feed() {
 
       {/* Story Viewer Modal */}
       <StoryModal
-        story={activeStory}
-        onClose={() => setActiveStory(null)}
+        stories={storiesList}
+        initialIndex={activeStoryIndex}
+        onClose={() => setActiveStoryIndex(null)}
+        onOpenProfile={handleOpenColegaProfile}
+      />
+
+      {/* Modal Criar Story */}
+      <CreateStoryModal
+        isOpen={showCreateStory}
+        onClose={() => setShowCreateStory(false)}
+        userName={profile?.nomeCompleto || "Pesquisador Censo"}
+        onPublish={(newStory) => {
+          const updated = [newStory, ...storiesList];
+          setStoriesList(updated);
+          try {
+            const saved = JSON.parse(localStorage.getItem('censo_custom_stories') || '[]');
+            localStorage.setItem('censo_custom_stories', JSON.stringify([newStory, ...saved]));
+          } catch {}
+        }}
+      />
+
+      {/* Modal Perfil do Colega & Curtidas */}
+      <ColegaProfileModal
+        colega={selectedColega}
+        onClose={() => setSelectedColega(null)}
+        onLikeChanged={() => void fetchPosts(true)}
       />
 
       <IndicarAmigosModal

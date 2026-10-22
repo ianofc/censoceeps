@@ -8,6 +8,7 @@ import {
   Radio, CornerUpLeft, Trash2, X, Heart, ExternalLink, Mic, Square, Edit2, XCircle, MoreVertical, Palette, Smile
 } from "lucide-react";
 import EmojiPicker from 'emoji-picker-react';
+import { ColegaProfileModal, ColegaProfileData } from "../components/ColegaProfileModal";
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
 function LaikaIcon({ size = 20, color = "currentColor" }: { size?: number; color?: string }) {
@@ -100,21 +101,34 @@ function GroupAvatar({ size = 40 }: { size?: number }) {
 }
 
 // ─── Message Bubble ───────────────────────────────────────────────────────────
-function MsgBubble({ msg, isMe, showAvatar, showName, onReply, onDelete, onEdit }: {
+function MsgBubble({ msg, isMe, showAvatar, showName, onReply, onDelete, onEdit, onOpenProfile }: {
   msg: Message; isMe: boolean; showAvatar: boolean; showName: boolean;
   onReply: (m: Message) => void; onDelete: (id: number) => void; onEdit: (m: Message) => void;
+  onOpenProfile?: (userId: string, authorName: string) => void;
 }) {
   const [showOptions, setShowOptions] = useState(false);
   return (
     <div style={{ display: "flex", gap: 8, flexDirection: isMe ? "row-reverse" : "row", alignItems: "flex-end" }}>
       {!isMe && (
-        <div style={{ width: 30, flexShrink: 0, display: "flex", alignItems: "flex-end" }}>
+        <div 
+          onClick={() => onOpenProfile?.(msg.user_id, msg.author_name)}
+          style={{ width: 30, flexShrink: 0, display: "flex", alignItems: "flex-end", cursor: onOpenProfile ? "pointer" : "default" }}
+          title={`Ver perfil de ${msg.author_name} e curtir`}
+        >
           {showAvatar && <Avatar name={msg.author_name} size={28} />}
         </div>
       )}
       <div style={{ display: "flex", flexDirection: "column", maxWidth: "70%", alignItems: isMe ? "flex-end" : "flex-start" }}>
         {showName && !isMe && (
-          <span style={{ fontSize: 10, fontWeight: 800, color: "#64748b", marginBottom: 2, marginLeft: 2 }}>{msg.author_name}</span>
+          <span 
+            onClick={() => onOpenProfile?.(msg.user_id, msg.author_name)}
+            style={{ fontSize: 10, fontWeight: 800, color: "#64748b", marginBottom: 2, marginLeft: 2, cursor: onOpenProfile ? "pointer" : "default" }}
+            onMouseEnter={e => { if (onOpenProfile) e.currentTarget.style.textDecoration = "underline"; }}
+            onMouseLeave={e => { e.currentTarget.style.textDecoration = "none"; }}
+            title={`Ver perfil de ${msg.author_name}`}
+          >
+            {msg.author_name}
+          </span>
         )}
         {msg.reply_to_id && (
           <div style={{
@@ -306,7 +320,18 @@ export function LykaChat() {
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editingMsg, setEditingMsg] = useState<Message | null>(null);
-  const [profileModal, setProfileModal] = useState<Pessoa | null>(null);
+  const [selectedColega, setSelectedColega] = useState<ColegaProfileData | null>(null);
+
+  const handleOpenProfile = (userId: string, authorName: string) => {
+    const p = pessoas.find(x => x.id === userId || x.nome_completo.toLowerCase() === authorName.toLowerCase());
+    setSelectedColega({
+      id: p?.id || userId,
+      nome_completo: p?.nome_completo || authorName,
+      turma_ou_cargo: p?.turma_ou_cargo,
+      papel: p?.papel,
+      avatar_url: p?.avatar_url,
+    });
+  };
   const [lastMsgs, setLastMsgs] = useState<Record<string, { text: string; time: string; unread: number }>>({});
   const [pinned, setPinned] = useState<string[]>([]);
   const [mediaFile, setMediaFile] = useState<File | null>(null);
@@ -887,8 +912,9 @@ export function LykaChat() {
             {activeConv.isGroup
               ? <GroupAvatar size={40} />
               : (
-                <button type="button" onClick={() => { const p = pessoas.find(px => px.id === activeConv.id); if(p) setProfileModal(p); }}
-                  style={{ background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 }}>
+                <button type="button" onClick={() => handleOpenProfile(activeConv.id, activeConv.name)}
+                  style={{ background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 }}
+                  title="Ver perfil e curtir colega">
                   <Avatar name={activeConv.name} size={40} url={pessoas.find(px => px.id === activeConv.id)?.avatar_url || ""} />
                 </button>
               )
@@ -896,8 +922,9 @@ export function LykaChat() {
             <div style={{ flex: 1, minWidth: 0 }}>
               {!activeConv.isGroup ? (
                 <button type="button"
-                  onClick={() => { const p = pessoas.find(px => px.id === activeConv.id); if(p) setProfileModal(p); }}
-                  style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", gap: 5, fontFamily: "inherit" }}>
+                  onClick={() => handleOpenProfile(activeConv.id, activeConv.name)}
+                  style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", gap: 5, fontFamily: "inherit" }}
+                  title="Ver perfil e curtir colega">
                   <p style={{ color: "#0f172a", fontWeight: 800, fontSize: 15, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{activeConv.name}</p>
                   <ExternalLink style={{ width: 12, height: 12, color: "#94a3b8", flexShrink: 0 }} />
                 </button>
@@ -967,7 +994,8 @@ export function LykaChat() {
                         const showAv = !mine && (!prev || prev.author_name !== msg.author_name || prev.user_id !== msg.user_id);
                         return (
                           <MsgBubble key={msg.id} msg={msg} isMe={mine} showAvatar={showAv} showName={showAv}
-                            onReply={setReplyTo} onDelete={handleDeleteMsg} onEdit={handleEditInit} />
+                            onReply={setReplyTo} onDelete={handleDeleteMsg} onEdit={handleEditInit}
+                            onOpenProfile={handleOpenProfile} />
                         );
                       })}
                     </div>
@@ -1110,13 +1138,10 @@ export function LykaChat() {
           {ChatEl}
         </div>
       </div>
-      {profileModal && (
-        <PersonProfileModal
-          pessoa={profileModal}
-          myId={profile.id}
-          onClose={() => setProfileModal(null)}
-        />
-      )}
+      <ColegaProfileModal
+        colega={selectedColega}
+        onClose={() => setSelectedColega(null)}
+      />
     </>
   );
 
