@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTheme, AppTheme } from "../context/ThemeContext";
 import { supabase, supabaseAdmin } from "../lib/supabaseClient";
 import {
   Save, Edit2, X, ShieldCheck, Mail, Phone, MapPin,
@@ -224,6 +225,7 @@ export type PerfilTheme = "clean" | "rosa" | "azul" | "dark";
 
 export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
   const navigate = useNavigate();
+  const { theme: globalTheme, setTheme: setGlobalTheme } = useTheme();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -911,7 +913,7 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
             </div>
 
             {/* ── BLOCO DIREITA: BOTÕES DE MÉTRICAS EXPANDIDOS E MINIMALISTAS ────────── */}
-            <div className="flex items-center gap-1.5 sm:gap-2 pt-2 md:pt-0 flex-wrap justify-end">
+            <div className="flex items-center gap-2 pt-2 md:pt-0 flex-nowrap overflow-x-auto scrollbar-none justify-start md:justify-end max-w-full">
               
               {/* 1. Coletas */}
               <button

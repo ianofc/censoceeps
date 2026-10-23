@@ -170,11 +170,11 @@ function Layout({ session }: LayoutProps) {
   }, [session?.user?.id]);
 
   return (
-    <div className="flex flex-col lg:flex-row h-screen bg-slate-100 overflow-hidden font-sans relative">
+    <div className="flex flex-col lg:flex-row h-screen bg-slate-100 dark:bg-slate-950 overflow-hidden font-sans relative">
       {/* Navegação Flutuante Adaptativa (Sidebar no Desktop / Barra com Drawer no Mobile) */}
       <FloatingNav onLogout={handleLogout} />
 
-      <main className="flex-1 overflow-y-auto bg-slate-50 p-6 lg:p-10 lg:pl-28 pb-28 lg:pb-10 relative flex flex-col items-center">
+      <main className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-900 p-6 lg:p-10 lg:pl-28 pb-28 lg:pb-10 relative flex flex-col items-center">
         <div className="w-full max-w-6xl mx-auto flex flex-col items-center">
           <ChunkErrorBoundary>
             <Suspense fallback={
