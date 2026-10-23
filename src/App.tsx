@@ -111,7 +111,7 @@ const Admin = lazyRetry(() => import('./pages/Admin').then(m => ({ default: m.Ad
 const PublicDisplay = lazyRetry(() => import('./pages/PublicDisplay').then(m => ({ default: m.PublicDisplay })));
 const NotFound = lazyRetry(() => import('./pages/NotFound').then(m => ({ default: m.NotFound })));
 const AdinhaAssistant = lazyRetry(() => import('./components/AdinhaAssistant').then(m => ({ default: m.AdinhaAssistant })));
-const MeuPerfil = lazyRetry(() => import('./pages/MeuPerfil').then(m => ({ default: m.MeuPerfil })));
+const MeuPerfil = lazyRetry(() => import('./pages/MeuPerfil').then(m => ({ default: m.MeuPerfil || m.default })));
 const About = lazyRetry(() => import('./pages/About').then(m => ({ default: m.About })));
 const Feed = lazyRetry(() => import('./pages/Feed').then(m => ({ default: m.Feed })));
 const LykaChat = lazyRetry(() => import('./pages/LykaChat').then(m => ({ default: m.LykaChat })));
