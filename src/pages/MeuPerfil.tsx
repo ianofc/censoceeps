@@ -7,7 +7,8 @@ import {
   CheckCircle, UserCircle, Calendar, Hash, Trophy, Target,
   Upload, Camera, Trash2, Link as LinkIcon, Loader2, Check, AlertCircle, RefreshCw,
   Plus, MessageCircle, Heart, UserPlus, MoreHorizontal, Sparkles, Image as ImageIcon,
-  ChevronDown, Flame, Share2, ThumbsUp, ChevronRight, FileText, Users, Eye, Globe
+  ChevronDown, Flame, Share2, ThumbsUp, ChevronRight, FileText, Users, Eye, Globe,
+  Palette, Sun, Moon
 } from "lucide-react";
 import BadgeList from "../components/Gamification/BadgeList";
 import { CrachaPesquisador } from "../components/CrachaPesquisador";
@@ -219,6 +220,8 @@ interface TrendItem {
 // Capa padrão elegante de paisagem tropical/mar para compor o visual igual à imagem de referência
 const DEFAULT_HERO_COVER = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1600&auto=format&fit=crop&q=80";
 
+export type PerfilTheme = "clean" | "rosa" | "azul" | "dark";
+
 export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -230,6 +233,12 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
   const [xpStats, setXpStats] = useState({ posts: 0, msgs: 0, likes: 0 });
   const [seguindoCount, setSeguindoCount] = useState(0);
   const [seguidoresCount, setSeguidoresCount] = useState(0);
+
+  // Seletor de Tema do Perfil: Clean, Rosa, Azul, Dark (Persistido no localStorage)
+  const [perfilTheme, setPerfilTheme] = useState<PerfilTheme>(() => {
+    const saved = localStorage.getItem("ceep_perfil_theme");
+    return (saved === "clean" || saved === "rosa" || saved === "azul" || saved === "dark") ? saved : "clean";
+  });
 
   // Abas sociais com Perfil e Conquistas
   const [activeTab, setActiveTab] = useState<"midia" | "respostas" | "repostagens" | "postagens" | "conquistas" | "perfil">("midia");
@@ -258,6 +267,20 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+
+  const handleSelectTheme = (theme: PerfilTheme) => {
+    setPerfilTheme(theme);
+    try {
+      localStorage.setItem("ceep_perfil_theme", theme);
+    } catch {}
+    // Se selecionar tema Dark, também sincroniza a classe dark do sistema
+    const root = document.documentElement;
+    if (theme === "dark") {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+  };
 
   useEffect(() => {
     async function fetchUserData() {
@@ -575,8 +598,44 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
   const activeCover = perfil.cover_url || DEFAULT_HERO_COVER;
   const showCover = activeCover && !coverImgErr;
 
+  // Paleta de tema selecionada
+  const themeAccent = {
+    clean: {
+      borderActive: "#2563eb",
+      textActive: "#0f172a",
+      cardBg: "bg-white dark:bg-slate-900",
+      subText: "text-slate-500 dark:text-slate-400",
+      tabIndicator: "border-blue-600 text-slate-900 dark:text-white",
+      badgeColor: "#475569",
+    },
+    rosa: {
+      borderActive: "#f43f5e",
+      textActive: "#881337",
+      cardBg: "bg-gradient-to-b from-rose-50/40 to-white dark:from-slate-900 dark:to-slate-950",
+      subText: "text-rose-600/80 dark:text-rose-300/80",
+      tabIndicator: "border-rose-500 text-rose-700 dark:text-rose-300",
+      badgeColor: "#e11d48",
+    },
+    azul: {
+      borderActive: "#2563eb",
+      textActive: "#1e3a8a",
+      cardBg: "bg-gradient-to-b from-blue-50/40 to-white dark:from-slate-900 dark:to-slate-950",
+      subText: "text-blue-600/80 dark:text-blue-300/80",
+      tabIndicator: "border-blue-600 text-blue-700 dark:text-blue-300",
+      badgeColor: "#2563eb",
+    },
+    dark: {
+      borderActive: "#fbbf24",
+      textActive: "#f8fafc",
+      cardBg: "bg-slate-900 dark:bg-slate-950",
+      subText: "text-slate-400",
+      tabIndicator: "border-amber-400 text-amber-300",
+      badgeColor: "#f59e0b",
+    },
+  }[perfilTheme];
+
   return (
-    <div className="w-full max-w-5xl mx-auto pb-24 px-2 sm:px-6 font-sans">
+    <div className={`w-full max-w-5xl mx-auto pb-24 px-2 sm:px-6 font-sans theme-${perfilTheme}`}>
       <style>{`
         @keyframes perfilSpin { to { transform: rotate(360deg); } }
         @keyframes perfilPop { from { opacity:0; transform: scale(0.98) translateY(6px); } to { opacity:1; transform: scale(1) translateY(0); } }
@@ -590,15 +649,15 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          gap: 4px;
-          padding: 4px 7px;
+          gap: 6px;
+          padding: 6px 12px;
           border-radius: 9999px;
           background: #f8fafc;
-          color: #334155;
+          color: #1e293b;
           font-weight: 700;
-          font-size: 11px;
-          border: 1px solid #e2e8f0;
-          transition: all 0.15s ease;
+          font-size: 12px;
+          border: 1px solid #cbd5e1;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
           cursor: pointer;
           user-select: none;
           flex-shrink: 0;
@@ -607,7 +666,8 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
         .icon-stat-btn:hover, .icon-stat-btn:active {
           background: #f1f5f9;
           color: #0f172a;
-          border-color: #cbd5e1;
+          border-color: #94a3b8;
+          transform: translateY(-1px);
         }
         .icon-stat-tooltip {
           position: absolute;
@@ -642,7 +702,7 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
       ) : null}
 
       {/* ── CARD PRINCIPAL COM CAPA PANORÂMICA MINIMALISTA ───────────────── */}
-      <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-200">
+      <div className={`${themeAccent.cardBg} rounded-3xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-800 transition-colors`}>
 
         {/* Capa Panorâmica padrão (igual à imagem de referência) */}
         <div className="h-44 sm:h-64 md:h-72 w-full relative overflow-hidden bg-slate-900 group">
@@ -675,14 +735,71 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
             }}
           />
 
-          {/* Botão sutil de lápis para editar capa no canto superior direito */}
-          <div className="absolute top-3 right-3 z-10">
+          {/* Controles no topo da Capa: Seletor de Tema (Clean, Rosa, Azul, Dark) e Lápis de Edição */}
+          <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
+            {/* Seletor de Tema Dinâmico */}
+            <div className="flex items-center gap-1 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md p-1 rounded-full shadow-md border border-white/20">
+              <button
+                type="button"
+                onClick={() => handleSelectTheme("clean")}
+                title="Tema Clean"
+                aria-label="Tema Clean"
+                className={`px-2 py-0.5 rounded-full text-[10px] font-black tracking-wide transition cursor-pointer ${
+                  perfilTheme === "clean"
+                    ? "bg-slate-800 text-white shadow-xs"
+                    : "text-slate-600 dark:text-slate-300 hover:text-slate-900"
+                }`}
+              >
+                Clean
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectTheme("rosa")}
+                title="Tema Rosa"
+                aria-label="Tema Rosa"
+                className={`px-2 py-0.5 rounded-full text-[10px] font-black tracking-wide transition cursor-pointer ${
+                  perfilTheme === "rosa"
+                    ? "bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-xs"
+                    : "text-rose-600 hover:text-rose-700"
+                }`}
+              >
+                Rosa
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectTheme("azul")}
+                title="Tema Azul"
+                aria-label="Tema Azul"
+                className={`px-2 py-0.5 rounded-full text-[10px] font-black tracking-wide transition cursor-pointer ${
+                  perfilTheme === "azul"
+                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xs"
+                    : "text-blue-600 hover:text-blue-700"
+                }`}
+              >
+                Azul
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectTheme("dark")}
+                title="Tema Dark"
+                aria-label="Tema Dark"
+                className={`px-2 py-0.5 rounded-full text-[10px] font-black tracking-wide transition cursor-pointer ${
+                  perfilTheme === "dark"
+                    ? "bg-black text-amber-300 shadow-xs"
+                    : "text-slate-700 dark:text-slate-200 hover:text-black"
+                }`}
+              >
+                Dark
+              </button>
+            </div>
+
+            {/* Botão de edição da Capa */}
             <button
               type="button"
               onClick={() => coverInputRef.current?.click()}
               title="Trocar foto de capa"
               aria-label="Editar foto de capa"
-              className="w-8 h-8 rounded-full bg-white/80 hover:bg-white text-slate-700 flex items-center justify-center shadow-md backdrop-blur-sm transition cursor-pointer"
+              className="w-8 h-8 rounded-full bg-white/85 hover:bg-white text-slate-700 flex items-center justify-center shadow-md backdrop-blur-sm transition cursor-pointer"
             >
               {uploadingCover ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
@@ -793,8 +910,8 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
               </div>
             </div>
 
-            {/* ── BLOCO DIREITA: ÍCONES REDUZIDOS COMPACTOS LADO A LADO (SEM BARRA DE ROLAGEM) ────────── */}
-            <div className="flex items-center gap-1 sm:gap-1.5 pt-1 md:pt-0 flex-shrink-0">
+            {/* ── BLOCO DIREITA: BOTÕES DE MÉTRICAS EXPANDIDOS E MINIMALISTAS ────────── */}
+            <div className="flex items-center gap-1.5 sm:gap-2 pt-2 md:pt-0 flex-wrap justify-end">
               
               {/* 1. Coletas */}
               <button
@@ -804,7 +921,7 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
                 onClick={() => navigate("/coleta")}
                 aria-label={`Coletas: ${totalFichas} fichas`}
               >
-                <FileText className="w-3.5 h-3.5 text-indigo-600" />
+                <FileText className="w-4 h-4 text-indigo-600" />
                 <span>{totalFichas}</span>
                 <span className="icon-stat-tooltip">Coletas: {totalFichas} fichas</span>
               </button>
@@ -817,7 +934,7 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
                 onClick={() => navigate("/feed")}
                 aria-label={`Postagens: ${xpStats.posts}`}
               >
-                <ImageIcon className="w-3.5 h-3.5 text-blue-600" />
+                <ImageIcon className="w-4 h-4 text-blue-600" />
                 <span>{xpStats.posts}</span>
                 <span className="icon-stat-tooltip">Postagens: {xpStats.posts}</span>
               </button>
@@ -829,7 +946,7 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
                 tabIndex={0}
                 aria-label={`Curtidas: ${xpStats.likes}`}
               >
-                <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />
+                <Heart className="w-4 h-4 text-rose-500 fill-rose-500" />
                 <span>{xpStats.likes}</span>
                 <span className="icon-stat-tooltip">Curtidas: {xpStats.likes}</span>
               </button>
@@ -842,7 +959,7 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
                 onClick={() => navigate("/membros")}
                 aria-label={`Seguindo: ${seguindoCount}`}
               >
-                <Users className="w-3.5 h-3.5 text-emerald-600" />
+                <Users className="w-4 h-4 text-emerald-600" />
                 <span>{seguindoCount}</span>
                 <span className="icon-stat-tooltip">Seguindo: {seguindoCount}</span>
               </button>
@@ -854,7 +971,7 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
                 tabIndex={0}
                 aria-label={`Seguidores: ${seguidoresCount}`}
               >
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <Sparkles className="w-4 h-4 text-amber-500" />
                 <span>{seguidoresCount}</span>
                 <span className="icon-stat-tooltip">Seguidores: {seguidoresCount}</span>
               </button>
@@ -867,7 +984,8 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
                 tabIndex={0}
                 aria-label="Abrir Lyka Chat"
               >
-                <LaikaNavIcon size={15} />
+                <LaikaNavIcon size={16} />
+                <span>Chat</span>
                 <span className="icon-stat-tooltip">Abrir Lyka Chat</span>
               </button>
             </div>
@@ -923,12 +1041,12 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
           </div>
 
           {/* ── BARRA DE ABAS SOCIAL: Mídia, Respostas, Repostagens, Postagens e PERFIL ── */}
-          <div className="flex items-center gap-3 sm:gap-5 border-t border-slate-200 mt-2.5 overflow-x-auto scrollbar-none">
+          <div className="flex items-center gap-3 sm:gap-5 border-t border-slate-200 dark:border-slate-800 mt-2.5 overflow-x-auto scrollbar-none">
             <button
               type="button"
               onClick={() => setActiveTab("midia")}
               className={`inline-flex items-center gap-1 py-2.5 px-1 border-b-2 text-xs sm:text-sm font-semibold transition cursor-pointer ${
-                activeTab === "midia" ? "border-blue-600 text-slate-900 !font-extrabold" : "border-transparent text-slate-500 hover:text-slate-800"
+                activeTab === "midia" ? `${themeAccent.tabIndicator} !font-extrabold` : "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
               }`}
             >
               <span>Mídia</span>
@@ -939,7 +1057,7 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
               type="button"
               onClick={() => setActiveTab("respostas")}
               className={`py-2.5 px-1 border-b-2 text-xs sm:text-sm font-semibold transition cursor-pointer ${
-                activeTab === "respostas" ? "border-blue-600 text-slate-900 !font-extrabold" : "border-transparent text-slate-500 hover:text-slate-800"
+                activeTab === "respostas" ? `${themeAccent.tabIndicator} !font-extrabold` : "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
               }`}
             >
               Respostas
@@ -949,7 +1067,7 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
               type="button"
               onClick={() => setActiveTab("repostagens")}
               className={`py-2.5 px-1 border-b-2 text-xs sm:text-sm font-semibold transition cursor-pointer ${
-                activeTab === "repostagens" ? "border-blue-600 text-slate-900 !font-extrabold" : "border-transparent text-slate-500 hover:text-slate-800"
+                activeTab === "repostagens" ? `${themeAccent.tabIndicator} !font-extrabold` : "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
               }`}
             >
               Repostagens
@@ -959,7 +1077,7 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
               type="button"
               onClick={() => setActiveTab("postagens")}
               className={`py-2.5 px-2 border-b-2 text-xs sm:text-sm font-semibold transition cursor-pointer ${
-                activeTab === "postagens" ? "border-blue-600 text-slate-900 !font-extrabold" : "border-transparent text-slate-600 hover:text-slate-900"
+                activeTab === "postagens" ? `${themeAccent.tabIndicator} !font-extrabold` : "border-transparent text-slate-600 hover:text-slate-900 dark:hover:text-slate-200"
               }`}
             >
               Postagens
@@ -970,7 +1088,7 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
               type="button"
               onClick={() => setActiveTab("conquistas")}
               className={`inline-flex items-center gap-1.5 py-2.5 px-2 border-b-2 text-xs sm:text-sm font-semibold transition cursor-pointer ${
-                activeTab === "conquistas" ? "border-blue-600 text-slate-900 !font-extrabold" : "border-transparent text-slate-600 hover:text-slate-900"
+                activeTab === "conquistas" ? `${themeAccent.tabIndicator} !font-extrabold` : "border-transparent text-slate-600 hover:text-slate-900 dark:hover:text-slate-200"
               }`}
             >
               <Trophy className="w-3.5 h-3.5 text-amber-500" />
@@ -982,7 +1100,7 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
               type="button"
               onClick={() => setActiveTab("perfil")}
               className={`inline-flex items-center gap-1.5 py-2.5 px-2 border-b-2 text-xs sm:text-sm font-semibold transition cursor-pointer ${
-                activeTab === "perfil" ? "border-blue-600 text-slate-900 !font-extrabold" : "border-transparent text-slate-600 hover:text-slate-900"
+                activeTab === "perfil" ? `${themeAccent.tabIndicator} !font-extrabold` : "border-transparent text-slate-600 hover:text-slate-900 dark:hover:text-slate-200"
               }`}
             >
               <UserCircle className="w-3.5 h-3.5" />
@@ -1327,11 +1445,11 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
           </div>
 
           {/* Dados de Contato / Localização do Pesquisador */}
-          <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800">
             <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2.5">
               Informações do Pesquisador
             </h4>
-            <div className="flex flex-col gap-2 text-xs text-slate-600">
+            <div className="flex flex-col gap-2 text-xs text-slate-600 dark:text-slate-300">
               {perfil.email && (
                 <div className="flex items-center gap-2 truncate">
                   <Mail className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
@@ -1354,84 +1472,6 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
         </div>
 
       </div>
-
-      {/* ── SEÇÃO DE CONQUISTAS DO PESQUISADOR (QUANDO NAS DEMAIS ABAS) ── */}
-      {activeTab !== "conquistas" && (() => {
-        const totalXP = (totalFichas * 100) + (xpStats.posts * 20) + (xpStats.msgs * 5) + (xpStats.likes * 10);
-        const nivel = getNivel(totalXP);
-        const nextNivel = getNextNivel(totalXP);
-        const progress = nextNivel ? Math.round(((totalXP - nivel.minXP) / (nextNivel.minXP - nivel.minXP)) * 100) : 100;
-        
-        return (
-          <div className="mt-5 bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-slate-200">
-            <div className="flex items-center gap-2.5 mb-4">
-              <div className="p-2 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-600 text-white shadow-sm">
-                <Trophy className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="m-0 font-extrabold text-sm sm:text-base text-slate-900">Conquistas do Pesquisador</h3>
-                <p className="m-0 text-[11px] text-slate-500 font-semibold">Gerenciado pelo módulo Accumbens (TAS)</p>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-3">
-              <div className="flex justify-between items-end">
-                <div>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Nível Atual</span>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="text-lg sm:text-xl">{nivel.icon}</span>
-                    <span className="text-lg sm:text-xl font-black" style={{ color: nivel.color }}>{nivel.nome}</span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <span className="text-xl sm:text-2xl font-black text-slate-900 leading-none">{totalXP.toLocaleString()}</span>
-                  <span className="text-xs font-bold text-slate-500 ml-1">XP</span>
-                </div>
-              </div>
-
-              {nextNivel && (
-                <div>
-                  <div className="flex justify-between text-[11px] font-bold text-slate-600 mb-1">
-                    <span>Progresso para {nextNivel.nome}</span>
-                    <span>{progress}%</span>
-                  </div>
-                  <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-700"
-                      style={{
-                        width: `${progress}%`,
-                        background: `linear-gradient(90deg, ${nivel.color}, ${nextNivel.color})`,
-                      }}
-                    />
-                  </div>
-                  <div className="text-right text-[10px] font-bold text-slate-400 mt-0.5">
-                    Faltam {(nextNivel.minXP - totalXP).toLocaleString()} XP
-                  </div>
-                </div>
-              )}
-              
-              <div className="grid grid-cols-2 gap-2.5 mt-1">
-                <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                  <BookOpen className="w-3.5 h-3.5 text-blue-600 mb-1" />
-                  <div className="text-base font-black text-slate-900">{totalFichas}</div>
-                  <div className="text-[10px] font-semibold text-slate-500">Fichas (x100 XP)</div>
-                </div>
-                <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                  <Target className="w-3.5 h-3.5 text-emerald-600 mb-1" />
-                  <div className="text-base font-black text-slate-900">{xpStats.posts + xpStats.msgs + xpStats.likes}</div>
-                  <div className="text-[10px] font-semibold text-slate-500">Interações Sociais</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
-      {activeTab !== "conquistas" && (
-        <div className="mt-4">
-          <BadgeList userId={perfil.id} />
-        </div>
-      )}
 
     </div>
   );
