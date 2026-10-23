@@ -7,11 +7,31 @@ import {
   CheckCircle, UserCircle, Calendar, Hash, Trophy, Target,
   Upload, Camera, Trash2, Link as LinkIcon, Loader2, Check, AlertCircle, RefreshCw,
   Plus, MessageCircle, Heart, UserPlus, MoreHorizontal, Sparkles, Image as ImageIcon,
-  ChevronDown, Flame, Share2, ThumbsUp, ChevronRight
+  ChevronDown, Flame, Share2, ThumbsUp, ChevronRight, FileText, Users, Eye, Globe
 } from "lucide-react";
 import BadgeList from "../components/Gamification/BadgeList";
 import { CrachaPesquisador } from "../components/CrachaPesquisador";
 import { badgeService } from "../services/badgeService";
+import { tasFeedScraperService } from "../services/tasFeedScraperService";
+
+/**
+ * Ícone visual do Lyka Chat oficial do Censo CEEP
+ */
+function LaikaNavIcon({ size = 20 }: { readonly size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 8 C4 4 2 3 3 7" />
+      <path d="M19 8 C20 4 22 3 21 7" />
+      <ellipse cx="12" cy="10" rx="7" ry="6" />
+      <ellipse cx="12" cy="13" rx="3" ry="2" />
+      <ellipse cx="12" cy="12" rx="1.2" ry="0.8" fill="currentColor" stroke="none" />
+      <circle cx="9" cy="9" r="0.9" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="9" r="0.9" fill="currentColor" stroke="none" />
+      <path d="M7 15.5 C6 18 6 21 8 21 L16 21 C18 21 18 18 17 15.5" />
+      <path d="M17 16 C21 14 22 10 20 9" />
+    </svg>
+  );
+}
 
 /**
  * Redimensiona e recorta a imagem em quadrado (512x512) no cliente antes do upload.
@@ -137,32 +157,6 @@ function papelBadge(papel: string) {
   return { label: "Entrevistado", color: "#10B981", bg: "#ECFDF5", border: "#A7F3D0" };
 }
 
-function StatCard({ value, label, icon }: { value: string | number; label: string; icon: React.ReactNode }) {
-  return (
-    <div style={{
-      flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
-      padding: "14px 8px", gap: 4,
-    }}>
-      <div style={{ color: "#7c3aed", marginBottom: 2 }}>{icon}</div>
-      <span style={{ fontWeight: 900, fontSize: 20, color: "#0f172a", lineHeight: 1 }}>{value}</span>
-      <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600, textAlign: "center", letterSpacing: "0.2px" }}>{label}</span>
-    </div>
-  );
-}
-
-function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  if (!value) return null;
-  return (
-    <div style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 0", borderBottom: "1px solid #f1f5f9" }}>
-      <div style={{ color: "#7c3aed", flexShrink: 0, marginTop: 1 }}>{icon}</div>
-      <div>
-        <span style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 2 }}>{label}</span>
-        <span style={{ fontSize: 14, fontWeight: 600, color: "#1e293b" }}>{value}</span>
-      </div>
-    </div>
-  );
-}
-
 function Field({ id, label, value, onChange, multiline = false, placeholder = "" }: {
   id: string; label: string; value: string;
   onChange: (v: string) => void; multiline?: boolean; placeholder?: string;
@@ -213,7 +207,13 @@ interface StoryHighlight {
   id: string;
   label: string;
   coverImg?: string;
-  iconBg?: string;
+}
+
+interface TrendItem {
+  category: string;
+  topic: string;
+  posts: string;
+  isGlobal?: boolean;
 }
 
 export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
@@ -226,31 +226,19 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
   const [coverImgErr, setCoverImgErr] = useState(false);
   const [totalFichas, setTotalFichas] = useState(0);
   const [xpStats, setXpStats] = useState({ posts: 0, msgs: 0, likes: 0 });
-  const [totalPessoasCount, setTotalPessoasCount] = useState(156);
-  const memberSince = new Date().getFullYear();
+  const [seguindoCount, setSeguindoCount] = useState(0);
+  const [seguidoresCount, setSeguidoresCount] = useState(0);
 
   // Abas sociais estilo Twitter/X e Facebook
   const [activeTab, setActiveTab] = useState<"midia" | "respostas" | "repostagens" | "postagens">("midia");
   const [userPosts, setUserPosts] = useState<PostItem[]>([]);
   const [mediaPosts, setMediaPosts] = useState<PostItem[]>([]);
-  const [loadingPosts, setLoadingPosts] = useState(false);
 
-  // Trending / O que está acontecendo
-  const [trendingTopics, setTrendingTopics] = useState([
-    { category: "Censo CEEP · Tendências", topic: "#Meta20Alcançada", posts: "128 menções" },
-    { category: "Pesquisa Científica · Destaque", topic: "Projeto Ada Lovelace", posts: "342 menções" },
-    { category: "Educação · Bahia", topic: "CEEP Seabra", posts: "89 menções" },
-    { category: "Comunidade · Tendências", topic: "#AdinhaLovelace", posts: "215 menções" },
-  ]);
+  // Destaques do usuário (novo usuário = vazio por padrão, estilo Instagram)
+  const [highlights, setHighlights] = useState<StoryHighlight[]>([]);
 
-  // Destaques / Stories
-  const [highlights, setHighlights] = useState<StoryHighlight[]>([
-    { id: "destaques", label: "Destaques", coverImg: "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=200&auto=format&fit=crop&q=80" },
-    { id: "amor", label: "Amor", coverImg: "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=200&auto=format&fit=crop&q=80" },
-    { id: "ensaio", label: "Ensaio", coverImg: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80" },
-    { id: "songs", label: "Songs", coverImg: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200&auto=format&fit=crop&q=80" },
-    { id: "city", label: "City", coverImg: "https://images.unsplash.com/photo-1477959858617-67f30bc75b82?w=200&auto=format&fit=crop&q=80" },
-  ]);
+  // Trends mundiais + adaptação inteligente ao perfil do usuário (Estilo Twitter/X)
+  const [trendingTopics, setTrendingTopics] = useState<TrendItem[]>([]);
 
   const [perfil, setPerfil] = useState({
     id: "", nome: "", email: "", papel: "entrevistador_aluno",
@@ -289,7 +277,7 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
           { count: pC },
           { count: mC },
           { count: lC },
-          { count: totalColegasCount },
+          { count: seguidosCount },
           { data: myPosts }
         ] = await Promise.all([
           supabase.from("pessoas").select("*").eq("id", userId).maybeSingle(),
@@ -297,7 +285,7 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
           supabase.from("lyka_posts").select("*", { count: "exact", head: true }).eq("user_id", userId),
           supabase.from("lyka_messages").select("*", { count: "exact", head: true }).eq("user_id", userId),
           supabase.from("pessoa_likes").select("*", { count: "exact", head: true }).eq("liked_id", userId),
-          supabase.from("pessoas").select("*", { count: "exact", head: true }),
+          supabase.from("pessoa_likes").select("*", { count: "exact", head: true }).eq("liker_id", userId),
           supabase.from("lyka_posts").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(40)
         ]);
 
@@ -321,9 +309,11 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
         const totalFichasContadas = baseOnlineCount + pendingUserCount;
         setTotalFichas(totalFichasContadas);
         setXpStats({ posts: pC || 0, msgs: mC || 0, likes: lC || 0 });
-        if (totalColegasCount) {
-          setTotalPessoasCount(totalColegasCount);
-        }
+
+        // Seguidores = curtidas que seu perfil recebeu de colegas
+        // Seguindo = colegas que você curtiu
+        setSeguidoresCount(lC || 0);
+        setSeguindoCount(seguidosCount || 0);
 
         let cachedProfile: any = null;
         try {
@@ -345,8 +335,6 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
           localCover = localStorage.getItem(`ceep_profile_cover_${userId}`) || "";
         } catch {}
 
-        const defaultCover = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1600&auto=format&fit=crop&q=80";
-
         const p = {
           id: userId, nome: nomeCompleto, email: userEmail, papel: papelUsuario,
           turma_ou_cargo: turmaCargo, telefone: pessoaData?.telefone || "",
@@ -355,16 +343,65 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
           numero: pessoaData?.numero || "", bairro: pessoaData?.bairro || "Mandacaru",
           bio: pessoaData?.bio || "", avatar_url: pessoaData?.avatar_url || cachedProfile?.avatarUrl || avatarPadrao,
           genero,
-          cover_url: localCover || defaultCover,
+          cover_url: localCover || "",
         };
         setPerfil(p);
         setEditPerfil(p);
 
-        // Posts do usuário e posts com mídia
+        // Posts do usuário e posts com mídia real postada
         const postsList = (myPosts || []) as PostItem[];
         setUserPosts(postsList);
         const withMedia = postsList.filter(item => Boolean(item.image_url));
         setMediaPosts(withMedia);
+
+        // Recupera destaques do usuário se ele tiver criado algum
+        try {
+          const userHighlightsRaw = localStorage.getItem(`ceep_highlights_${userId}`);
+          if (userHighlightsRaw) {
+            setHighlights(JSON.parse(userHighlightsRaw));
+          } else {
+            setHighlights([]); // Perfil novo: sem destaques falsos
+          }
+        } catch {}
+
+        // Carrega as Trends Mundiais combinadas com as do Censo CEEP e do usuário
+        try {
+          const curatedNews = await tasFeedScraperService.getCuratedNews();
+          const trendsArray: TrendItem[] = [
+            { category: "Tecnologia & IA · Mundo", topic: "Artificial Intelligence & Robotics", posts: "842.1K posts", isGlobal: true },
+            { category: "Ciência & Exploração · Mundo", topic: "James Webb & Deep Space", posts: "318.5K posts", isGlobal: true },
+            { category: "Educação & Inovação · Bahia", topic: "SEC Bahia — Educação Profissional", posts: "42.8K posts", isGlobal: false },
+          ];
+
+          // Se o usuário tiver turma, adiciona trend adaptada à sua jornada
+          if (turmaCargo) {
+            trendsArray.push({
+              category: `Sua Turma · ${turmaCargo}`,
+              topic: `#Censo${turmaCargo.replace(/[^a-zA-Z0-9]/g, '')}`,
+              posts: `${Math.max(12, totalFichasContadas * 5)} menções`,
+              isGlobal: false
+            });
+          }
+
+          if (curatedNews && curatedNews.length > 0) {
+            trendsArray.push({
+              category: "Educação & Ciência · Destaque",
+              topic: curatedNews[0].title.slice(0, 36) + "...",
+              posts: "15.4K leituras",
+              isGlobal: false
+            });
+          }
+
+          trendsArray.push({ category: "Cultura & Sociedade · Mundo", topic: "Global Climate Summit", posts: "594.3K posts", isGlobal: true });
+          setTrendingTopics(trendsArray);
+        } catch {
+          // Fallback seguro
+          setTrendingTopics([
+            { category: "Tecnologia & IA · Mundo", topic: "Artificial Intelligence", posts: "720K posts", isGlobal: true },
+            { category: "Ciência · Mundo", topic: "Space Exploration", posts: "245K posts", isGlobal: true },
+            { category: "Censo CEEP · Local", topic: "#Meta20Alcançada", posts: "128 posts", isGlobal: false },
+          ]);
+        }
 
       } catch (err) {
         console.error("Erro ao carregar perfil:", err);
@@ -438,7 +475,6 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
         setEditPerfil(prev => ({ ...prev, cover_url: publicUrl }));
         localStorage.setItem(`ceep_profile_cover_${perfil.id}`, publicUrl);
       } catch {
-        // Fallback para FileReader base64
         const reader = new FileReader();
         reader.onloadend = () => {
           const base64 = reader.result as string;
@@ -482,14 +518,12 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
         if (adminErr) throw adminErr;
       }
 
-      // Salva capa no localStorage
       if (editPerfil.cover_url) {
         try {
           localStorage.setItem(`ceep_profile_cover_${perfil.id}`, editPerfil.cover_url);
         } catch {}
       }
 
-      // Sincroniza localmente para sessões de teste e cache
       try {
         const testUserStr = localStorage.getItem('ceep_test_user');
         if (testUserStr) {
@@ -501,8 +535,8 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
             localStorage.setItem('ceep_test_user', JSON.stringify(testUser));
           }
         }
-      } catch (e) {
-        console.warn("Erro ao sincronizar ceep_test_user:", e);
+      } catch (errSync) {
+        console.warn("Erro ao sincronizar ceep_test_user:", errSync);
       }
 
       try {
@@ -541,26 +575,24 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
   };
 
   const handleAddHighlight = () => {
-    const nome = prompt("Nome do novo destaque (ex: Eventos, Campo, Amigos):");
+    const nome = prompt("Nome do novo destaque (ex: Pesquisa, Visitas, Amigos):");
     if (!nome) return;
     const novoHighlight: StoryHighlight = {
       id: `hl-${Date.now()}`,
-      label: nome.slice(0, 10),
-      coverImg: perfil.avatar_url || "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=200&auto=format&fit=crop&q=80",
+      label: nome.slice(0, 12),
+      coverImg: perfil.avatar_url,
     };
-    setHighlights(prev => [...prev, novoHighlight]);
+    const updated = [...highlights, novoHighlight];
+    setHighlights(updated);
+    try {
+      localStorage.setItem(`ceep_highlights_${perfil.id}`, JSON.stringify(updated));
+    } catch {}
   };
 
   if (loading) {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 0", gap: 16 }}>
         <style>{`@keyframes perfilSpin { to { transform: rotate(360deg); } }`}</style>
-
-        {perfil.turma_ou_cargo?.toUpperCase().includes('1º ADM') || perfil.turma_ou_cargo?.toUpperCase().includes('1° ADM') || perfil.turma_ou_cargo?.toUpperCase().includes('1 ADM') ? (
-          <div style={{ marginBottom: 24 }}>
-            <CrachaPesquisador nome={perfil.nome} avatarUrl={perfil.avatar_url} turma={perfil.turma_ou_cargo} />
-          </div>
-        ) : null}
         <div style={{ width: 44, height: 44, border: "3px solid #ede9fe", borderTopColor: "#7c3aed", borderRadius: "50%", animation: "perfilSpin 0.8s linear infinite" }} />
         <span style={{ color: "#7c3aed", fontWeight: 700, fontSize: 14 }}>Carregando perfil...</span>
       </div>
@@ -575,87 +607,103 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
   const activeCover = isEditing ? editPerfil.cover_url : perfil.cover_url;
   const showCover = activeCover && !coverImgErr;
 
-  // Imagens da galeria de Mídia (combina as do usuário com preenchimento visual elegante se tiver poucas)
-  const fallbackMedia = [
-    "https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=500&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=500&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1517457373958-b7bdd4587205?w=500&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=500&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=500&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1543269865-cbf427effbad?w=500&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=500&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1531482615713-2afd69097998?w=500&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=500&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=500&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1517048676732-d65bc937f952?w=500&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1509062522246-3755977927d7?w=500&auto=format&fit=crop&q=80",
-  ];
-
-  const galleryImages = mediaPosts.length > 0 
-    ? mediaPosts.map(p => p.image_url!).concat(fallbackMedia).slice(0, 15)
-    : fallbackMedia;
+  // Fallback de capa gradiente moderno quando o usuário ainda não enviou uma foto de capa
+  const defaultGradientCover = `linear-gradient(135deg, ${g1}dd 0%, ${g2}dd 100%)`;
 
   return (
-    <div style={{ width: "100%", maxWidth: 1080, margin: "0 auto", paddingBottom: 80, fontFamily: "inherit" }}>
+    <div className="w-full max-w-5xl mx-auto pb-24 px-3 sm:px-6 font-sans">
       <style>{`
         @keyframes perfilSpin { to { transform: rotate(360deg); } }
         @keyframes perfilPop { from { opacity:0; transform: scale(0.98) translateY(6px); } to { opacity:1; transform: scale(1) translateY(0); } }
         @keyframes savedPulse { 0%,100% { opacity:1; } 50% { opacity:0.7; } }
         .tab-btn-active { border-bottom: 3.5px solid #0084ff !important; color: #0f172a !important; font-weight: 800 !important; }
-        .highlight-item:hover { transform: scale(1.05); }
+        .highlight-item:hover { transform: scale(1.06); }
+        .icon-stat-btn {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          padding: 8px 12px;
+          border-radius: 9999px;
+          background: #f1f5f9;
+          color: #334155;
+          font-weight: 800;
+          font-size: 13px;
+          border: 1px solid #e2e8f0;
+          transition: all 0.15s ease;
+          cursor: pointer;
+          user-select: none;
+        }
+        .icon-stat-btn:hover, .icon-stat-btn:active {
+          background: #e2e8f0;
+          color: #0f172a;
+          transform: translateY(-1px);
+        }
+        .icon-stat-tooltip {
+          position: absolute;
+          bottom: 115%;
+          left: 50%;
+          transform: translateX(-50%);
+          background: #0f172a;
+          color: #fff;
+          font-size: 11px;
+          font-weight: 700;
+          padding: 5px 9px;
+          border-radius: 8px;
+          white-space: nowrap;
+          pointer-events: none;
+          opacity: 0;
+          transition: opacity 0.15s ease, transform 0.15s ease;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+          z-index: 50;
+        }
+        .icon-stat-btn:hover .icon-stat-tooltip,
+        .icon-stat-btn:focus .icon-stat-tooltip {
+          opacity: 1;
+          transform: translateX(-50%) translateY(-2px);
+        }
       `}</style>
 
       {/* Crachá comemorativo para 1º ADM */}
       {perfil.turma_ou_cargo?.toUpperCase().includes('1º ADM') || perfil.turma_ou_cargo?.toUpperCase().includes('1° ADM') || perfil.turma_ou_cargo?.toUpperCase().includes('1 ADM') ? (
-        <div style={{ marginBottom: 20 }}>
+        <div className="mb-5">
           <CrachaPesquisador nome={perfil.nome} avatarUrl={perfil.avatar_url} turma={perfil.turma_ou_cargo} />
         </div>
       ) : null}
 
-      {/* ── CARD PRINCIPAL COM A CAPA AMPLA DO TOPO ──────────────────────── */}
-      <div style={{
-        background: "#fff",
-        borderRadius: 24,
-        overflow: "hidden",
-        boxShadow: "0 6px 30px rgba(0,0,0,0.06)",
-        border: "1px solid #e2e8f0",
-        animation: "perfilPop 0.35s ease",
-      }}>
+      {/* ── CARD PRINCIPAL COM CAPA RESPONSIVA ────────────────────────────── */}
+      <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-200">
 
-        {/* Capa Panorâmica estilo Facebook */}
-        <div style={{
-          height: 280,
-          position: "relative",
-          overflow: "hidden",
-          backgroundColor: "#1e293b",
-        }}>
+        {/* Capa Panorâmica com adaptação de altura para mobile / desktop */}
+        <div className="h-44 sm:h-64 md:h-72 w-full relative overflow-hidden bg-slate-900">
           {showCover ? (
             <img
               src={activeCover}
               alt="Capa de perfil"
               onError={() => setCoverImgErr(true)}
-              style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }}
+              className="w-full h-full object-cover object-center"
             />
           ) : (
-            <div style={{
-              width: "100%", height: "100%",
-              background: "linear-gradient(135deg, #0284c7 0%, #0369a1 50%, #075985 100%)",
-            }} />
+            <div
+              className="w-full h-full flex items-center justify-center relative"
+              style={{ background: defaultGradientCover }}
+            >
+              <div className="absolute inset-0 bg-black/15" />
+              <span className="text-white/60 font-semibold text-xs tracking-wider uppercase z-10 flex items-center gap-1.5">
+                <Camera className="w-4 h-4 opacity-75" /> Adicione uma capa personalizada
+              </span>
+            </div>
           )}
 
-          {/* Sombra sutil superior/inferior para contraste */}
-          <div style={{
-            position: "absolute", inset: 0,
-            background: "linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, transparent 40%, rgba(0,0,0,0.4) 100%)",
-            pointerEvents: "none",
-          }} />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20 pointer-events-none" />
 
           {/* Input oculto para capa */}
           <input
             ref={coverInputRef}
             type="file"
             accept="image/*"
-            style={{ display: "none" }}
+            className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) void handleCoverSelect(file);
@@ -663,80 +711,47 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
             }}
           />
 
-          {/* Botão de Trocar Capa */}
-          <div style={{ position: "absolute", top: 16, right: 16, display: "flex", gap: 8, zIndex: 10 }}>
+          {/* Botões do topo da Capa */}
+          <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex items-center gap-2 z-10">
             <button
               type="button"
               onClick={() => coverInputRef.current?.click()}
               title="Trocar foto de capa"
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 6,
-                padding: "8px 14px", borderRadius: 99,
-                background: "rgba(255,255,255,0.92)",
-                backdropFilter: "blur(8px)",
-                border: "1px solid rgba(255,255,255,0.4)",
-                color: "#1e293b", fontSize: 12, fontWeight: 700,
-                cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.15)",
-                transition: "all 0.15s",
-              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-full bg-white/90 hover:bg-white text-slate-800 text-xs font-bold shadow-md backdrop-blur-md transition cursor-pointer"
             >
               {uploadingCover ? (
-                <Loader2 style={{ width: 14, height: 14, animation: "perfilSpin 0.8s linear infinite" }} />
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
               ) : (
-                <Camera style={{ width: 14, height: 14, color: "#0284c7" }} />
+                <Camera className="w-3.5 h-3.5 text-blue-600" />
               )}
-              <span>{uploadingCover ? "Atualizando capa..." : "Editar capa"}</span>
+              <span className="hidden sm:inline">{uploadingCover ? "Enviando..." : "Editar capa"}</span>
             </button>
 
             <button
               type="button"
               onClick={() => isEditing ? handleCancel() : setIsEditing(true)}
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 6,
-                padding: "8px 16px", borderRadius: 99,
-                background: isEditing ? "rgba(239,68,68,0.9)" : "rgba(15,23,42,0.75)",
-                border: "none",
-                color: "#fff", fontSize: 12, fontWeight: 700,
-                cursor: "pointer", backdropFilter: "blur(8px)",
-                boxShadow: "0 2px 10px rgba(0,0,0,0.15)",
-                transition: "all 0.2s",
-              }}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs font-bold shadow-md backdrop-blur-md transition cursor-pointer text-white ${
+                isEditing ? "bg-red-600/90 hover:bg-red-700" : "bg-slate-900/80 hover:bg-slate-900"
+              }`}
             >
-              {isEditing ? <X style={{ width: 13, height: 13 }} /> : <Edit3 style={{ width: 13, height: 13 }} />}
-              {isEditing ? "Cancelar" : "Editar perfil"}
+              {isEditing ? <X className="w-3.5 h-3.5" /> : <Edit3 className="w-3.5 h-3.5" />}
+              <span>{isEditing ? "Cancelar" : "Editar perfil"}</span>
             </button>
           </div>
         </div>
 
-        {/* ── SEÇÃO DE CABEÇALHO COM AVATAR SOBREPOSTO E BOTÕES ESTILO FACEBOOK ── */}
-        <div style={{ padding: "0 24px 20px", position: "relative" }}>
+        {/* ── CABEÇALHO COM AVATAR SOBREPOSTO E MÉTRICAS EM ÍCONES ────────── */}
+        <div className="px-4 sm:px-7 pb-5 relative">
           
-          <div style={{
-            display: "flex",
-            flexDirection: "row",
-            alignItems: "flex-end",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: 16,
-            marginTop: -68,
-            marginBottom: 16,
-          }}>
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 -mt-14 sm:-mt-20 md:-mt-24 mb-5">
             {/* Bloco Esquerda: Avatar Circular e Nome */}
-            <div style={{ display: "flex", alignItems: "flex-end", gap: 18, flexWrap: "wrap" }}>
+            <div className="flex flex-col sm:flex-row sm:items-end gap-4">
               
-              {/* Avatar com borda branca grossa */}
-              <div style={{ position: "relative", flexShrink: 0 }}>
+              {/* Avatar com borda branca */}
+              <div className="relative inline-block self-start sm:self-auto flex-shrink-0">
                 <div
-                  style={{
-                    width: 140, height: 140, borderRadius: "50%",
-                    border: "5px solid #fff",
-                    background: `linear-gradient(135deg,${g1},${g2})`,
-                    overflow: "hidden",
-                    boxShadow: "0 6px 22px rgba(0,0,0,0.18)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    position: "relative",
-                    cursor: isEditing ? "pointer" : "default",
-                  }}
+                  className="w-24 h-24 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full border-4 sm:border-[5px] border-white shadow-lg overflow-hidden flex items-center justify-center relative bg-slate-100"
+                  style={{ background: `linear-gradient(135deg,${g1},${g2})` }}
                   onClick={() => {
                     if (isEditing) fileInputRef.current?.click();
                   }}
@@ -747,35 +762,28 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
                       src={activeAvatar}
                       alt={editPerfil.nome || perfil.nome}
                       onError={() => setImgErr(true)}
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      className="w-full h-full object-cover"
                     />
                   ) : (
-                    <span style={{ fontWeight: 900, fontSize: 44, color: "#fff", letterSpacing: "-1px" }}>
+                    <span className="font-black text-3xl sm:text-4xl text-white">
                       {getInitials(editPerfil.nome || perfil.nome)}
                     </span>
                   )}
 
                   {isEditing && (
-                    <div style={{
-                      position: "absolute", inset: 0,
-                      background: "rgba(15,23,42,0.5)",
-                      display: "flex", flexDirection: "column",
-                      alignItems: "center", justifyContent: "center",
-                      color: "#fff",
-                    }}>
+                    <div className="absolute inset-0 bg-slate-900/60 flex flex-col items-center justify-center text-white cursor-pointer">
                       {uploadingImg ? (
-                        <Loader2 style={{ width: 26, height: 26, animation: "perfilSpin 0.8s linear infinite" }} />
+                        <Loader2 className="w-6 h-6 animate-spin" />
                       ) : (
                         <>
-                          <Camera style={{ width: 22, height: 22, marginBottom: 2 }} />
-                          <span style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase" }}>Alterar</span>
+                          <Camera className="w-5 h-5 mb-1" />
+                          <span className="text-[10px] font-black uppercase">Trocar</span>
                         </>
                       )}
                     </div>
                   )}
                 </div>
 
-                {/* Ícone de status ou botão de câmera */}
                 {isEditing ? (
                   <button
                     type="button"
@@ -783,211 +791,201 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
                       e.stopPropagation();
                       fileInputRef.current?.click();
                     }}
-                    title="Escolher foto do dispositivo"
-                    style={{
-                      position: "absolute", bottom: 6, right: 6,
-                      width: 36, height: 36, borderRadius: "50%",
-                      background: "#0084ff", border: "3px solid #fff",
-                      color: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
-                      cursor: "pointer", boxShadow: "0 2px 10px rgba(0,132,255,0.4)",
-                    }}
+                    title="Escolher foto"
+                    className="absolute bottom-1 right-1 w-8 h-8 rounded-full bg-blue-600 text-white border-2 border-white flex items-center justify-center shadow-md cursor-pointer hover:bg-blue-700"
                   >
-                    <Camera style={{ width: 17, height: 17 }} />
+                    <Camera className="w-4 h-4" />
                   </button>
                 ) : (
-                  <div style={{
-                    position: "absolute", bottom: 8, right: 8,
-                    width: 22, height: 22, borderRadius: "50%",
-                    background: "#10b981", border: "3.5px solid #fff",
-                    boxShadow: "0 2px 6px rgba(16,185,129,0.4)",
-                  }} />
+                  <div className="absolute bottom-2 right-2 w-5 h-5 rounded-full bg-emerald-500 border-2 border-white shadow-sm" />
                 )}
               </div>
 
-              {/* Informações do usuário: Nome e Amigos */}
-              <div style={{ paddingBottom: 6 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                  <h1 style={{ fontWeight: 900, fontSize: 26, color: "#0f172a", margin: 0, letterSpacing: "-0.5px" }}>
+              {/* Informações: Nome, Turma e Bio */}
+              <div className="pb-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="font-black text-xl sm:text-2xl text-slate-900 tracking-tight m-0">
                     {perfil.nome}
                   </h1>
-                  <span style={{
-                    padding: "3px 12px", borderRadius: 99, fontSize: 11, fontWeight: 800,
-                    color: badge.color, background: badge.bg, border: `1px solid ${badge.border}`,
-                  }}>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-black tracking-wide"
+                    style={{ color: badge.color, background: badge.bg, border: `1px solid ${badge.border}` }}>
                     {badge.label}
                   </span>
                   {saved && (
-                    <span style={{
-                      display: "flex", alignItems: "center", gap: 4,
-                      padding: "3px 10px", borderRadius: 99, fontSize: 11, fontWeight: 700,
-                      color: "#10b981", background: "#ecfdf5", border: "1px solid #a7f3d0",
-                      animation: "savedPulse 1s ease infinite",
-                    }}>
-                      <CheckCircle style={{ width: 11, height: 11 }} /> Salvo!
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200">
+                      <CheckCircle className="w-3 h-3" /> Salvo!
                     </span>
                   )}
                 </div>
-                <p style={{ color: "#64748b", fontSize: 13, fontWeight: 600, margin: "4px 0 0" }}>
-                  {totalPessoasCount} amigos · {perfil.turma_ou_cargo || "CEEP Seabra"}
+                <p className="text-xs sm:text-sm font-semibold text-slate-500 mt-1">
+                  {perfil.turma_ou_cargo || "CEEP Seabra"} · {escolaNome}
                 </p>
-                {perfil.bio && (
-                  <p style={{ color: "#475569", fontSize: 14, margin: "8px 0 0", lineHeight: 1.5, maxWidth: 440 }}>
+                {perfil.bio ? (
+                  <p className="text-xs sm:text-sm text-slate-600 mt-2 max-w-lg leading-relaxed">
                     {perfil.bio}
+                  </p>
+                ) : (
+                  <p className="text-xs text-slate-400 italic mt-1.5">
+                    Nenhuma bio adicionada ainda. Clique em "Editar perfil" para escrever sobre você.
                   </p>
                 )}
               </div>
             </div>
 
-            {/* Bloco Direita: Botões idênticos aos da imagem (Adicionar aos amigos, Mensagem, Dropdown) */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, paddingBottom: 8 }}>
+            {/* ── BLOCO DIREITA: ÍCONES DE STATUS / INTERAÇÃO COM TOOLTIP ─────── */}
+            <div className="flex items-center flex-wrap gap-2 pt-2 md:pt-0">
+              
+              {/* 1. Coletas (Fichas) */}
               <button
                 type="button"
-                onClick={() => navigate("/membros")}
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 6,
-                  padding: "8px 16px", borderRadius: 10,
-                  background: "#0084ff", color: "#fff",
-                  border: "none", fontSize: 13, fontWeight: 700,
-                  cursor: "pointer", boxShadow: "0 2px 8px rgba(0,132,255,0.3)",
-                  transition: "all 0.15s",
-                }}
+                className="icon-stat-btn"
+                tabIndex={0}
+                onClick={() => navigate("/coleta")}
+                aria-label={`Coletas: ${totalFichas} fichas registradas`}
               >
-                <UserPlus style={{ width: 15, height: 15 }} />
-                <span>Adicionar aos amigos</span>
+                <FileText className="w-4 h-4 text-indigo-600" />
+                <span>{totalFichas}</span>
+                <span className="icon-stat-tooltip">Coletas Registradas: {totalFichas} fichas</span>
               </button>
 
+              {/* 2. Postagens no Feed */}
+              <button
+                type="button"
+                className="icon-stat-btn"
+                tabIndex={0}
+                onClick={() => navigate("/feed")}
+                aria-label={`Postagens: ${xpStats.posts} publicações no Feed`}
+              >
+                <ImageIcon className="w-4 h-4 text-blue-600" />
+                <span>{xpStats.posts}</span>
+                <span className="icon-stat-tooltip">Postagens no Feed: {xpStats.posts}</span>
+              </button>
+
+              {/* 3. Curtidas Recebidas */}
+              <button
+                type="button"
+                className="icon-stat-btn"
+                tabIndex={0}
+                aria-label={`Curtidas: ${xpStats.likes} curtidas recebidas`}
+              >
+                <Heart className="w-4 h-4 text-rose-500 fill-rose-500" />
+                <span>{xpStats.likes}</span>
+                <span className="icon-stat-tooltip">Curtidas Recebidas: {xpStats.likes}</span>
+              </button>
+
+              {/* 4. Seguindo (Colegas que você curtiu) */}
+              <button
+                type="button"
+                className="icon-stat-btn"
+                tabIndex={0}
+                onClick={() => navigate("/membros")}
+                aria-label={`Seguindo: ${seguindoCount} colegas`}
+              >
+                <Users className="w-4 h-4 text-emerald-600" />
+                <span>{seguindoCount}</span>
+                <span className="icon-stat-tooltip">Seguindo: {seguindoCount} colegas</span>
+              </button>
+
+              {/* 5. Seguidores (Colegas que curtiram seu perfil) */}
+              <button
+                type="button"
+                className="icon-stat-btn"
+                tabIndex={0}
+                aria-label={`Seguidores: ${seguidoresCount} seguidores`}
+              >
+                <Sparkles className="w-4 h-4 text-amber-500" />
+                <span>{seguidoresCount}</span>
+                <span className="icon-stat-tooltip">Seguidores: {seguidoresCount}</span>
+              </button>
+
+              {/* 6. Ícone Oficial do Lyka Chat (substituindo o antigo botão Mensagem) */}
               <button
                 type="button"
                 onClick={() => navigate("/lyka-chat")}
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 6,
-                  padding: "8px 14px", borderRadius: 10,
-                  background: "#e4e6eb", color: "#050505",
-                  border: "none", fontSize: 13, fontWeight: 700,
-                  cursor: "pointer", transition: "all 0.15s",
-                }}
+                className="icon-stat-btn !bg-violet-600 hover:!bg-violet-700 !text-white !border-violet-600 shadow-sm"
+                tabIndex={0}
+                aria-label="Abrir Lyka Chat"
               >
-                <MessageCircle style={{ width: 15, height: 15 }} />
-                <span>Mensagem</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsEditing(v => !v)}
-                title="Mais opções"
-                style={{
-                  display: "inline-flex", alignItems: "center", justifyContent: "center",
-                  width: 38, height: 38, borderRadius: 10,
-                  background: "#e4e6eb", color: "#050505",
-                  border: "none", cursor: "pointer",
-                }}
-              >
-                <ChevronDown style={{ width: 16, height: 16 }} />
+                <LaikaNavIcon size={18} />
+                <span className="icon-stat-tooltip">Abrir Lyka Chat</span>
               </button>
             </div>
+
           </div>
 
-          {/* ── DESTAQUES DE STORIES CIRCULARES (Destaques, Amor, Ensaio, Songs, City, Novo) ── */}
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 18,
-            padding: "16px 0 12px",
-            borderTop: "1px solid #f1f5f9",
-            overflowX: "auto",
-            scrollbarWidth: "none",
-          }}>
-            {highlights.map((hl) => (
-              <div
-                key={hl.id}
-                className="highlight-item"
-                style={{
-                  display: "flex", flexDirection: "column", alignItems: "center",
-                  gap: 6, cursor: "pointer", flexShrink: 0,
-                  transition: "transform 0.15s",
-                }}
-              >
-                <div style={{
-                  width: 60, height: 60, borderRadius: "50%",
-                  padding: 2.5,
-                  background: "linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                }}>
-                  <div style={{
-                    width: "100%", height: "100%", borderRadius: "50%",
-                    border: "2px solid #fff", overflow: "hidden", background: "#f1f5f9",
-                  }}>
-                    <img
-                      src={hl.coverImg}
-                      alt={hl.label}
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                    />
+          {/* ── DESTAQUES DE STORIES (ESTILO INSTAGRAM NOVO: VAZIO OU COM BOTÃO NOVO) ── */}
+          <div className="pt-4 border-t border-slate-100">
+            {highlights.length > 0 ? (
+              <div className="flex items-center gap-4 overflow-x-auto pb-2 scrollbar-none">
+                {highlights.map((hl) => (
+                  <div
+                    key={hl.id}
+                    className="highlight-item flex flex-col items-center gap-1.5 cursor-pointer flex-shrink-0 transition-transform"
+                  >
+                    <div className="w-14 h-14 rounded-full p-[2px] bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 shadow-sm">
+                      <div className="w-full h-full rounded-full border-2 border-white overflow-hidden bg-slate-100">
+                        <img
+                          src={hl.coverImg || perfil.avatar_url}
+                          alt={hl.label}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    </div>
+                    <span className="text-[11px] font-bold text-slate-700 max-w-[64px] truncate text-center">
+                      {hl.label}
+                    </span>
                   </div>
+                ))}
+
+                {/* Botão de adicionar novo destaque */}
+                <div
+                  className="highlight-item flex flex-col items-center gap-1.5 cursor-pointer flex-shrink-0 transition-transform"
+                  onClick={handleAddHighlight}
+                >
+                  <div className="w-14 h-14 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center bg-slate-50 text-slate-500 hover:border-slate-400">
+                    <Plus className="w-5 h-5" />
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-500">Novo</span>
                 </div>
-                <span style={{ fontSize: 11, fontWeight: 700, color: "#475569" }}>
-                  {hl.label}
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 py-1">
+                <button
+                  type="button"
+                  onClick={handleAddHighlight}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition cursor-pointer"
+                >
+                  <div className="w-5 h-5 rounded-full border border-slate-400 border-dashed flex items-center justify-center text-slate-600">
+                    <Plus className="w-3 h-3" />
+                  </div>
+                  <span>Criar primeiro Destaque de Stories</span>
+                </button>
+                <span className="text-xs text-slate-400 hidden sm:inline">
+                  (Seus stories arquivados aparecerão organizados aqui no perfil)
                 </span>
               </div>
-            ))}
-
-            {/* Botão circular de "Novo" (+) */}
-            <div
-              className="highlight-item"
-              onClick={handleAddHighlight}
-              style={{
-                display: "flex", flexDirection: "column", alignItems: "center",
-                gap: 6, cursor: "pointer", flexShrink: 0,
-                transition: "transform 0.15s",
-              }}
-            >
-              <div style={{
-                width: 60, height: 60, borderRadius: "50%",
-                border: "2px dashed #cbd5e1",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                background: "#f8fafc", color: "#64748b",
-              }}>
-                <Plus style={{ width: 24, height: 24 }} />
-              </div>
-              <span style={{ fontSize: 11, fontWeight: 700, color: "#64748b" }}>
-                Novo
-              </span>
-            </div>
+            )}
           </div>
 
-          {/* ── BARRA DE ABAS SOCIAL (Mídia v, Respostas, Repostagens, Postagens) ── */}
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 24,
-            borderTop: "1px solid #e2e8f0",
-            paddingTop: 4,
-          }}>
+          {/* ── BARRA DE ABAS SOCIAL (Mídia ⌵, Respostas, Repostagens, Postagens) ── */}
+          <div className="flex items-center gap-4 sm:gap-6 border-t border-slate-200 mt-3 overflow-x-auto scrollbar-none">
             <button
               type="button"
               onClick={() => setActiveTab("midia")}
-              className={activeTab === "midia" ? "tab-btn-active" : ""}
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 6,
-                padding: "14px 4px", border: "none", background: "none",
-                fontSize: 15, fontWeight: activeTab === "midia" ? 800 : 600,
-                color: activeTab === "midia" ? "#0f172a" : "#64748b",
-                cursor: "pointer", transition: "all 0.15s",
-              }}
+              className={`inline-flex items-center gap-1.5 py-3 px-1 border-b-2 text-xs sm:text-sm font-semibold transition cursor-pointer ${
+                activeTab === "midia" ? "border-blue-600 text-slate-900 !font-extrabold" : "border-transparent text-slate-500 hover:text-slate-800"
+              }`}
             >
               <span>Mídia</span>
-              <ChevronDown style={{ width: 14, height: 14 }} />
+              <ChevronDown className="w-3.5 h-3.5 opacity-70" />
             </button>
 
             <button
               type="button"
               onClick={() => setActiveTab("respostas")}
-              className={activeTab === "respostas" ? "tab-btn-active" : ""}
-              style={{
-                padding: "14px 4px", border: "none", background: "none",
-                fontSize: 15, fontWeight: activeTab === "respostas" ? 800 : 600,
-                color: activeTab === "respostas" ? "#0f172a" : "#64748b",
-                cursor: "pointer", transition: "all 0.15s",
-              }}
+              className={`py-3 px-1 border-b-2 text-xs sm:text-sm font-semibold transition cursor-pointer ${
+                activeTab === "respostas" ? "border-blue-600 text-slate-900 !font-extrabold" : "border-transparent text-slate-500 hover:text-slate-800"
+              }`}
             >
               Respostas
             </button>
@@ -995,13 +993,9 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
             <button
               type="button"
               onClick={() => setActiveTab("repostagens")}
-              className={activeTab === "repostagens" ? "tab-btn-active" : ""}
-              style={{
-                padding: "14px 4px", border: "none", background: "none",
-                fontSize: 15, fontWeight: activeTab === "repostagens" ? 800 : 600,
-                color: activeTab === "repostagens" ? "#0f172a" : "#64748b",
-                cursor: "pointer", transition: "all 0.15s",
-              }}
+              className={`py-3 px-1 border-b-2 text-xs sm:text-sm font-semibold transition cursor-pointer ${
+                activeTab === "repostagens" ? "border-blue-600 text-slate-900 !font-extrabold" : "border-transparent text-slate-500 hover:text-slate-800"
+              }`}
             >
               Repostagens
             </button>
@@ -1009,13 +1003,9 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
             <button
               type="button"
               onClick={() => setActiveTab("postagens")}
-              className={activeTab === "postagens" ? "tab-btn-active" : ""}
-              style={{
-                padding: "14px 4px", border: "none", background: "none",
-                fontSize: 15, fontWeight: activeTab === "postagens" ? 800 : 600,
-                color: activeTab === "postagens" ? "#0f172a" : "#64748b",
-                cursor: "pointer", transition: "all 0.15s",
-              }}
+              className={`py-3 px-1 border-b-2 text-xs sm:text-sm font-semibold transition cursor-pointer ${
+                activeTab === "postagens" ? "border-blue-600 text-slate-900 !font-extrabold" : "border-transparent text-slate-500 hover:text-slate-800"
+              }`}
             >
               Postagens
             </button>
@@ -1026,25 +1016,19 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
 
       {/* ── MODO EDIÇÃO DO PERFIL ─────────────────────────────────────────── */}
       {isEditing && (
-        <form onSubmit={handleSave}
-          style={{
-            background: "#fff", borderRadius: 24, padding: 28,
-            marginTop: 18, boxShadow: "0 4px 24px rgba(0,0,0,0.07)",
-            border: "1px solid #e2e8f0", animation: "perfilPop 0.3s ease",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24, paddingBottom: 16, borderBottom: "1px solid #f1f5f9" }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,#0084ff,#0284c7)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Edit3 style={{ width: 16, height: 16, color: "#fff" }} />
+        <form onSubmit={handleSave} className="bg-white rounded-3xl p-6 sm:p-8 mt-5 shadow-sm border border-slate-200">
+          <div className="flex items-center gap-3 pb-4 mb-5 border-b border-slate-100">
+            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white">
+              <Edit3 className="w-4 h-4" />
             </div>
             <div>
-              <p style={{ fontWeight: 800, fontSize: 15, color: "#0f172a", margin: 0 }}>Editar Perfil</p>
-              <p style={{ fontSize: 12, color: "#94a3b8", margin: 0 }}>Atualize sua foto, capa e informações públicas</p>
+              <p className="font-extrabold text-sm text-slate-900 m-0">Editar Perfil</p>
+              <p className="text-xs text-slate-400 m-0">Atualize sua foto, capa e dados cadastrais</p>
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-            <div style={{ gridColumn: "1/-1" }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2">
               <Field id="edit-nome" label="Nome Completo" value={editPerfil.nome}
                 onChange={v => setEditPerfil(p => ({ ...p, nome: v }))} />
             </div>
@@ -1052,19 +1036,19 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
               onChange={v => setEditPerfil(p => ({ ...p, turma_ou_cargo: v }))} />
             <Field id="edit-tel" label="Telefone" value={editPerfil.telefone}
               onChange={v => setEditPerfil(p => ({ ...p, telefone: v }))} placeholder="(75) 99999-9999" />
-            <div style={{ gridColumn: "1/-1" }}>
+            <div className="sm:col-span-2">
               <Field id="edit-bio" label="Bio" value={editPerfil.bio}
                 onChange={v => setEditPerfil(p => ({ ...p, bio: v }))} multiline
-                placeholder="Conte um pouco sobre você..." />
+                placeholder="Conte um pouco sobre você e sua atuação no Censo..." />
             </div>
 
             {/* Foto de Perfil */}
-            <div style={{ gridColumn: "1/-1", display: "flex", flexDirection: "column", gap: 10 }}>
+            <div className="sm:col-span-2 flex flex-col gap-2.5">
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
-                style={{ display: "none" }}
+                className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) void handleFileSelect(file);
@@ -1072,40 +1056,28 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
                 }}
               />
 
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                   Foto de Perfil
                 </label>
-                <div style={{ display: "flex", background: "#f1f5f9", padding: 3, borderRadius: 10, gap: 2 }}>
+                <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
                   <button
                     type="button"
                     onClick={() => setAvatarInputMode("upload")}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 6,
-                      padding: "6px 12px", borderRadius: 8, border: "none",
-                      fontSize: 12, fontWeight: 700, cursor: "pointer",
-                      background: avatarInputMode === "upload" ? "#fff" : "transparent",
-                      color: avatarInputMode === "upload" ? "#0084ff" : "#64748b",
-                      boxShadow: avatarInputMode === "upload" ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
-                    }}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition ${
+                      avatarInputMode === "upload" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500"
+                    }`}
                   >
-                    <Upload style={{ width: 13, height: 13 }} />
-                    Upload
+                    <Upload className="w-3.5 h-3.5" /> Upload
                   </button>
                   <button
                     type="button"
                     onClick={() => setAvatarInputMode("url")}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 6,
-                      padding: "6px 12px", borderRadius: 8, border: "none",
-                      fontSize: 12, fontWeight: 700, cursor: "pointer",
-                      background: avatarInputMode === "url" ? "#fff" : "transparent",
-                      color: avatarInputMode === "url" ? "#0084ff" : "#64748b",
-                      boxShadow: avatarInputMode === "url" ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
-                    }}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition ${
+                      avatarInputMode === "url" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500"
+                    }`}
                   >
-                    <LinkIcon style={{ width: 13, height: 13 }} />
-                    URL da Foto
+                    <LinkIcon className="w-3.5 h-3.5" /> URL da Foto
                   </button>
                 </div>
               </div>
@@ -1122,248 +1094,160 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
                       if (file) void handleFileSelect(file);
                     }}
                     onClick={() => fileInputRef.current?.click()}
-                    style={{
-                      border: isDragging ? "2px dashed #0084ff" : "2px dashed #cbd5e1",
-                      borderRadius: 16,
-                      background: isDragging ? "#eff6ff" : "#f8fafc",
-                      padding: "22px 18px",
-                      textAlign: "center",
-                      cursor: "pointer",
-                      transition: "all 0.2s",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      gap: 8,
-                    }}
+                    className={`border-2 border-dashed rounded-2xl p-5 text-center cursor-pointer transition flex flex-col items-center gap-2 ${
+                      isDragging ? "border-blue-600 bg-blue-50" : "border-slate-300 bg-slate-50 hover:bg-slate-100/70"
+                    }`}
                   >
                     {uploadingImg ? (
-                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "10px 0" }}>
-                        <Loader2 style={{ width: 30, height: 30, color: "#0084ff", animation: "perfilSpin 0.8s linear infinite" }} />
-                        <span style={{ fontSize: 13, fontWeight: 700, color: "#0084ff" }}>
-                          Processando e otimizando sua foto...
-                        </span>
+                      <div className="flex flex-col items-center gap-2 py-2">
+                        <Loader2 className="w-7 h-7 text-blue-600 animate-spin" />
+                        <span className="text-xs font-bold text-blue-600">Otimizando sua foto...</span>
                       </div>
                     ) : (
                       <>
-                        <div style={{
-                          width: 48, height: 48, borderRadius: 14,
-                          background: "#eff6ff", color: "#0084ff",
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                        }}>
-                          <Camera style={{ width: 24, height: 24 }} />
+                        <div className="w-11 h-11 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center">
+                          <Camera className="w-5 h-5" />
                         </div>
-                        <div>
-                          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#1e293b" }}>
-                            Clique para escolher foto do aparelho
-                          </p>
-                          <p style={{ margin: "3px 0 0", fontSize: 11, color: "#64748b", fontWeight: 500 }}>
-                            Formatos: JPG, PNG, WEBP (recorte automático)
-                          </p>
-                        </div>
+                        <p className="text-xs font-bold text-slate-700 m-0">Clique para escolher foto do aparelho</p>
+                        <p className="text-[11px] text-slate-400 m-0">JPG, PNG, WEBP (recorte e compressão automáticos)</p>
                       </>
                     )}
                   </div>
 
                   {uploadMsg && (
-                    <div style={{
-                      marginTop: 8,
-                      padding: "10px 14px",
-                      borderRadius: 12,
-                      fontSize: 12,
-                      fontWeight: 600,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      background: uploadMsg.type === "success" ? "#ecfdf5" : "#fef2f2",
-                      color: uploadMsg.type === "success" ? "#065f46" : "#991b1b",
-                      border: `1px solid ${uploadMsg.type === "success" ? "#a7f3d0" : "#fecaca"}`,
-                    }}>
-                      {uploadMsg.type === "success" ? (
-                        <Check style={{ width: 15, height: 15, flexShrink: 0 }} />
-                      ) : (
-                        <AlertCircle style={{ width: 15, height: 15, flexShrink: 0 }} />
-                      )}
+                    <div className={`mt-2 p-3 rounded-xl text-xs font-semibold flex items-center gap-2 ${
+                      uploadMsg.type === "success" ? "bg-emerald-50 text-emerald-800 border border-emerald-200" : "bg-red-50 text-red-800 border border-red-200"
+                    }`}>
+                      {uploadMsg.type === "success" ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
                       <span>{uploadMsg.text}</span>
                     </div>
                   )}
                 </div>
               ) : (
-                <div>
-                  <Field
-                    id="edit-avatar"
-                    label=""
-                    value={editPerfil.avatar_url}
-                    onChange={(v) => {
-                      setEditPerfil(p => ({ ...p, avatar_url: v }));
-                      setImgErr(false);
-                      setUploadMsg(null);
-                    }}
-                    placeholder="Cole aqui o link da imagem (https://...)"
-                  />
-                </div>
+                <Field
+                  id="edit-avatar"
+                  label=""
+                  value={editPerfil.avatar_url}
+                  onChange={(v) => {
+                    setEditPerfil(p => ({ ...p, avatar_url: v }));
+                    setImgErr(false);
+                    setUploadMsg(null);
+                  }}
+                  placeholder="Cole aqui o link direto da imagem (https://...)"
+                />
               )}
             </div>
           </div>
 
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 24, paddingTop: 16, borderTop: "1px solid #f1f5f9" }}>
-            <button type="button" onClick={handleCancel}
-              style={{
-                padding: "10px 20px", borderRadius: 12, border: "1.5px solid #e2e8f0",
-                background: "#fff", color: "#64748b", fontWeight: 700, fontSize: 13,
-                cursor: "pointer", fontFamily: "inherit",
-              }}
+          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 font-bold text-xs hover:bg-slate-50 cursor-pointer"
             >
               Cancelar
             </button>
-            <button type="submit" disabled={saving}
-              style={{
-                padding: "10px 24px", borderRadius: 12, border: "none",
-                background: saving ? "rgba(0,132,255,0.5)" : "#0084ff",
-                color: "#fff", fontWeight: 800, fontSize: 13,
-                cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit",
-                display: "flex", alignItems: "center", gap: 8,
-                boxShadow: "0 4px 14px rgba(0,132,255,0.35)",
-              }}
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-md transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
-              <Save style={{ width: 14, height: 14 }} />
-              {saving ? "Salvando..." : "Salvar alterações"}
+              <Save className="w-3.5 h-3.5" />
+              <span>{saving ? "Salvando..." : "Salvar alterações"}</span>
             </button>
           </div>
         </form>
       )}
 
-      {/* ── CORPO PRINCIPAL COM FEED DE MÍDIA E SIDEBAR "O QUE ESTÁ ACONTECENDO?" ── */}
-      <div style={{
-        marginTop: 18,
-        display: "grid",
-        gridTemplateColumns: "1fr 340px",
-        gap: 18,
-      }}>
+      {/* ── CORPO PRINCIPAL COM GRID RESPONSIVA: MÍDIA + TRENDS ESTILO TWITTER ── */}
+      <div className="mt-5 grid grid-cols-1 lg:grid-cols-12 gap-5">
 
-        {/* Coluna Esquerda: Grid de Mídia / Fotos / Publicações */}
-        <div>
+        {/* Coluna Principal: Galeria de Mídias Reais ou Postagens */}
+        <div className="lg:col-span-8 order-2 lg:order-1">
           {activeTab === "midia" && (
-            <div style={{
-              background: "#fff",
-              borderRadius: 24,
-              padding: 16,
-              border: "1px solid #e2e8f0",
-              boxShadow: "0 2px 14px rgba(0,0,0,0.04)",
-            }}>
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(3, 1fr)",
-                gap: 6,
-                borderRadius: 16,
-                overflow: "hidden",
-              }}>
-                {galleryImages.map((src, index) => (
-                  <div
-                    key={index}
-                    style={{
-                      aspectRatio: "1/1",
-                      overflow: "hidden",
-                      background: "#f1f5f9",
-                      position: "relative",
-                      cursor: "pointer",
-                    }}
-                    onClick={() => {
-                      // Abre imagem em tela cheia se desejar
-                      window.open(src, "_blank");
-                    }}
-                  >
-                    <img
-                      src={src}
-                      alt={`Mídia ${index + 1}`}
-                      style={{
-                        width: "100%", height: "100%",
-                        objectFit: "cover",
-                        transition: "transform 0.3s ease",
-                      }}
-                      onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.05)")}
-                      onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
-                    />
-                    {/* Efeito sutil ao passar o cursor */}
-                    <div style={{
-                      position: "absolute", inset: 0,
-                      background: "rgba(0,0,0,0.15)",
-                      opacity: 0, transition: "opacity 0.2s",
-                      display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
-                      color: "#fff", fontWeight: 700, fontSize: 13,
-                    }}
-                    onMouseEnter={e => (e.currentTarget.style.opacity = "1")}
-                    onMouseLeave={e => (e.currentTarget.style.opacity = "0")}
+            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200 shadow-sm">
+              {mediaPosts.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 rounded-2xl overflow-hidden">
+                  {mediaPosts.map((post) => (
+                    <div
+                      key={post.id}
+                      className="aspect-square overflow-hidden bg-slate-100 relative group cursor-pointer"
+                      onClick={() => window.open(post.image_url, "_blank")}
                     >
-                      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                        <Heart style={{ width: 16, height: 16, fill: "#fff" }} />
-                        <span>{12 + (index * 7) % 50}</span>
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                        <MessageCircle style={{ width: 16, height: 16, fill: "#fff" }} />
-                        <span>{2 + (index * 3) % 15}</span>
+                      <img
+                        src={post.image_url}
+                        alt="Publicação com mídia"
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 text-white font-bold text-xs">
+                        <div className="flex items-center gap-1">
+                          <Heart className="w-4 h-4 fill-white" />
+                          <span>{post.likes_count || 0}</span>
+                        </div>
                       </div>
                     </div>
+                  ))}
+                </div>
+              ) : (
+                /* Estado Vazio Real estilo Instagram quando a conta é nova */
+                <div className="py-14 px-4 text-center flex flex-col items-center justify-center">
+                  <div className="w-16 h-16 rounded-full border-2 border-slate-300 flex items-center justify-center text-slate-400 mb-3">
+                    <Camera className="w-8 h-8 opacity-75" />
                   </div>
-                ))}
-              </div>
+                  <h3 className="font-extrabold text-base text-slate-800 m-0">Ainda não há mídias publicadas</h3>
+                  <p className="text-xs text-slate-500 mt-1 max-w-sm">
+                    Quando você compartilhar fotos ou registros de campo no Feed do Censo, elas ficarão organizadas aqui.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/feed")}
+                    className="mt-4 px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm transition cursor-pointer"
+                  >
+                    Publicar foto no Feed
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
           {activeTab === "postagens" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div className="flex flex-col gap-3">
               {userPosts.length === 0 ? (
-                <div style={{
-                  background: "#fff", borderRadius: 20, padding: 36, textAlign: "center",
-                  border: "1px solid #e2e8f0", color: "#64748b",
-                }}>
-                  <p style={{ fontWeight: 700, fontSize: 16, color: "#1e293b", margin: 0 }}>Você ainda não publicou no Feed</p>
-                  <p style={{ fontSize: 13, margin: "6px 0 16px" }}>Compartilhe suas descobertas de campo com os colegas!</p>
+                <div className="bg-white rounded-3xl p-10 text-center border border-slate-200">
+                  <p className="font-extrabold text-sm text-slate-800 m-0">Nenhuma postagem realizada ainda</p>
+                  <p className="text-xs text-slate-500 mt-1 mb-4">Compartilhe suas descobertas de pesquisa com seus colegas de escola!</p>
                   <button
                     type="button"
                     onClick={() => navigate("/feed")}
-                    style={{
-                      padding: "8px 18px", borderRadius: 10,
-                      background: "#0084ff", color: "#fff", border: "none",
-                      fontSize: 13, fontWeight: 700, cursor: "pointer",
-                    }}
+                    className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold shadow-sm"
                   >
                     Ir para o Feed
                   </button>
                 </div>
               ) : (
                 userPosts.map((post) => (
-                  <div key={post.id} style={{
-                    background: "#fff", borderRadius: 20, padding: 20,
-                    border: "1px solid #e2e8f0", boxShadow: "0 2px 10px rgba(0,0,0,0.03)",
-                  }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-                      <div style={{
-                        width: 42, height: 42, borderRadius: "50%",
-                        background: `linear-gradient(135deg,${g1},${g2})`,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        color: "#fff", fontWeight: 800, fontSize: 14, overflow: "hidden",
-                      }}>
+                  <div key={post.id} className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-200 flex items-center justify-center text-slate-600 font-bold text-xs">
                         {showAvatar ? (
-                          <img src={perfil.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          <img src={perfil.avatar_url} alt="" className="w-full h-full object-cover" />
                         ) : (
                           getInitials(perfil.nome)
                         )}
                       </div>
                       <div>
-                        <span style={{ fontWeight: 800, fontSize: 14, color: "#0f172a" }}>{post.author_name}</span>
-                        <span style={{ display: "block", fontSize: 11, color: "#94a3b8" }}>
+                        <span className="font-bold text-sm text-slate-900 block">{post.author_name}</span>
+                        <span className="text-[11px] text-slate-400">
                           {new Date(post.created_at).toLocaleDateString("pt-BR")}
                         </span>
                       </div>
                     </div>
-                    <p style={{ fontSize: 14, color: "#334155", lineHeight: 1.6, margin: "0 0 12px" }}>
-                      {post.content}
-                    </p>
+                    <p className="text-xs sm:text-sm text-slate-700 leading-relaxed mb-3">{post.content}</p>
                     {post.image_url && (
                       <img
                         src={post.image_url}
                         alt=""
-                        style={{ width: "100%", maxHeight: 360, objectFit: "cover", borderRadius: 14, marginBottom: 12 }}
+                        className="w-full max-h-80 object-cover rounded-2xl mb-3"
                       />
                     )}
                   </div>
@@ -1373,76 +1257,57 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
           )}
 
           {activeTab === "respostas" && (
-            <div style={{
-              background: "#fff", borderRadius: 20, padding: 36, textAlign: "center",
-              border: "1px solid #e2e8f0", color: "#64748b",
-            }}>
-              <MessageCircle style={{ width: 32, height: 32, color: "#cbd5e1", margin: "0 auto 10px" }} />
-              <p style={{ fontWeight: 700, fontSize: 15, color: "#1e293b", margin: 0 }}>Nenhuma resposta recente</p>
-              <p style={{ fontSize: 13, margin: "4px 0 0" }}>Suas interações e respostas aos colegas do CEEP aparecerão aqui.</p>
+            <div className="bg-white rounded-3xl p-10 text-center border border-slate-200">
+              <MessageCircle className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+              <p className="font-bold text-sm text-slate-800 m-0">Nenhuma resposta recente</p>
+              <p className="text-xs text-slate-400 mt-1">Suas interações e respostas aos colegas do CEEP aparecerão aqui.</p>
             </div>
           )}
 
           {activeTab === "repostagens" && (
-            <div style={{
-              background: "#fff", borderRadius: 20, padding: 36, textAlign: "center",
-              border: "1px solid #e2e8f0", color: "#64748b",
-            }}>
-              <Share2 style={{ width: 32, height: 32, color: "#cbd5e1", margin: "0 auto 10px" }} />
-              <p style={{ fontWeight: 700, fontSize: 15, color: "#1e293b", margin: 0 }}>Nenhuma repostagem encontrada</p>
-              <p style={{ fontSize: 13, margin: "4px 0 0" }}>Publicações que você repostar do Feed do Censo serão listadas aqui.</p>
+            <div className="bg-white rounded-3xl p-10 text-center border border-slate-200">
+              <Share2 className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+              <p className="font-bold text-sm text-slate-800 m-0">Nenhuma repostagem encontrada</p>
+              <p className="text-xs text-slate-400 mt-1">Publicações que você repostar do Feed do Censo serão listadas aqui.</p>
             </div>
           )}
         </div>
 
-        {/* Coluna Direita: Caixa "O que está acontecendo?" (Trending) */}
-        <div>
-          <div style={{
-            background: "#f8fafc",
-            borderRadius: 20,
-            padding: "18px 20px",
-            border: "1px solid #e2e8f0",
-          }}>
-            <h3 style={{
-              margin: "0 0 16px",
-              fontWeight: 900,
-              fontSize: 18,
-              color: "#0f172a",
-              letterSpacing: "-0.3px",
-            }}>
-              O que está acontecendo?
-            </h3>
+        {/* Coluna Lateral: "O que está acontecendo?" (Trends Mundiais + CEEP adaptadas estilo Twitter/X) */}
+        <div className="lg:col-span-4 order-1 lg:order-2 flex flex-col gap-4">
+          
+          <div className="bg-slate-50 rounded-3xl p-5 border border-slate-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-black text-base sm:text-lg text-slate-900 tracking-tight m-0 flex items-center gap-2">
+                <Globe className="w-4 h-4 text-blue-600" />
+                <span>O que está acontecendo?</span>
+              </h3>
+            </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div className="flex flex-col gap-3.5">
               {trendingTopics.map((trend, idx) => (
                 <div
                   key={idx}
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    justifyContent: "space-between",
-                    gap: 8,
-                    cursor: "pointer",
-                  }}
+                  className="flex items-start justify-between gap-2 cursor-pointer group"
                   onClick={() => navigate("/feed")}
                 >
-                  <div>
-                    <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600, display: "block" }}>
+                  <div className="min-w-0">
+                    <span className="text-[11px] font-semibold text-slate-500 block">
                       {trend.category}
                     </span>
-                    <span style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", display: "block", marginTop: 2 }}>
+                    <span className="text-xs sm:text-sm font-extrabold text-slate-900 block mt-0.5 group-hover:text-blue-600 transition truncate">
                       {trend.topic}
                     </span>
-                    <span style={{ fontSize: 11, color: "#94a3b8", display: "block", marginTop: 2 }}>
+                    <span className="text-[10px] text-slate-400 block mt-0.5">
                       {trend.posts}
                     </span>
                   </div>
                   <button
                     type="button"
-                    title="Opções"
-                    style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", padding: 4 }}
+                    title="Mais informações da trend"
+                    className="text-slate-400 hover:text-slate-600 p-1 rounded-md"
                   >
-                    <MoreHorizontal style={{ width: 16, height: 16 }} />
+                    <MoreHorizontal className="w-4 h-4" />
                   </button>
                 </div>
               ))}
@@ -1451,53 +1316,37 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
             <button
               type="button"
               onClick={() => navigate("/feed")}
-              style={{
-                marginTop: 18,
-                padding: "8px 0 0",
-                background: "none",
-                border: "none",
-                color: "#0084ff",
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: "pointer",
-                textAlign: "left",
-                display: "block",
-              }}
+              className="mt-4 pt-3 border-t border-slate-200 w-full text-left text-xs font-bold text-blue-600 hover:underline cursor-pointer"
             >
-              Mostrar mais
+              Mostrar mais notícias e tendências
             </button>
           </div>
 
-          {/* Mini resumo de informações do pesquisador */}
-          <div style={{
-            marginTop: 16,
-            background: "#fff",
-            borderRadius: 20,
-            padding: 18,
-            border: "1px solid #e2e8f0",
-          }}>
-            <h4 style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 800, color: "#64748b", textTransform: "uppercase" }}>
-              Informações de Contato
+          {/* Dados de Contato / Localização do Pesquisador */}
+          <div className="bg-white rounded-3xl p-5 border border-slate-200">
+            <h4 className="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">
+              Informações do Pesquisador
             </h4>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 13 }}>
+            <div className="flex flex-col gap-2.5 text-xs text-slate-600">
               {perfil.email && (
-                <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#475569" }}>
-                  <Mail style={{ width: 15, height: 15, color: "#0084ff", flexShrink: 0 }} />
-                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{perfil.email}</span>
+                <div className="flex items-center gap-2 truncate">
+                  <Mail className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                  <span className="truncate">{perfil.email}</span>
                 </div>
               )}
               {perfil.telefone && (
-                <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#475569" }}>
-                  <Phone style={{ width: 15, height: 15, color: "#0084ff", flexShrink: 0 }} />
+                <div className="flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-blue-600 flex-shrink-0" />
                   <span>{perfil.telefone}</span>
                 </div>
               )}
-              <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#475569" }}>
-                <MapPin style={{ width: 15, height: 15, color: "#0084ff", flexShrink: 0 }} />
+              <div className="flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-blue-600 flex-shrink-0" />
                 <span>{perfil.cidade} — {perfil.estado}</span>
               </div>
             </div>
           </div>
+
         </div>
 
       </div>
@@ -1510,64 +1359,63 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
         const progress = nextNivel ? Math.round(((totalXP - nivel.minXP) / (nextNivel.minXP - nivel.minXP)) * 100) : 100;
         
         return (
-          <div style={{
-            marginTop: 24, background: "#fff", borderRadius: 24, padding: 24,
-            boxShadow: "0 4px 20px rgba(0,0,0,0.05)", border: "1px solid #e2e8f0",
-            animation: "perfilPop 0.4s ease"
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-              <div style={{ padding: 10, borderRadius: 14, background: "linear-gradient(135deg, #f59e0b, #ea580c)", color: "#fff", boxShadow: "0 4px 14px rgba(245,158,11,0.3)" }}>
-                <Trophy style={{ width: 20, height: 20 }} />
+          <div className="mt-6 bg-white rounded-3xl p-5 sm:p-7 shadow-sm border border-slate-200">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="p-2.5 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-600 text-white shadow-sm">
+                <Trophy className="w-5 h-5" />
               </div>
               <div>
-                <h3 style={{ margin: 0, fontWeight: 900, fontSize: 18, color: "#0f172a" }}>Conquistas do Pesquisador</h3>
-                <p style={{ margin: 0, fontSize: 12, color: "#64748b", fontWeight: 600 }}>Gerenciado pelo módulo Accumbens (TAS)</p>
+                <h3 className="m-0 font-black text-base sm:text-lg text-slate-900">Conquistas do Pesquisador</h3>
+                <p className="m-0 text-xs text-slate-500 font-semibold">Gerenciado pelo módulo Accumbens (TAS)</p>
               </div>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {/* Nível atual */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+            <div className="flex flex-col gap-4">
+              <div className="flex justify-between items-end">
                 <div>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "1px" }}>Nível Atual</span>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
-                    <span style={{ fontSize: 24 }}>{nivel.icon}</span>
-                    <span style={{ fontSize: 24, fontWeight: 900, color: nivel.color }}>{nivel.nome}</span>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Nível Atual</span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xl sm:text-2xl">{nivel.icon}</span>
+                    <span className="text-xl sm:text-2xl font-black" style={{ color: nivel.color }}>{nivel.nome}</span>
                   </div>
                 </div>
-                <div style={{ textAlign: "right" }}>
-                  <span style={{ fontSize: 28, fontWeight: 900, color: "#0f172a", lineHeight: 1 }}>{totalXP.toLocaleString()}</span>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: "#64748b", marginLeft: 4 }}>XP</span>
+                <div className="text-right">
+                  <span className="text-2xl sm:text-3xl font-black text-slate-900 leading-none">{totalXP.toLocaleString()}</span>
+                  <span className="text-xs sm:text-sm font-bold text-slate-500 ml-1">XP</span>
                 </div>
               </div>
 
-              {/* Barra de Progresso */}
               {nextNivel && (
                 <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: 700, color: "#64748b", marginBottom: 6 }}>
+                  <div className="flex justify-between text-xs font-bold text-slate-600 mb-1.5">
                     <span>Progresso para {nextNivel.nome}</span>
                     <span>{progress}%</span>
                   </div>
-                  <div style={{ width: "100%", height: 10, background: "#f1f5f9", borderRadius: 99, overflow: "hidden" }}>
-                    <div style={{ width: `${progress}%`, height: "100%", background: `linear-gradient(90deg, ${nivel.color}, ${nextNivel.color})`, borderRadius: 99, transition: "width 1s cubic-bezier(0.4, 0, 0.2, 1)" }} />
+                  <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-700"
+                      style={{
+                        width: `${progress}%`,
+                        background: `linear-gradient(90deg, ${nivel.color}, ${nextNivel.color})`,
+                      }}
+                    />
                   </div>
-                  <div style={{ textAlign: "right", fontSize: 10, fontWeight: 700, color: "#94a3b8", marginTop: 4 }}>
+                  <div className="text-right text-[10px] font-bold text-slate-400 mt-1">
                     Faltam {(nextNivel.minXP - totalXP).toLocaleString()} XP
                   </div>
                 </div>
               )}
               
-              {/* Grid de Atividades */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 8 }}>
-                <div style={{ background: "#f8fafc", padding: 14, borderRadius: 16, border: "1px solid #e2e8f0" }}>
-                  <div style={{ color: "#3b82f6", marginBottom: 8 }}><BookOpen style={{ width: 18, height: 18 }}/></div>
-                  <div style={{ fontSize: 18, fontWeight: 900, color: "#0f172a" }}>{totalFichas}</div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "#64748b" }}>Fichas Coletadas (x100 XP)</div>
+              <div className="grid grid-cols-2 gap-3 mt-1">
+                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                  <BookOpen className="w-4 h-4 text-blue-600 mb-1.5" />
+                  <div className="text-lg font-black text-slate-900">{totalFichas}</div>
+                  <div className="text-[11px] font-semibold text-slate-500">Fichas Coletadas (x100 XP)</div>
                 </div>
-                <div style={{ background: "#f8fafc", padding: 14, borderRadius: 16, border: "1px solid #e2e8f0" }}>
-                  <div style={{ color: "#10b981", marginBottom: 8 }}><Target style={{ width: 18, height: 18 }}/></div>
-                  <div style={{ fontSize: 18, fontWeight: 900, color: "#0f172a" }}>{xpStats.posts + xpStats.msgs + xpStats.likes}</div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "#64748b" }}>Interações Sociais</div>
+                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                  <Target className="w-4 h-4 text-emerald-600 mb-1.5" />
+                  <div className="text-lg font-black text-slate-900">{xpStats.posts + xpStats.msgs + xpStats.likes}</div>
+                  <div className="text-[11px] font-semibold text-slate-500">Interações Sociais</div>
                 </div>
               </div>
             </div>
@@ -1575,7 +1423,7 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
         );
       })()}
 
-      <div style={{ marginTop: 20 }}>
+      <div className="mt-5">
         <BadgeList userId={perfil.id} />
       </div>
 
