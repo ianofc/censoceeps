@@ -583,13 +583,15 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
         @keyframes savedPulse { 0%,100% { opacity:1; } 50% { opacity:0.7; } }
         .tab-btn-active { border-bottom: 2.5px solid #0084ff !important; color: #0f172a !important; font-weight: 800 !important; }
         .highlight-item:hover { transform: scale(1.06); }
+        .scrollbar-none::-webkit-scrollbar { display: none; }
+        .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
         .icon-stat-btn {
           position: relative;
           display: inline-flex;
           align-items: center;
           justify-content: center;
           gap: 4px;
-          padding: 5px 8px;
+          padding: 4px 7px;
           border-radius: 9999px;
           background: #f8fafc;
           color: #334155;
@@ -600,6 +602,7 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
           cursor: pointer;
           user-select: none;
           flex-shrink: 0;
+          line-height: 1;
         }
         .icon-stat-btn:hover, .icon-stat-btn:active {
           background: #f1f5f9;
@@ -768,16 +771,30 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
                 <p className="text-[11px] sm:text-xs font-semibold text-slate-500 mt-0.5">
                   {perfil.turma_ou_cargo || "CEEP Seabra"} · {escolaNome}
                 </p>
-                {perfil.bio && (
-                  <p className="text-xs text-slate-600 mt-1 max-w-md line-clamp-2 leading-tight">
-                    {perfil.bio}
-                  </p>
-                )}
+                {/* Espaço fixo e elegante reservado para Bio */}
+                <div className="mt-1.5 max-w-xl">
+                  {perfil.bio ? (
+                    <p className="text-xs text-slate-700 leading-relaxed m-0">
+                      {perfil.bio}
+                    </p>
+                  ) : (
+                    <p
+                      onClick={() => {
+                        setActiveTab("perfil");
+                        setIsEditingData(true);
+                      }}
+                      className="text-xs text-slate-400 italic hover:text-blue-600 transition cursor-pointer m-0 flex items-center gap-1"
+                      title="Clique para adicionar sua bio"
+                    >
+                      <Plus className="w-3 h-3" /> Adicionar biografia ao perfil...
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* ── BLOCO DIREITA: ÍCONES REDUZIDOS COMPACTOS LADO A LADO ────────── */}
-            <div className="flex items-center flex-wrap sm:flex-nowrap gap-1.5 pt-1 md:pt-0 overflow-x-auto scrollbar-none">
+            {/* ── BLOCO DIREITA: ÍCONES REDUZIDOS COMPACTOS LADO A LADO (SEM BARRA DE ROLAGEM) ────────── */}
+            <div className="flex items-center gap-1 sm:gap-1.5 pt-1 md:pt-0 flex-shrink-0">
               
               {/* 1. Coletas */}
               <button
