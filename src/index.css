@@ -300,3 +300,40 @@ html.theme-dark .bg-slate-100 {
     background-color: #1e293b !important;
     border-color: #334155 !important;
 }
+
+
+/* ==========================================================================
+   ACESSIBILIDADE: ALTO CONTRASTE, TAMANHO DE FONTE E MOVIMENTO REDUZIDO
+   ========================================================================== */
+html.accessibility-high-contrast {
+    filter: contrast(135%);
+}
+
+html.accessibility-high-contrast * {
+    border-color: #000000 !important;
+}
+
+html.dark.accessibility-high-contrast * {
+    border-color: #ffffff !important;
+}
+
+html.font-size-md {
+    font-size: 115% !important;
+}
+
+html.font-size-lg {
+    font-size: 130% !important;
+}
+
+html.reduced-motion *,
+html.reduced-motion *::before,
+html.reduced-motion *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+}
+
+html.font-dyslexic * {
+    font-family: 'Comic Sans MS', 'OpenDyslexic', system-ui, sans-serif !important;
+    letter-spacing: 0.05em !important;
+}

@@ -705,7 +705,7 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
       ) : null}
 
       {/* ── CARD PRINCIPAL COM CAPA PANORÂMICA MINIMALISTA ───────────────── */}
-      <div className={`${themeAccent.cardBg} rounded-3xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-800 transition-colors`}>
+      <div className={`bg-white dark:bg-slate-900 rounded-3xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-800 transition-colors`}>
 
         {/* Capa Panorâmica padrão (igual à imagem de referência) */}
         <div className="h-44 sm:h-64 md:h-72 w-full relative overflow-hidden bg-slate-900 group">
@@ -738,71 +738,14 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
             }}
           />
 
-          {/* Controles no topo da Capa: Seletor de Tema (Clean, Rosa, Azul, Dark) e Lápis de Edição */}
+          {/* Botão minimalista de edição da Capa com lápis (sem ícones de tema na capa) */}
           <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
-            {/* Seletor de Tema Dinâmico */}
-            <div className="flex items-center gap-1 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md p-1 rounded-full shadow-md border border-white/20">
-              <button
-                type="button"
-                onClick={() => handleSelectTheme("clean")}
-                title="Tema Clean"
-                aria-label="Tema Clean"
-                className={`px-2 py-0.5 rounded-full text-[10px] font-black tracking-wide transition cursor-pointer ${
-                  perfilTheme === "clean"
-                    ? "bg-slate-800 text-white shadow-xs"
-                    : "text-slate-600 dark:text-slate-300 hover:text-slate-900"
-                }`}
-              >
-                Clean
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSelectTheme("rosa")}
-                title="Tema Rosa"
-                aria-label="Tema Rosa"
-                className={`px-2 py-0.5 rounded-full text-[10px] font-black tracking-wide transition cursor-pointer ${
-                  perfilTheme === "rosa"
-                    ? "bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-xs"
-                    : "text-rose-600 hover:text-rose-700"
-                }`}
-              >
-                Rosa
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSelectTheme("azul")}
-                title="Tema Azul"
-                aria-label="Tema Azul"
-                className={`px-2 py-0.5 rounded-full text-[10px] font-black tracking-wide transition cursor-pointer ${
-                  perfilTheme === "azul"
-                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xs"
-                    : "text-blue-600 hover:text-blue-700"
-                }`}
-              >
-                Azul
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSelectTheme("dark")}
-                title="Tema Dark"
-                aria-label="Tema Dark"
-                className={`px-2 py-0.5 rounded-full text-[10px] font-black tracking-wide transition cursor-pointer ${
-                  perfilTheme === "dark"
-                    ? "bg-black text-amber-300 shadow-xs"
-                    : "text-slate-700 dark:text-slate-200 hover:text-black"
-                }`}
-              >
-                Dark
-              </button>
-            </div>
-
-            {/* Botão de edição da Capa */}
             <button
               type="button"
               onClick={() => coverInputRef.current?.click()}
               title="Trocar foto de capa"
               aria-label="Editar foto de capa"
-              className="w-8 h-8 rounded-full bg-white/85 hover:bg-white text-slate-700 flex items-center justify-center shadow-md backdrop-blur-sm transition cursor-pointer"
+              className="w-8 h-8 rounded-full bg-white/85 hover:bg-white text-slate-700 flex items-center justify-center shadow-md backdrop-blur-sm transition cursor-pointer border border-white/40"
             >
               {uploadingCover ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />

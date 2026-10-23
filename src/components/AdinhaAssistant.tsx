@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Send, Sparkles } from 'lucide-react';
+import { ThemeToggle } from './ThemeToggle';
+import { AccessibilityToggle } from './AccessibilityToggle';
 import { supabase } from '../lib/supabaseClient';
 
 import adinhasFrente from '../assets/imgs/adinhafrente.png';
@@ -173,7 +175,7 @@ export const AdinhaAssistant: React.FC = () => {
 
       {/* JANELA DO CHAT REFINADA */}
       {isOpen && (
-        <div className="w-[92vw] sm:w-[400px] h-[500px] md:h-[540px] bg-white border border-slate-200 rounded-[32px] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 fixed md:absolute bottom-20 right-2 sm:right-4 md:right-0 md:bottom-20 origin-bottom-right z-[60]">
+        <div className="w-[92vw] sm:w-[400px] h-[500px] md:h-[540px] bg-white border border-slate-200 rounded-[32px] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 fixed top-1/2 -translate-y-1/2 right-2 sm:right-4 md:right-6 origin-center z-[60]">
           
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-white flex items-center justify-between shrink-0 shadow-sm">
             <div className="flex items-center gap-3">

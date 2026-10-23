@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
 import { ThemeProvider } from './context/ThemeContext';
+import { AccessibilityProvider } from './context/AccessibilityContext';
 
 // Auto-recuperação resiliente contra chunks desatualizados após deploys
 if (typeof window !== 'undefined') {
@@ -63,7 +64,9 @@ if (!rootElement) {
     ReactDOM.createRoot(rootElement).render(
       <React.StrictMode>
         <ThemeProvider>
+        <AccessibilityProvider>
           <App />
+        </AccessibilityProvider>
         </ThemeProvider>
       </React.StrictMode>
     );
