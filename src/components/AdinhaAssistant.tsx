@@ -148,8 +148,15 @@ export const AdinhaAssistant: React.FC = () => {
   };
 
   return (
-    <div className="fixed top-1/2 -translate-y-1/2 right-3 md:right-5 z-50 font-sans flex items-center gap-2">
+    <div className="fixed top-1/2 -translate-y-1/2 right-3 md:right-5 z-50 font-sans flex flex-col items-center gap-2.5">
       
+      {/* BOTÃO DE TEMA ACIMA DA ADINHA */}
+      {!isOpen && (
+        <div className="bg-white/85 dark:bg-slate-900/85 backdrop-blur-md p-1 rounded-full shadow-lg border border-slate-200/80 dark:border-slate-700/80 hover:scale-105 transition-transform shrink-0">
+          <ThemeToggle size={28} />
+        </div>
+      )}
+
       {/* BOTÃO FLUTUANTE DA MASCOTE ADINHA NO MEIO */}
       {!isOpen && (
         <button
@@ -173,12 +180,9 @@ export const AdinhaAssistant: React.FC = () => {
         </button>
       )}
 
-      {/* ÍCONE DE TEMA E DE ACESSIBILIDADE AO LADO NA VERTICAL DO LADO DIREITO */}
+      {/* BOTÃO DE ACESSIBILIDADE ABAIXO DA ADINHA */}
       {!isOpen && (
-        <div className="flex flex-col items-center gap-2 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-slate-200/80 dark:border-slate-700/80 shrink-0">
-          {/* Círculo do Tema (Clean, Rosa, Azul, Dark) */}
-          <ThemeToggle size={28} />
-          {/* Ícone de Acessibilidade */}
+        <div className="bg-white/85 dark:bg-slate-900/85 backdrop-blur-md p-1 rounded-full shadow-lg border border-slate-200/80 dark:border-slate-700/80 hover:scale-105 transition-transform shrink-0">
           <AccessibilityToggle size={28} />
         </div>
       )}
