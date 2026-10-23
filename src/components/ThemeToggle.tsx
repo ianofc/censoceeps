@@ -1,46 +1,37 @@
-import React, { useEffect, useState } from 'react';
-import { Sun, Moon } from 'lucide-react';
+import React from 'react';
+import { useTheme, AppTheme } from '../context/ThemeContext';
 
-export function ThemeToggle() {
-  const [isDark, setIsDark] = useState(false);
+interface ThemeToggleProps {
+  className?: string;
+  size?: number;
+}
 
-  useEffect(() => {
-    const root = document.documentElement;
-    const currentTheme = localStorage.getItem('theme');
-    if (currentTheme === 'dark' || (!currentTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-      setIsDark(true);
-      root.classList.add('dark');
-    } else {
-      setIsDark(false);
-      root.classList.remove('dark');
-    }
-  }, []);
+const THEME_INFO: Record<AppTheme, { name: string; color: string; border: string; ring: string }> = {
+  clean: { name: 'Clean', color: 'bg-slate-100', border: 'border-slate-300', ring: 'ring-slate-400' },
+  rosa: { name: 'Rosa', color: 'bg-gradient-to-tr from-rose-400 to-pink-500', border: 'border-rose-300', ring: 'ring-rose-400' },
+  azul: { name: 'Azul', color: 'bg-gradient-to-tr from-blue-500 to-indigo-600', border: 'border-blue-300', ring: 'ring-blue-400' },
+  dark: { name: 'Dark', color: 'bg-slate-900', border: 'border-amber-400/80', ring: 'ring-amber-400' },
+};
 
-  const toggleTheme = () => {
-    const root = document.documentElement;
-    if (isDark) {
-      root.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-      setIsDark(false);
-    } else {
-      root.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-      setIsDark(true);
-    }
-  };
+/**
+ * Botão circular minimalista para alternar temas clicando em sequência:
+ * Clean -> Rosa -> Azul -> Dark -> Clean
+ */
+export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className = '', size = 32 }) => {
+  const { theme, cycleTheme } = useTheme();
+  const current = THEME_INFO[theme];
 
   return (
     <button
       type="button"
-      onClick={toggleTheme}
-      className="w-11 h-11 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center transition hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer border-0 shadow-sm"
-      title="Alternar Tema Claro / Escuro"
+      onClick={cycleTheme}
+      title={`Tema atual: ${current.name} (Clique para alternar: Clean, Rosa, Azul, Dark)`}
+      aria-label={`Alternar tema do sistema (atual: ${current.name})`}
+      className={`relative rounded-full transition-all duration-300 hover:scale-110 active:scale-95 flex items-center justify-center cursor-pointer shadow-md ${current.color} ${current.border} border-2 hover:ring-2 ${current.ring} ${className}`}
+      style={{ width: size, height: size }}
     >
-      {isDark ? (
-        <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all text-amber-400" />
-      ) : (
-        <Moon className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all text-slate-700" />
-      )}
+      {/* Indicador interno visual com mini círculo decorativo */}
+      <span className="w-2.5 h-2.5 rounded-full bg-white/90 shadow-xs" />
     </button>
   );
-}
+};

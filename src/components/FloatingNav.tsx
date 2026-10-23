@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme, AppTheme } from '../context/ThemeContext';
+import { ThemeToggle } from './ThemeToggle';
 import { Palette } from 'lucide-react';
 import { useUserSession } from '../hooks/useUserSession';
 import { 
@@ -168,31 +169,10 @@ export const FloatingNav: React.FC<FloatingNavProps> = ({ onLogout }) => {
               })}
             </div>
 
-                        {/* Seletor Global de Tema (Clean, Rosa, Azul, Dark) */}
-            <div className="pt-2 border-t border-blue-800 flex flex-col gap-1.5">
-              <div className="flex items-center gap-1.5 text-blue-200 text-[11px] font-bold px-1">
-                <Palette size={14} className="text-indigo-400" />
-                <span>Tema do Sistema</span>
-              </div>
-              <div className="grid grid-cols-4 gap-1 bg-blue-950/70 p-1 rounded-xl border border-blue-800/60">
-                {(['clean', 'rosa', 'azul', 'dark'] as AppTheme[]).map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setTheme(t)}
-                    className={`py-1 rounded-lg text-[10px] font-black capitalize transition-all cursor-pointer ${
-                      theme === t
-                        ? t === 'rosa' ? 'bg-pink-600 text-white shadow-sm'
-                        : t === 'azul' ? 'bg-blue-600 text-white shadow-sm'
-                        : t === 'dark' ? 'bg-slate-900 text-amber-300 shadow-sm border border-slate-700'
-                        : 'bg-indigo-600 text-white shadow-sm'
-                        : 'text-blue-300 hover:text-white hover:bg-blue-800/40'
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
+            {/* Alternador de Tema Circular Global */}
+            <div className="pt-2 border-t border-blue-800 flex items-center justify-between px-2 py-1">
+              <span className="text-blue-200 text-xs font-bold">Tema do Sistema</span>
+              <ThemeToggle size={28} />
             </div>
 
             <div className="pt-2 border-t border-blue-800 flex flex-col gap-2">
@@ -302,6 +282,11 @@ export const FloatingNav: React.FC<FloatingNavProps> = ({ onLogout }) => {
             <Trophy size={20} />
             <span className="text-[10px] mt-0.5">Ranking</span>
           </button>
+
+          {/* 4. Alternador de Tema Circular (Clique para trocar: Clean, Rosa, Azul, Dark) */}
+          <div className="flex flex-col items-center justify-center p-1">
+            <ThemeToggle size={24} />
+          </div>
 
           {/* 4. Menu Mais Opções */}
           <button

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme, AppTheme } from "../context/ThemeContext";
+import { ThemeToggle } from "../components/ThemeToggle";
 import { supabase, supabaseAdmin } from "../lib/supabaseClient";
 import {
   Save, Edit2, X, ShieldCheck, Mail, Phone, MapPin,

@@ -235,3 +235,68 @@
     background: #94a3b8;
     border-radius: 4px;
 }
+
+/* ==========================================================================
+   TEMAS GLOBAIS (Clean, Rosa, Azul, Dark) - APLICADOS EM TODO O PROJETO
+   ========================================================================== */
+html.theme-clean body, body.theme-clean {
+    background-color: #f8fafc !important;
+    color: #0f172a !important;
+}
+
+html.theme-rosa body, body.theme-rosa {
+    background-color: #fff1f2 !important;
+    color: #881337 !important;
+}
+
+html.theme-azul body, body.theme-azul {
+    background-color: #f0f9ff !important;
+    color: #0c4a6e !important;
+}
+
+html.theme-dark body, body.theme-dark {
+    background-color: #090d16 !important;
+    color: #f8fafc !important;
+}
+
+/* Background da área principal de todas as páginas */
+html.theme-rosa main {
+    background-color: #fff1f2 !important;
+}
+
+html.theme-azul main {
+    background-color: #f0f9ff !important;
+}
+
+html.theme-dark main {
+    background-color: #090d16 !important;
+}
+
+/* Adaptação de cartões brancos e cinzas nos temas */
+html.theme-rosa .bg-white {
+    background-color: #ffffff !important;
+    border-color: #fecdd3 !important;
+}
+
+html.theme-azul .bg-white {
+    background-color: #ffffff !important;
+    border-color: #bae6fd !important;
+}
+
+html.theme-dark .bg-white {
+    background-color: #0f172a !important;
+    color: #f8fafc !important;
+    border-color: #1e293b !important;
+}
+
+html.theme-dark .text-slate-900,
+html.theme-dark .text-slate-800,
+html.theme-dark .text-slate-700 {
+    color: #f1f5f9 !important;
+}
+
+html.theme-dark .bg-slate-50,
+html.theme-dark .bg-slate-100 {
+    background-color: #1e293b !important;
+    border-color: #334155 !important;
+}

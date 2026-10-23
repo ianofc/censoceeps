@@ -5,14 +5,17 @@ export type AppTheme = 'clean' | 'rosa' | 'azul' | 'dark';
 interface ThemeContextType {
   theme: AppTheme;
   setTheme: (theme: AppTheme) => void;
+  cycleTheme: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextType>({
   theme: 'clean',
   setTheme: () => {},
+  cycleTheme: () => {},
 });
 
 const THEME_STORAGE_KEY = 'ceep_global_theme';
+const THEME_CYCLE: AppTheme[] = ['clean', 'rosa', 'azul', 'dark'];
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<AppTheme>(() => {
@@ -52,12 +55,18 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     applyTheme(newTheme);
   };
 
+  const cycleTheme = () => {
+    const currentIndex = THEME_CYCLE.indexOf(theme);
+    const nextIndex = (currentIndex + 1) % THEME_CYCLE.length;
+    setTheme(THEME_CYCLE[nextIndex]);
+  };
+
   useEffect(() => {
     applyTheme(theme);
   }, [theme]);
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme, cycleTheme }}>
       {children}
     </ThemeContext.Provider>
   );
