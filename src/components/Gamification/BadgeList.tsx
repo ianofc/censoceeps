@@ -158,25 +158,25 @@ export const BadgeList: React.FC<BadgeListProps> = ({ userId }) => {
 
       {/* ─── FILTROS & ABAS ────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-        <div className="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-bold">
+        <div className="flex items-center bg-slate-100 p-1.5 rounded-2xl text-xs font-bold gap-1">
           <button
             type="button"
             onClick={() => setActiveTab('all')}
-            className={`px-3 py-1.5 rounded-lg transition-all ${activeTab === 'all' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+            className={`px-3.5 py-2 rounded-xl transition-all cursor-pointer ${activeTab === 'all' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-700 hover:text-slate-900'}`}
           >
             Todas ({totalCount})
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('unlocked')}
-            className={`px-3 py-1.5 rounded-lg transition-all ${activeTab === 'unlocked' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+            className={`px-3.5 py-2 rounded-xl transition-all cursor-pointer ${activeTab === 'unlocked' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-700 hover:text-slate-900'}`}
           >
             Conquistadas ({unlockedCount})
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('locked')}
-            className={`px-3 py-1.5 rounded-lg transition-all ${activeTab === 'locked' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+            className={`px-3.5 py-2 rounded-xl transition-all cursor-pointer ${activeTab === 'locked' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-700 hover:text-slate-900'}`}
           >
             A Conquistar ({totalCount - unlockedCount})
           </button>
@@ -256,8 +256,8 @@ export const BadgeList: React.FC<BadgeListProps> = ({ userId }) => {
                   {badge.rarity}
                 </span>
 
-                {/* Descrição resumida */}
-                <p className="text-[11px] text-slate-500 line-clamp-2 leading-tight mb-2">
+                {/* Descrição resumida com contraste aprimorado */}
+                <p className="text-[11px] text-slate-700 font-medium line-clamp-2 leading-tight mb-2">
                   {badge.description}
                 </p>
 

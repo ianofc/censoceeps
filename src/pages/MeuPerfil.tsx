@@ -231,8 +231,8 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
   const [seguindoCount, setSeguindoCount] = useState(0);
   const [seguidoresCount, setSeguidoresCount] = useState(0);
 
-  // Abas sociais com Perfil adicionado lado a lado de Postagens
-  const [activeTab, setActiveTab] = useState<"midia" | "respostas" | "repostagens" | "postagens" | "perfil">("midia");
+  // Abas sociais com Perfil e Conquistas
+  const [activeTab, setActiveTab] = useState<"midia" | "respostas" | "repostagens" | "postagens" | "conquistas" | "perfil">("midia");
   const [userPosts, setUserPosts] = useState<PostItem[]>([]);
   const [mediaPosts, setMediaPosts] = useState<PostItem[]>([]);
 
@@ -958,19 +958,31 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
             <button
               type="button"
               onClick={() => setActiveTab("postagens")}
-              className={`py-2.5 px-1 border-b-2 text-xs sm:text-sm font-semibold transition cursor-pointer ${
-                activeTab === "postagens" ? "border-blue-600 text-slate-900 !font-extrabold" : "border-transparent text-slate-500 hover:text-slate-800"
+              className={`py-2.5 px-2 border-b-2 text-xs sm:text-sm font-semibold transition cursor-pointer ${
+                activeTab === "postagens" ? "border-blue-600 text-slate-900 !font-extrabold" : "border-transparent text-slate-600 hover:text-slate-900"
               }`}
             >
               Postagens
             </button>
 
-            {/* ABA "PERFIL" minimalista ao lado de Postagens */}
+            {/* ABA "CONQUISTAS" - Gamificação e Insígnias Unificadas */}
+            <button
+              type="button"
+              onClick={() => setActiveTab("conquistas")}
+              className={`inline-flex items-center gap-1.5 py-2.5 px-2 border-b-2 text-xs sm:text-sm font-semibold transition cursor-pointer ${
+                activeTab === "conquistas" ? "border-blue-600 text-slate-900 !font-extrabold" : "border-transparent text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <Trophy className="w-3.5 h-3.5 text-amber-500" />
+              <span>Conquistas</span>
+            </button>
+
+            {/* ABA "PERFIL" minimalista ao lado de Postagens e Conquistas */}
             <button
               type="button"
               onClick={() => setActiveTab("perfil")}
-              className={`inline-flex items-center gap-1 py-2.5 px-1 border-b-2 text-xs sm:text-sm font-semibold transition cursor-pointer ${
-                activeTab === "perfil" ? "border-blue-600 text-slate-900 !font-extrabold" : "border-transparent text-slate-500 hover:text-slate-800"
+              className={`inline-flex items-center gap-1.5 py-2.5 px-2 border-b-2 text-xs sm:text-sm font-semibold transition cursor-pointer ${
+                activeTab === "perfil" ? "border-blue-600 text-slate-900 !font-extrabold" : "border-transparent text-slate-600 hover:text-slate-900"
               }`}
             >
               <UserCircle className="w-3.5 h-3.5" />
@@ -1164,6 +1176,88 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
             </div>
           )}
 
+          {/* ABA: CONQUISTAS (Gamificação Unificada no Grid) */}
+          {activeTab === "conquistas" && (
+            <div className="flex flex-col gap-4">
+              {(() => {
+                const totalXP = (totalFichas * 100) + (xpStats.posts * 20) + (xpStats.msgs * 5) + (xpStats.likes * 10);
+                const nivel = getNivel(totalXP);
+                const nextNivel = getNextNivel(totalXP);
+                const progress = nextNivel ? Math.round(((totalXP - nivel.minXP) / (nextNivel.minXP - nivel.minXP)) * 100) : 100;
+                const xpRestante = nextNivel ? nextNivel.minXP - totalXP : 0;
+                
+                return (
+                  <div className="bg-white rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-200">
+                    <div className="flex items-center gap-2.5 mb-4">
+                      <div className="p-2.5 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-600 text-white shadow-sm">
+                        <Trophy className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="m-0 font-extrabold text-base text-slate-900">Conquistas do Pesquisador</h3>
+                        <p className="m-0 text-xs text-slate-600 font-semibold">Gerenciado pelo módulo Accumbens (TAS)</p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-4">
+                      <div className="flex justify-between items-end bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
+                        <div>
+                          <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Nível Atual</span>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-2xl">{nivel.icon}</span>
+                            <span className="text-xl font-black" style={{ color: nivel.color }}>{nivel.nome}</span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-2xl sm:text-3xl font-black text-slate-900 leading-none">{totalXP.toLocaleString()}</span>
+                          <span className="text-xs font-bold text-slate-600 ml-1">XP Total</span>
+                        </div>
+                      </div>
+
+                      {nextNivel && (
+                        <div>
+                          <div className="flex justify-between text-xs font-bold text-slate-700 mb-1.5">
+                            <span>Progresso para {nextNivel.nome}</span>
+                            <span className="text-blue-700 font-black">{progress}% ({totalXP} / {nextNivel.minXP} XP)</span>
+                          </div>
+                          <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-700"
+                              style={{
+                                width: `${progress}%`,
+                                background: `linear-gradient(90deg, ${nivel.color}, ${nextNivel.color})`,
+                              }}
+                            />
+                          </div>
+                          <div className="flex justify-between items-center text-xs font-bold text-slate-600 mt-1.5">
+                            <span>{nivel.nome} ({nivel.minXP} XP)</span>
+                            <span className="text-amber-700 font-extrabold">Faltam {xpRestante.toLocaleString()} XP para o próximo nível</span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="grid grid-cols-2 gap-3 mt-1">
+                        <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                          <BookOpen className="w-4 h-4 text-blue-600 mb-1.5" />
+                          <div className="text-lg font-black text-slate-900">{totalFichas}</div>
+                          <div className="text-xs font-semibold text-slate-600">Fichas Coletadas (+{totalFichas * 100} XP)</div>
+                        </div>
+                        <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                          <Target className="w-4 h-4 text-emerald-600 mb-1.5" />
+                          <div className="text-lg font-black text-slate-900">{xpStats.posts + xpStats.msgs + xpStats.likes}</div>
+                          <div className="text-xs font-semibold text-slate-600">Interações Sociais no App</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">
+                <BadgeList userId={perfil.id} />
+              </div>
+            </div>
+          )}
+
           {/* ABA: RESPOSTAS */}
           {activeTab === "respostas" && (
             <div className="bg-white rounded-3xl p-8 text-center border border-slate-200">
@@ -1261,8 +1355,8 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
 
       </div>
 
-      {/* ── SEÇÃO DE CONQUISTAS DO PESQUISADOR (GAMIFICAÇÃO ACCUMBENS / TAS) ── */}
-      {(() => {
+      {/* ── SEÇÃO DE CONQUISTAS DO PESQUISADOR (QUANDO NAS DEMAIS ABAS) ── */}
+      {activeTab !== "conquistas" && (() => {
         const totalXP = (totalFichas * 100) + (xpStats.posts * 20) + (xpStats.msgs * 5) + (xpStats.likes * 10);
         const nivel = getNivel(totalXP);
         const nextNivel = getNextNivel(totalXP);
@@ -1333,9 +1427,11 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
         );
       })()}
 
-      <div className="mt-4">
-        <BadgeList userId={perfil.id} />
-      </div>
+      {activeTab !== "conquistas" && (
+        <div className="mt-4">
+          <BadgeList userId={perfil.id} />
+        </div>
+      )}
 
     </div>
   );
