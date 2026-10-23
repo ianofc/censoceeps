@@ -148,14 +148,14 @@ export const AdinhaAssistant: React.FC = () => {
   };
 
   return (
-    <div className="fixed bottom-6 right-4 md:right-6 z-50 font-sans flex flex-col items-end">
+    <div className="fixed top-1/2 -translate-y-1/2 right-3 md:right-5 z-50 font-sans flex items-center gap-2">
       
-      {/* BOTÃO FLUTUANTE DA MASCOTE */}
+      {/* BOTÃO FLUTUANTE DA MASCOTE ADINHA NO MEIO */}
       {!isOpen && (
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="group relative w-14 h-14 md:w-16 md:h-16 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 p-1 shadow-2xl shadow-blue-500/40 hover:scale-110 transition-transform cursor-pointer border-0 flex items-center justify-center"
+          className="group relative w-14 h-14 md:w-16 md:h-16 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 p-1 shadow-2xl shadow-blue-500/40 hover:scale-110 transition-transform cursor-pointer border-0 flex items-center justify-center shrink-0"
           title="Falar com a Adinha"
         >
           <div className="w-full h-full rounded-full overflow-hidden bg-white flex items-center justify-center">
@@ -171,6 +171,16 @@ export const AdinhaAssistant: React.FC = () => {
             Orientadora Metodológica — Adinha 👋
           </div>
         </button>
+      )}
+
+      {/* ÍCONE DE TEMA E DE ACESSIBILIDADE AO LADO NA VERTICAL DO LADO DIREITO */}
+      {!isOpen && (
+        <div className="flex flex-col items-center gap-2 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-slate-200/80 dark:border-slate-700/80 shrink-0">
+          {/* Círculo do Tema (Clean, Rosa, Azul, Dark) */}
+          <ThemeToggle size={28} />
+          {/* Ícone de Acessibilidade */}
+          <AccessibilityToggle size={28} />
+        </div>
       )}
 
       {/* JANELA DO CHAT REFINADA */}

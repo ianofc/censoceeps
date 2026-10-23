@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme, AppTheme } from '../context/ThemeContext';
-import { ThemeToggle } from './ThemeToggle';
 import { Palette } from 'lucide-react';
 import { useUserSession } from '../hooks/useUserSession';
 import { 
@@ -169,11 +168,7 @@ export const FloatingNav: React.FC<FloatingNavProps> = ({ onLogout }) => {
               })}
             </div>
 
-            {/* Alternador de Tema Circular Global */}
-            <div className="pt-2 border-t border-blue-800 flex items-center justify-between px-2 py-1">
-              <span className="text-blue-200 text-xs font-bold">Tema do Sistema</span>
-              <ThemeToggle size={28} />
-            </div>
+
 
             <div className="pt-2 border-t border-blue-800 flex flex-col gap-2">
               <button
@@ -283,10 +278,7 @@ export const FloatingNav: React.FC<FloatingNavProps> = ({ onLogout }) => {
             <span className="text-[10px] mt-0.5">Ranking</span>
           </button>
 
-          {/* 4. Alternador de Tema Circular (Clique para trocar: Clean, Rosa, Azul, Dark) */}
-          <div className="flex flex-col items-center justify-center p-1">
-            <ThemeToggle size={24} />
-          </div>
+
 
           {/* 4. Menu Mais Opções */}
           <button
