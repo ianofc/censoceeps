@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase, supabaseAdmin } from "../lib/supabaseClient";
 import {
-  Save, Edit3, X, ShieldCheck, Mail, Phone, MapPin,
+  Save, Edit2, X, ShieldCheck, Mail, Phone, MapPin,
   Briefcase, BookOpen, Star, Award, GraduationCap,
   CheckCircle, UserCircle, Calendar, Hash, Trophy, Target,
   Upload, Camera, Trash2, Link as LinkIcon, Loader2, Check, AlertCircle, RefreshCw,
@@ -17,7 +17,7 @@ import { tasFeedScraperService } from "../services/tasFeedScraperService";
 /**
  * Ícone visual do Lyka Chat oficial do Censo CEEP
  */
-function LaikaNavIcon({ size = 20 }: { readonly size?: number }) {
+function LaikaNavIcon({ size = 16 }: { readonly size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M5 8 C4 4 2 3 3 7" />
@@ -163,28 +163,28 @@ function Field({ id, label, value, onChange, multiline = false, placeholder = ""
 }) {
   const base: React.CSSProperties = {
     width: "100%", boxSizing: "border-box",
-    padding: "11px 14px", background: "#f8fafc",
-    border: "1.5px solid #e2e8f0", borderRadius: 12,
-    fontSize: 14, fontWeight: 500, color: "#0f172a",
+    padding: "9px 12px", background: "#f8fafc",
+    border: "1px solid #cbd5e1", borderRadius: 10,
+    fontSize: 13, fontWeight: 500, color: "#0f172a",
     fontFamily: "inherit", outline: "none", transition: "border-color 0.2s",
     resize: "none" as const,
   };
   return (
     <div>
-      <label htmlFor={id} style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>
+      <label htmlFor={id} style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>
         {label}
       </label>
       {multiline ? (
         <textarea id={id} rows={3} value={value} placeholder={placeholder}
           onChange={e => onChange(e.target.value)} style={base}
-          onFocus={e => { e.target.style.borderColor = "#7c3aed"; e.target.style.background = "#fff"; }}
-          onBlur={e => { e.target.style.borderColor = "#e2e8f0"; e.target.style.background = "#f8fafc"; }}
+          onFocus={e => { e.target.style.borderColor = "#3b82f6"; e.target.style.background = "#fff"; }}
+          onBlur={e => { e.target.style.borderColor = "#cbd5e1"; e.target.style.background = "#f8fafc"; }}
         />
       ) : (
         <input id={id} type="text" value={value} placeholder={placeholder}
           onChange={e => onChange(e.target.value)} style={base}
-          onFocus={e => { e.target.style.borderColor = "#7c3aed"; e.target.style.background = "#fff"; }}
-          onBlur={e => { e.target.style.borderColor = "#e2e8f0"; e.target.style.background = "#f8fafc"; }}
+          onFocus={e => { e.target.style.borderColor = "#3b82f6"; e.target.style.background = "#fff"; }}
+          onBlur={e => { e.target.style.borderColor = "#cbd5e1"; e.target.style.background = "#f8fafc"; }}
         />
       )}
     </div>
@@ -216,11 +216,13 @@ interface TrendItem {
   isGlobal?: boolean;
 }
 
+// Capa padrão elegante de paisagem tropical/mar para compor o visual igual à imagem de referência
+const DEFAULT_HERO_COVER = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1600&auto=format&fit=crop&q=80";
+
 export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
   const [saved, setSaved] = useState(false);
   const [imgErr, setImgErr] = useState(false);
   const [coverImgErr, setCoverImgErr] = useState(false);
@@ -229,8 +231,8 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
   const [seguindoCount, setSeguindoCount] = useState(0);
   const [seguidoresCount, setSeguidoresCount] = useState(0);
 
-  // Abas sociais estilo Twitter/X e Facebook
-  const [activeTab, setActiveTab] = useState<"midia" | "respostas" | "repostagens" | "postagens">("midia");
+  // Abas sociais com Perfil adicionado lado a lado de Postagens
+  const [activeTab, setActiveTab] = useState<"midia" | "respostas" | "repostagens" | "postagens" | "perfil">("midia");
   const [userPosts, setUserPosts] = useState<PostItem[]>([]);
   const [mediaPosts, setMediaPosts] = useState<PostItem[]>([]);
 
@@ -252,7 +254,8 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
   const [uploadingCover, setUploadingCover] = useState(false);
   const [uploadMsg, setUploadMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [avatarInputMode, setAvatarInputMode] = useState<"upload" | "url">("upload");
-  const [isDragging, setIsDragging] = useState(false);
+  const [isEditingData, setIsEditingData] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
@@ -310,8 +313,6 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
         setTotalFichas(totalFichasContadas);
         setXpStats({ posts: pC || 0, msgs: mC || 0, likes: lC || 0 });
 
-        // Seguidores = curtidas que seu perfil recebeu de colegas
-        // Seguindo = colegas que você curtiu
         setSeguidoresCount(lC || 0);
         setSeguindoCount(seguidosCount || 0);
 
@@ -329,7 +330,6 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
           ? "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80"
           : "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80";
 
-        // Recupera capa personalizada salva localmente se houver
         let localCover = "";
         try {
           localCover = localStorage.getItem(`ceep_profile_cover_${userId}`) || "";
@@ -343,28 +343,25 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
           numero: pessoaData?.numero || "", bairro: pessoaData?.bairro || "Mandacaru",
           bio: pessoaData?.bio || "", avatar_url: pessoaData?.avatar_url || cachedProfile?.avatarUrl || avatarPadrao,
           genero,
-          cover_url: localCover || "",
+          cover_url: localCover || DEFAULT_HERO_COVER,
         };
         setPerfil(p);
         setEditPerfil(p);
 
-        // Posts do usuário e posts com mídia real postada
         const postsList = (myPosts || []) as PostItem[];
         setUserPosts(postsList);
         const withMedia = postsList.filter(item => Boolean(item.image_url));
         setMediaPosts(withMedia);
 
-        // Recupera destaques do usuário se ele tiver criado algum
         try {
           const userHighlightsRaw = localStorage.getItem(`ceep_highlights_${userId}`);
           if (userHighlightsRaw) {
             setHighlights(JSON.parse(userHighlightsRaw));
           } else {
-            setHighlights([]); // Perfil novo: sem destaques falsos
+            setHighlights([]);
           }
         } catch {}
 
-        // Carrega as Trends Mundiais combinadas com as do Censo CEEP e do usuário
         try {
           const curatedNews = await tasFeedScraperService.getCuratedNews();
           const trendsArray: TrendItem[] = [
@@ -373,7 +370,6 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
             { category: "Educação & Inovação · Bahia", topic: "SEC Bahia — Educação Profissional", posts: "42.8K posts", isGlobal: false },
           ];
 
-          // Se o usuário tiver turma, adiciona trend adaptada à sua jornada
           if (turmaCargo) {
             trendsArray.push({
               category: `Sua Turma · ${turmaCargo}`,
@@ -395,7 +391,6 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
           trendsArray.push({ category: "Cultura & Sociedade · Mundo", topic: "Global Climate Summit", posts: "594.3K posts", isGlobal: true });
           setTrendingTopics(trendsArray);
         } catch {
-          // Fallback seguro
           setTrendingTopics([
             { category: "Tecnologia & IA · Mundo", topic: "Artificial Intelligence", posts: "720K posts", isGlobal: true },
             { category: "Ciência · Mundo", topic: "Space Exploration", posts: "245K posts", isGlobal: true },
@@ -415,44 +410,43 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
   const handleFileSelect = async (file: File) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      setUploadMsg({ type: "error", text: "Por favor, selecione um arquivo de imagem (JPG, PNG, WEBP, etc.)." });
+      alert("Por favor, selecione um arquivo de imagem (JPG, PNG, WEBP, etc.).");
       return;
     }
     if (file.size > 15 * 1024 * 1024) {
-      setUploadMsg({ type: "error", text: "A imagem selecionada é muito pesada (máx 15MB). Escolha outra foto." });
+      alert("A imagem selecionada é muito pesada (máx 15MB).");
       return;
     }
 
     setUploadingImg(true);
-    setUploadMsg(null);
-
     const localUrl = URL.createObjectURL(file);
     setEditPerfil(prev => ({ ...prev, avatar_url: localUrl }));
+    setPerfil(prev => ({ ...prev, avatar_url: localUrl }));
     setImgErr(false);
 
     try {
       const publicUrl = await uploadAvatarImage(file, perfil.id);
       URL.revokeObjectURL(localUrl);
       setEditPerfil(prev => ({ ...prev, avatar_url: publicUrl }));
-      setUploadMsg({ type: "success", text: "Foto carregada com sucesso! Clique em 'Salvar alterações' para confirmar." });
+      setPerfil(prev => ({ ...prev, avatar_url: publicUrl }));
+      await supabase.from("pessoas").update({ avatar_url: publicUrl }).eq("id", perfil.id);
+      try {
+        await supabase.auth.updateUser({ data: { avatar_url: publicUrl } });
+      } catch {}
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
     } catch (err: unknown) {
-      console.warn("Upload no storage falhou, gerando base64 otimizado:", err);
+      console.warn("Upload falhou, mantendo base64:", err);
       try {
         const compressedBlob = await processImageForAvatar(file);
         const reader = new FileReader();
         reader.onloadend = () => {
           const base64Url = reader.result as string;
           setEditPerfil(prev => ({ ...prev, avatar_url: base64Url }));
-          setUploadMsg({
-            type: "success",
-            text: "Foto pronta! Clique em 'Salvar alterações' para gravar no seu perfil.",
-          });
+          setPerfil(prev => ({ ...prev, avatar_url: base64Url }));
         };
         reader.readAsDataURL(compressedBlob);
-      } catch {
-        const msg = err instanceof Error ? err.message : "Erro ao processar imagem.";
-        setUploadMsg({ type: "error", text: msg });
-      }
+      } catch {}
     } finally {
       setUploadingImg(false);
     }
@@ -469,28 +463,33 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
       const localUrl = URL.createObjectURL(file);
       setCoverImgErr(false);
       setEditPerfil(prev => ({ ...prev, cover_url: localUrl }));
+      setPerfil(prev => ({ ...prev, cover_url: localUrl }));
 
       try {
         const publicUrl = await uploadAvatarImage(file, `${perfil.id}_cover`);
         setEditPerfil(prev => ({ ...prev, cover_url: publicUrl }));
+        setPerfil(prev => ({ ...prev, cover_url: publicUrl }));
         localStorage.setItem(`ceep_profile_cover_${perfil.id}`, publicUrl);
       } catch {
         const reader = new FileReader();
         reader.onloadend = () => {
           const base64 = reader.result as string;
           setEditPerfil(prev => ({ ...prev, cover_url: base64 }));
+          setPerfil(prev => ({ ...prev, cover_url: base64 }));
           try {
             localStorage.setItem(`ceep_profile_cover_${perfil.id}`, base64);
           } catch {}
         };
         reader.readAsDataURL(file);
       }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
     } finally {
       setUploadingCover(false);
     }
   };
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSaveData = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
@@ -518,27 +517,6 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
         if (adminErr) throw adminErr;
       }
 
-      if (editPerfil.cover_url) {
-        try {
-          localStorage.setItem(`ceep_profile_cover_${perfil.id}`, editPerfil.cover_url);
-        } catch {}
-      }
-
-      try {
-        const testUserStr = localStorage.getItem('ceep_test_user');
-        if (testUserStr) {
-          const testUser = JSON.parse(testUserStr);
-          if (testUser.id === perfil.id || !testUser.id) {
-            testUser.avatarUrl = editPerfil.avatar_url;
-            testUser.nomeCompleto = editPerfil.nome;
-            testUser.turmaOuCargo = editPerfil.turma_ou_cargo;
-            localStorage.setItem('ceep_test_user', JSON.stringify(testUser));
-          }
-        }
-      } catch (errSync) {
-        console.warn("Erro ao sincronizar ceep_test_user:", errSync);
-      }
-
       try {
         await supabase.auth.updateUser({
           data: {
@@ -549,10 +527,8 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
       } catch {}
 
       setPerfil({ ...editPerfil });
-      setImgErr(false);
-      setCoverImgErr(false);
       setUploadMsg(null);
-      setIsEditing(false);
+      setIsEditingData(false);
       setSaved(true);
       if (editPerfil.avatar_url && editPerfil.turma_ou_cargo) {
         void badgeService.unlockBadge(perfil.id, "perfil_completo");
@@ -564,14 +540,6 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleCancel = () => {
-    setEditPerfil({ ...perfil });
-    setUploadMsg(null);
-    setImgErr(false);
-    setCoverImgErr(false);
-    setIsEditing(false);
   };
 
   const handleAddHighlight = () => {
@@ -601,56 +569,54 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
 
   const badge = papelBadge(perfil.papel);
   const [g1, g2] = gradFor(perfil.nome);
-  const activeAvatar = isEditing ? editPerfil.avatar_url : perfil.avatar_url;
+  const activeAvatar = perfil.avatar_url;
   const showAvatar = activeAvatar && !imgErr;
 
-  const activeCover = isEditing ? editPerfil.cover_url : perfil.cover_url;
+  const activeCover = perfil.cover_url || DEFAULT_HERO_COVER;
   const showCover = activeCover && !coverImgErr;
 
-  // Fallback de capa gradiente moderno quando o usuário ainda não enviou uma foto de capa
-  const defaultGradientCover = `linear-gradient(135deg, ${g1}dd 0%, ${g2}dd 100%)`;
-
   return (
-    <div className="w-full max-w-5xl mx-auto pb-24 px-3 sm:px-6 font-sans">
+    <div className="w-full max-w-5xl mx-auto pb-24 px-2 sm:px-6 font-sans">
       <style>{`
         @keyframes perfilSpin { to { transform: rotate(360deg); } }
         @keyframes perfilPop { from { opacity:0; transform: scale(0.98) translateY(6px); } to { opacity:1; transform: scale(1) translateY(0); } }
         @keyframes savedPulse { 0%,100% { opacity:1; } 50% { opacity:0.7; } }
-        .tab-btn-active { border-bottom: 3.5px solid #0084ff !important; color: #0f172a !important; font-weight: 800 !important; }
+        .tab-btn-active { border-bottom: 2.5px solid #0084ff !important; color: #0f172a !important; font-weight: 800 !important; }
         .highlight-item:hover { transform: scale(1.06); }
         .icon-stat-btn {
           position: relative;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          gap: 6px;
-          padding: 8px 12px;
+          gap: 4px;
+          padding: 5px 8px;
           border-radius: 9999px;
-          background: #f1f5f9;
+          background: #f8fafc;
           color: #334155;
-          font-weight: 800;
-          font-size: 13px;
+          font-weight: 700;
+          font-size: 11px;
           border: 1px solid #e2e8f0;
           transition: all 0.15s ease;
           cursor: pointer;
           user-select: none;
+          flex-shrink: 0;
         }
         .icon-stat-btn:hover, .icon-stat-btn:active {
-          background: #e2e8f0;
+          background: #f1f5f9;
           color: #0f172a;
-          transform: translateY(-1px);
+          border-color: #cbd5e1;
         }
         .icon-stat-tooltip {
           position: absolute;
-          bottom: 115%;
+          bottom: 120%;
           left: 50%;
           transform: translateX(-50%);
           background: #0f172a;
           color: #fff;
-          font-size: 11px;
+          font-size: 10px;
           font-weight: 700;
-          padding: 5px 9px;
-          border-radius: 8px;
+          padding: 4px 8px;
+          border-radius: 6px;
           white-space: nowrap;
           pointer-events: none;
           opacity: 0;
@@ -667,16 +633,16 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
 
       {/* Crachá comemorativo para 1º ADM */}
       {perfil.turma_ou_cargo?.toUpperCase().includes('1º ADM') || perfil.turma_ou_cargo?.toUpperCase().includes('1° ADM') || perfil.turma_ou_cargo?.toUpperCase().includes('1 ADM') ? (
-        <div className="mb-5">
+        <div className="mb-4">
           <CrachaPesquisador nome={perfil.nome} avatarUrl={perfil.avatar_url} turma={perfil.turma_ou_cargo} />
         </div>
       ) : null}
 
-      {/* ── CARD PRINCIPAL COM CAPA RESPONSIVA ────────────────────────────── */}
+      {/* ── CARD PRINCIPAL COM CAPA PANORÂMICA MINIMALISTA ───────────────── */}
       <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-200">
 
-        {/* Capa Panorâmica com adaptação de altura para mobile / desktop */}
-        <div className="h-44 sm:h-64 md:h-72 w-full relative overflow-hidden bg-slate-900">
+        {/* Capa Panorâmica padrão (igual à imagem de referência) */}
+        <div className="h-44 sm:h-64 md:h-72 w-full relative overflow-hidden bg-slate-900 group">
           {showCover ? (
             <img
               src={activeCover}
@@ -687,16 +653,11 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
           ) : (
             <div
               className="w-full h-full flex items-center justify-center relative"
-              style={{ background: defaultGradientCover }}
-            >
-              <div className="absolute inset-0 bg-black/15" />
-              <span className="text-white/60 font-semibold text-xs tracking-wider uppercase z-10 flex items-center gap-1.5">
-                <Camera className="w-4 h-4 opacity-75" /> Adicione uma capa personalizada
-              </span>
-            </div>
+              style={{ background: `linear-gradient(135deg, ${g1}dd 0%, ${g2}dd 100%)` }}
+            />
           )}
 
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/10 pointer-events-none" />
 
           {/* Input oculto para capa */}
           <input
@@ -711,194 +672,177 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
             }}
           />
 
-          {/* Botões do topo da Capa */}
-          <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex items-center gap-2 z-10">
+          {/* Botão sutil de lápis para editar capa no canto superior direito */}
+          <div className="absolute top-3 right-3 z-10">
             <button
               type="button"
               onClick={() => coverInputRef.current?.click()}
               title="Trocar foto de capa"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-full bg-white/90 hover:bg-white text-slate-800 text-xs font-bold shadow-md backdrop-blur-md transition cursor-pointer"
+              aria-label="Editar foto de capa"
+              className="w-8 h-8 rounded-full bg-white/80 hover:bg-white text-slate-700 flex items-center justify-center shadow-md backdrop-blur-sm transition cursor-pointer"
             >
               {uploadingCover ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
               ) : (
-                <Camera className="w-3.5 h-3.5 text-blue-600" />
+                <Edit2 className="w-3.5 h-3.5" />
               )}
-              <span className="hidden sm:inline">{uploadingCover ? "Enviando..." : "Editar capa"}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => isEditing ? handleCancel() : setIsEditing(true)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs font-bold shadow-md backdrop-blur-md transition cursor-pointer text-white ${
-                isEditing ? "bg-red-600/90 hover:bg-red-700" : "bg-slate-900/80 hover:bg-slate-900"
-              }`}
-            >
-              {isEditing ? <X className="w-3.5 h-3.5" /> : <Edit3 className="w-3.5 h-3.5" />}
-              <span>{isEditing ? "Cancelar" : "Editar perfil"}</span>
             </button>
           </div>
         </div>
 
-        {/* ── CABEÇALHO COM AVATAR SOBREPOSTO E MÉTRICAS EM ÍCONES ────────── */}
-        <div className="px-4 sm:px-7 pb-5 relative">
+        {/* ── CABEÇALHO COM AVATAR, LÁPIS AO LADO E ÍCONES REDUZIDOS LADO A LADO ── */}
+        <div className="px-4 sm:px-7 pb-4 relative">
           
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 -mt-14 sm:-mt-20 md:-mt-24 mb-5">
-            {/* Bloco Esquerda: Avatar Circular e Nome */}
-            <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 -mt-12 sm:-mt-16 md:-mt-20 mb-4">
+            
+            {/* Bloco Esquerda: Avatar Circular com Lápis ao lado */}
+            <div className="flex flex-row items-end gap-3.5">
               
-              {/* Avatar com borda branca */}
-              <div className="relative inline-block self-start sm:self-auto flex-shrink-0">
+              {/* Avatar com botão de lápis ao lado */}
+              <div className="relative inline-block flex-shrink-0">
                 <div
-                  className="w-24 h-24 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full border-4 sm:border-[5px] border-white shadow-lg overflow-hidden flex items-center justify-center relative bg-slate-100"
+                  className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full border-4 border-white shadow-md overflow-hidden flex items-center justify-center relative bg-slate-100"
                   style={{ background: `linear-gradient(135deg,${g1},${g2})` }}
-                  onClick={() => {
-                    if (isEditing) fileInputRef.current?.click();
-                  }}
-                  title={isEditing ? "Clique para escolher uma foto" : undefined}
+                  title="Foto do pesquisador"
                 >
                   {showAvatar ? (
                     <img
                       src={activeAvatar}
-                      alt={editPerfil.nome || perfil.nome}
+                      alt={perfil.nome}
                       onError={() => setImgErr(true)}
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <span className="font-black text-3xl sm:text-4xl text-white">
-                      {getInitials(editPerfil.nome || perfil.nome)}
+                    <span className="font-black text-2xl sm:text-3xl text-white">
+                      {getInitials(perfil.nome)}
                     </span>
                   )}
-
-                  {isEditing && (
-                    <div className="absolute inset-0 bg-slate-900/60 flex flex-col items-center justify-center text-white cursor-pointer">
-                      {uploadingImg ? (
-                        <Loader2 className="w-6 h-6 animate-spin" />
-                      ) : (
-                        <>
-                          <Camera className="w-5 h-5 mb-1" />
-                          <span className="text-[10px] font-black uppercase">Trocar</span>
-                        </>
-                      )}
+                  {uploadingImg && (
+                    <div className="absolute inset-0 bg-slate-900/60 flex items-center justify-center text-white">
+                      <Loader2 className="w-6 h-6 animate-spin" />
                     </div>
                   )}
                 </div>
 
-                {isEditing ? (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      fileInputRef.current?.click();
-                    }}
-                    title="Escolher foto"
-                    className="absolute bottom-1 right-1 w-8 h-8 rounded-full bg-blue-600 text-white border-2 border-white flex items-center justify-center shadow-md cursor-pointer hover:bg-blue-700"
-                  >
-                    <Camera className="w-4 h-4" />
-                  </button>
-                ) : (
-                  <div className="absolute bottom-2 right-2 w-5 h-5 rounded-full bg-emerald-500 border-2 border-white shadow-sm" />
-                )}
+                {/* Input oculto para foto de perfil */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) void handleFileSelect(file);
+                    e.target.value = "";
+                  }}
+                />
+
+                {/* Ícone de Lápis ao lado do avatar para trocar foto */}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Trocar foto de perfil"
+                  aria-label="Editar foto de perfil"
+                  className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-blue-600 hover:bg-blue-700 text-white border-2 border-white flex items-center justify-center shadow-md cursor-pointer transition"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                </button>
               </div>
 
-              {/* Informações: Nome, Turma e Bio */}
+              {/* Informações: Nome, Turma */}
               <div className="pb-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="font-black text-xl sm:text-2xl text-slate-900 tracking-tight m-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <h1 className="font-extrabold text-lg sm:text-xl text-slate-900 tracking-tight m-0">
                     {perfil.nome}
                   </h1>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-black tracking-wide"
+                  <span className="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black tracking-wide"
                     style={{ color: badge.color, background: badge.bg, border: `1px solid ${badge.border}` }}>
                     {badge.label}
                   </span>
                   {saved && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200">
-                      <CheckCircle className="w-3 h-3" /> Salvo!
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200">
+                      <CheckCircle className="w-2.5 h-2.5" /> Atualizado!
                     </span>
                   )}
                 </div>
-                <p className="text-xs sm:text-sm font-semibold text-slate-500 mt-1">
+                <p className="text-[11px] sm:text-xs font-semibold text-slate-500 mt-0.5">
                   {perfil.turma_ou_cargo || "CEEP Seabra"} · {escolaNome}
                 </p>
-                {perfil.bio ? (
-                  <p className="text-xs sm:text-sm text-slate-600 mt-2 max-w-lg leading-relaxed">
+                {perfil.bio && (
+                  <p className="text-xs text-slate-600 mt-1 max-w-md line-clamp-2 leading-tight">
                     {perfil.bio}
-                  </p>
-                ) : (
-                  <p className="text-xs text-slate-400 italic mt-1.5">
-                    Nenhuma bio adicionada ainda. Clique em "Editar perfil" para escrever sobre você.
                   </p>
                 )}
               </div>
             </div>
 
-            {/* ── BLOCO DIREITA: ÍCONES DE STATUS / INTERAÇÃO COM TOOLTIP ─────── */}
-            <div className="flex items-center flex-wrap gap-2 pt-2 md:pt-0">
+            {/* ── BLOCO DIREITA: ÍCONES REDUZIDOS COMPACTOS LADO A LADO ────────── */}
+            <div className="flex items-center flex-wrap sm:flex-nowrap gap-1.5 pt-1 md:pt-0 overflow-x-auto scrollbar-none">
               
-              {/* 1. Coletas (Fichas) */}
+              {/* 1. Coletas */}
               <button
                 type="button"
                 className="icon-stat-btn"
                 tabIndex={0}
                 onClick={() => navigate("/coleta")}
-                aria-label={`Coletas: ${totalFichas} fichas registradas`}
+                aria-label={`Coletas: ${totalFichas} fichas`}
               >
-                <FileText className="w-4 h-4 text-indigo-600" />
+                <FileText className="w-3.5 h-3.5 text-indigo-600" />
                 <span>{totalFichas}</span>
-                <span className="icon-stat-tooltip">Coletas Registradas: {totalFichas} fichas</span>
+                <span className="icon-stat-tooltip">Coletas: {totalFichas} fichas</span>
               </button>
 
-              {/* 2. Postagens no Feed */}
+              {/* 2. Postagens */}
               <button
                 type="button"
                 className="icon-stat-btn"
                 tabIndex={0}
                 onClick={() => navigate("/feed")}
-                aria-label={`Postagens: ${xpStats.posts} publicações no Feed`}
+                aria-label={`Postagens: ${xpStats.posts}`}
               >
-                <ImageIcon className="w-4 h-4 text-blue-600" />
+                <ImageIcon className="w-3.5 h-3.5 text-blue-600" />
                 <span>{xpStats.posts}</span>
-                <span className="icon-stat-tooltip">Postagens no Feed: {xpStats.posts}</span>
+                <span className="icon-stat-tooltip">Postagens: {xpStats.posts}</span>
               </button>
 
-              {/* 3. Curtidas Recebidas */}
+              {/* 3. Curtidas */}
               <button
                 type="button"
                 className="icon-stat-btn"
                 tabIndex={0}
-                aria-label={`Curtidas: ${xpStats.likes} curtidas recebidas`}
+                aria-label={`Curtidas: ${xpStats.likes}`}
               >
-                <Heart className="w-4 h-4 text-rose-500 fill-rose-500" />
+                <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />
                 <span>{xpStats.likes}</span>
-                <span className="icon-stat-tooltip">Curtidas Recebidas: {xpStats.likes}</span>
+                <span className="icon-stat-tooltip">Curtidas: {xpStats.likes}</span>
               </button>
 
-              {/* 4. Seguindo (Colegas que você curtiu) */}
+              {/* 4. Seguindo */}
               <button
                 type="button"
                 className="icon-stat-btn"
                 tabIndex={0}
                 onClick={() => navigate("/membros")}
-                aria-label={`Seguindo: ${seguindoCount} colegas`}
+                aria-label={`Seguindo: ${seguindoCount}`}
               >
-                <Users className="w-4 h-4 text-emerald-600" />
+                <Users className="w-3.5 h-3.5 text-emerald-600" />
                 <span>{seguindoCount}</span>
-                <span className="icon-stat-tooltip">Seguindo: {seguindoCount} colegas</span>
+                <span className="icon-stat-tooltip">Seguindo: {seguindoCount}</span>
               </button>
 
-              {/* 5. Seguidores (Colegas que curtiram seu perfil) */}
+              {/* 5. Seguidores */}
               <button
                 type="button"
                 className="icon-stat-btn"
                 tabIndex={0}
-                aria-label={`Seguidores: ${seguidoresCount} seguidores`}
+                aria-label={`Seguidores: ${seguidoresCount}`}
               >
-                <Sparkles className="w-4 h-4 text-amber-500" />
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                 <span>{seguidoresCount}</span>
                 <span className="icon-stat-tooltip">Seguidores: {seguidoresCount}</span>
               </button>
 
-              {/* 6. Ícone Oficial do Lyka Chat (substituindo o antigo botão Mensagem) */}
+              {/* 6. Ícone do Lyka Chat direcionando diretamente para /lyka-chat */}
               <button
                 type="button"
                 onClick={() => navigate("/lyka-chat")}
@@ -906,24 +850,24 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
                 tabIndex={0}
                 aria-label="Abrir Lyka Chat"
               >
-                <LaikaNavIcon size={18} />
+                <LaikaNavIcon size={15} />
                 <span className="icon-stat-tooltip">Abrir Lyka Chat</span>
               </button>
             </div>
 
           </div>
 
-          {/* ── DESTAQUES DE STORIES (ESTILO INSTAGRAM NOVO: VAZIO OU COM BOTÃO NOVO) ── */}
-          <div className="pt-4 border-t border-slate-100">
+          {/* ── DESTAQUES DE STORIES (ESTILO INSTAGRAM NOVO) ──────────────────── */}
+          <div className="pt-3 border-t border-slate-100">
             {highlights.length > 0 ? (
-              <div className="flex items-center gap-4 overflow-x-auto pb-2 scrollbar-none">
+              <div className="flex items-center gap-3.5 overflow-x-auto pb-1 scrollbar-none">
                 {highlights.map((hl) => (
                   <div
                     key={hl.id}
-                    className="highlight-item flex flex-col items-center gap-1.5 cursor-pointer flex-shrink-0 transition-transform"
+                    className="highlight-item flex flex-col items-center gap-1 cursor-pointer flex-shrink-0 transition-transform"
                   >
-                    <div className="w-14 h-14 rounded-full p-[2px] bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 shadow-sm">
-                      <div className="w-full h-full rounded-full border-2 border-white overflow-hidden bg-slate-100">
+                    <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 shadow-sm">
+                      <div className="w-full h-full rounded-full border border-white overflow-hidden bg-slate-100">
                         <img
                           src={hl.coverImg || perfil.avatar_url}
                           alt={hl.label}
@@ -931,59 +875,53 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
                         />
                       </div>
                     </div>
-                    <span className="text-[11px] font-bold text-slate-700 max-w-[64px] truncate text-center">
+                    <span className="text-[10px] font-bold text-slate-700 max-w-[56px] truncate text-center">
                       {hl.label}
                     </span>
                   </div>
                 ))}
 
-                {/* Botão de adicionar novo destaque */}
                 <div
-                  className="highlight-item flex flex-col items-center gap-1.5 cursor-pointer flex-shrink-0 transition-transform"
+                  className="highlight-item flex flex-col items-center gap-1 cursor-pointer flex-shrink-0 transition-transform"
                   onClick={handleAddHighlight}
                 >
-                  <div className="w-14 h-14 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center bg-slate-50 text-slate-500 hover:border-slate-400">
-                    <Plus className="w-5 h-5" />
+                  <div className="w-12 h-12 rounded-full border border-dashed border-slate-300 flex items-center justify-center bg-slate-50 text-slate-500 hover:border-slate-400">
+                    <Plus className="w-4 h-4" />
                   </div>
-                  <span className="text-[11px] font-bold text-slate-500">Novo</span>
+                  <span className="text-[10px] font-bold text-slate-500">Novo</span>
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-3 py-1">
+              <div className="flex items-center gap-2 py-0.5">
                 <button
                   type="button"
                   onClick={handleAddHighlight}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 text-[11px] font-bold transition cursor-pointer"
                 >
-                  <div className="w-5 h-5 rounded-full border border-slate-400 border-dashed flex items-center justify-center text-slate-600">
-                    <Plus className="w-3 h-3" />
-                  </div>
-                  <span>Criar primeiro Destaque de Stories</span>
+                  <Plus className="w-3 h-3" />
+                  <span>Novo Destaque</span>
                 </button>
-                <span className="text-xs text-slate-400 hidden sm:inline">
-                  (Seus stories arquivados aparecerão organizados aqui no perfil)
-                </span>
               </div>
             )}
           </div>
 
-          {/* ── BARRA DE ABAS SOCIAL (Mídia ⌵, Respostas, Repostagens, Postagens) ── */}
-          <div className="flex items-center gap-4 sm:gap-6 border-t border-slate-200 mt-3 overflow-x-auto scrollbar-none">
+          {/* ── BARRA DE ABAS SOCIAL: Mídia, Respostas, Repostagens, Postagens e PERFIL ── */}
+          <div className="flex items-center gap-3 sm:gap-5 border-t border-slate-200 mt-2.5 overflow-x-auto scrollbar-none">
             <button
               type="button"
               onClick={() => setActiveTab("midia")}
-              className={`inline-flex items-center gap-1.5 py-3 px-1 border-b-2 text-xs sm:text-sm font-semibold transition cursor-pointer ${
+              className={`inline-flex items-center gap-1 py-2.5 px-1 border-b-2 text-xs sm:text-sm font-semibold transition cursor-pointer ${
                 activeTab === "midia" ? "border-blue-600 text-slate-900 !font-extrabold" : "border-transparent text-slate-500 hover:text-slate-800"
               }`}
             >
               <span>Mídia</span>
-              <ChevronDown className="w-3.5 h-3.5 opacity-70" />
+              <ChevronDown className="w-3 h-3 opacity-60" />
             </button>
 
             <button
               type="button"
               onClick={() => setActiveTab("respostas")}
-              className={`py-3 px-1 border-b-2 text-xs sm:text-sm font-semibold transition cursor-pointer ${
+              className={`py-2.5 px-1 border-b-2 text-xs sm:text-sm font-semibold transition cursor-pointer ${
                 activeTab === "respostas" ? "border-blue-600 text-slate-900 !font-extrabold" : "border-transparent text-slate-500 hover:text-slate-800"
               }`}
             >
@@ -993,7 +931,7 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
             <button
               type="button"
               onClick={() => setActiveTab("repostagens")}
-              className={`py-3 px-1 border-b-2 text-xs sm:text-sm font-semibold transition cursor-pointer ${
+              className={`py-2.5 px-1 border-b-2 text-xs sm:text-sm font-semibold transition cursor-pointer ${
                 activeTab === "repostagens" ? "border-blue-600 text-slate-900 !font-extrabold" : "border-transparent text-slate-500 hover:text-slate-800"
               }`}
             >
@@ -1003,167 +941,36 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
             <button
               type="button"
               onClick={() => setActiveTab("postagens")}
-              className={`py-3 px-1 border-b-2 text-xs sm:text-sm font-semibold transition cursor-pointer ${
+              className={`py-2.5 px-1 border-b-2 text-xs sm:text-sm font-semibold transition cursor-pointer ${
                 activeTab === "postagens" ? "border-blue-600 text-slate-900 !font-extrabold" : "border-transparent text-slate-500 hover:text-slate-800"
               }`}
             >
               Postagens
+            </button>
+
+            {/* ABA "PERFIL" minimalista ao lado de Postagens */}
+            <button
+              type="button"
+              onClick={() => setActiveTab("perfil")}
+              className={`inline-flex items-center gap-1 py-2.5 px-1 border-b-2 text-xs sm:text-sm font-semibold transition cursor-pointer ${
+                activeTab === "perfil" ? "border-blue-600 text-slate-900 !font-extrabold" : "border-transparent text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              <UserCircle className="w-3.5 h-3.5" />
+              <span>Perfil</span>
             </button>
           </div>
 
         </div>
       </div>
 
-      {/* ── MODO EDIÇÃO DO PERFIL ─────────────────────────────────────────── */}
-      {isEditing && (
-        <form onSubmit={handleSave} className="bg-white rounded-3xl p-6 sm:p-8 mt-5 shadow-sm border border-slate-200">
-          <div className="flex items-center gap-3 pb-4 mb-5 border-b border-slate-100">
-            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white">
-              <Edit3 className="w-4 h-4" />
-            </div>
-            <div>
-              <p className="font-extrabold text-sm text-slate-900 m-0">Editar Perfil</p>
-              <p className="text-xs text-slate-400 m-0">Atualize sua foto, capa e dados cadastrais</p>
-            </div>
-          </div>
+      {/* ── CORPO PRINCIPAL COM GRID: CONTEÚDO ESCOLHIDO + TRENDS ADAPTATIVAS ── */}
+      <div className="mt-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="sm:col-span-2">
-              <Field id="edit-nome" label="Nome Completo" value={editPerfil.nome}
-                onChange={v => setEditPerfil(p => ({ ...p, nome: v }))} />
-            </div>
-            <Field id="edit-turma" label="Turma / Cargo" value={editPerfil.turma_ou_cargo}
-              onChange={v => setEditPerfil(p => ({ ...p, turma_ou_cargo: v }))} />
-            <Field id="edit-tel" label="Telefone" value={editPerfil.telefone}
-              onChange={v => setEditPerfil(p => ({ ...p, telefone: v }))} placeholder="(75) 99999-9999" />
-            <div className="sm:col-span-2">
-              <Field id="edit-bio" label="Bio" value={editPerfil.bio}
-                onChange={v => setEditPerfil(p => ({ ...p, bio: v }))} multiline
-                placeholder="Conte um pouco sobre você e sua atuação no Censo..." />
-            </div>
-
-            {/* Foto de Perfil */}
-            <div className="sm:col-span-2 flex flex-col gap-2.5">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) void handleFileSelect(file);
-                  e.target.value = "";
-                }}
-              />
-
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  Foto de Perfil
-                </label>
-                <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setAvatarInputMode("upload")}
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition ${
-                      avatarInputMode === "upload" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500"
-                    }`}
-                  >
-                    <Upload className="w-3.5 h-3.5" /> Upload
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAvatarInputMode("url")}
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition ${
-                      avatarInputMode === "url" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500"
-                    }`}
-                  >
-                    <LinkIcon className="w-3.5 h-3.5" /> URL da Foto
-                  </button>
-                </div>
-              </div>
-
-              {avatarInputMode === "upload" ? (
-                <div>
-                  <div
-                    onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                    onDragLeave={() => setIsDragging(false)}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      setIsDragging(false);
-                      const file = e.dataTransfer.files?.[0];
-                      if (file) void handleFileSelect(file);
-                    }}
-                    onClick={() => fileInputRef.current?.click()}
-                    className={`border-2 border-dashed rounded-2xl p-5 text-center cursor-pointer transition flex flex-col items-center gap-2 ${
-                      isDragging ? "border-blue-600 bg-blue-50" : "border-slate-300 bg-slate-50 hover:bg-slate-100/70"
-                    }`}
-                  >
-                    {uploadingImg ? (
-                      <div className="flex flex-col items-center gap-2 py-2">
-                        <Loader2 className="w-7 h-7 text-blue-600 animate-spin" />
-                        <span className="text-xs font-bold text-blue-600">Otimizando sua foto...</span>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="w-11 h-11 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center">
-                          <Camera className="w-5 h-5" />
-                        </div>
-                        <p className="text-xs font-bold text-slate-700 m-0">Clique para escolher foto do aparelho</p>
-                        <p className="text-[11px] text-slate-400 m-0">JPG, PNG, WEBP (recorte e compressão automáticos)</p>
-                      </>
-                    )}
-                  </div>
-
-                  {uploadMsg && (
-                    <div className={`mt-2 p-3 rounded-xl text-xs font-semibold flex items-center gap-2 ${
-                      uploadMsg.type === "success" ? "bg-emerald-50 text-emerald-800 border border-emerald-200" : "bg-red-50 text-red-800 border border-red-200"
-                    }`}>
-                      {uploadMsg.type === "success" ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-                      <span>{uploadMsg.text}</span>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <Field
-                  id="edit-avatar"
-                  label=""
-                  value={editPerfil.avatar_url}
-                  onChange={(v) => {
-                    setEditPerfil(p => ({ ...p, avatar_url: v }));
-                    setImgErr(false);
-                    setUploadMsg(null);
-                  }}
-                  placeholder="Cole aqui o link direto da imagem (https://...)"
-                />
-              )}
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={handleCancel}
-              className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 font-bold text-xs hover:bg-slate-50 cursor-pointer"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-md transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
-            >
-              <Save className="w-3.5 h-3.5" />
-              <span>{saving ? "Salvando..." : "Salvar alterações"}</span>
-            </button>
-          </div>
-        </form>
-      )}
-
-      {/* ── CORPO PRINCIPAL COM GRID RESPONSIVA: MÍDIA + TRENDS ESTILO TWITTER ── */}
-      <div className="mt-5 grid grid-cols-1 lg:grid-cols-12 gap-5">
-
-        {/* Coluna Principal: Galeria de Mídias Reais ou Postagens */}
+        {/* Coluna Principal */}
         <div className="lg:col-span-8 order-2 lg:order-1">
+          
+          {/* ABA: MÍDIA */}
           {activeTab === "midia" && (
             <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200 shadow-sm">
               {mediaPosts.length > 0 ? (
@@ -1189,46 +996,46 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
                   ))}
                 </div>
               ) : (
-                /* Estado Vazio Real estilo Instagram quando a conta é nova */
-                <div className="py-14 px-4 text-center flex flex-col items-center justify-center">
-                  <div className="w-16 h-16 rounded-full border-2 border-slate-300 flex items-center justify-center text-slate-400 mb-3">
-                    <Camera className="w-8 h-8 opacity-75" />
+                <div className="py-12 px-4 text-center flex flex-col items-center justify-center">
+                  <div className="w-14 h-14 rounded-full border border-slate-300 flex items-center justify-center text-slate-400 mb-2.5">
+                    <Camera className="w-7 h-7 opacity-70" />
                   </div>
-                  <h3 className="font-extrabold text-base text-slate-800 m-0">Ainda não há mídias publicadas</h3>
-                  <p className="text-xs text-slate-500 mt-1 max-w-sm">
-                    Quando você compartilhar fotos ou registros de campo no Feed do Censo, elas ficarão organizadas aqui.
+                  <h3 className="font-extrabold text-sm text-slate-800 m-0">Ainda não há mídias publicadas</h3>
+                  <p className="text-[11px] text-slate-500 mt-1 max-w-xs">
+                    Suas fotos e registros de campo no Feed do Censo serão arquivados aqui.
                   </p>
                   <button
                     type="button"
                     onClick={() => navigate("/feed")}
-                    className="mt-4 px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm transition cursor-pointer"
+                    className="mt-3.5 px-3.5 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm transition cursor-pointer"
                   >
-                    Publicar foto no Feed
+                    Publicar no Feed
                   </button>
                 </div>
               )}
             </div>
           )}
 
+          {/* ABA: POSTAGENS */}
           {activeTab === "postagens" && (
             <div className="flex flex-col gap-3">
               {userPosts.length === 0 ? (
-                <div className="bg-white rounded-3xl p-10 text-center border border-slate-200">
-                  <p className="font-extrabold text-sm text-slate-800 m-0">Nenhuma postagem realizada ainda</p>
-                  <p className="text-xs text-slate-500 mt-1 mb-4">Compartilhe suas descobertas de pesquisa com seus colegas de escola!</p>
+                <div className="bg-white rounded-3xl p-8 text-center border border-slate-200">
+                  <p className="font-bold text-sm text-slate-800 m-0">Nenhuma postagem realizada ainda</p>
+                  <p className="text-xs text-slate-500 mt-1 mb-3">Compartilhe suas descobertas de pesquisa com os colegas!</p>
                   <button
                     type="button"
                     onClick={() => navigate("/feed")}
-                    className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold shadow-sm"
+                    className="px-3.5 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-bold shadow-sm"
                   >
                     Ir para o Feed
                   </button>
                 </div>
               ) : (
                 userPosts.map((post) => (
-                  <div key={post.id} className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-200 flex items-center justify-center text-slate-600 font-bold text-xs">
+                  <div key={post.id} className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200 shadow-sm">
+                    <div className="flex items-center gap-3 mb-2.5">
+                      <div className="w-9 h-9 rounded-full overflow-hidden bg-slate-200 flex items-center justify-center text-slate-600 font-bold text-xs">
                         {showAvatar ? (
                           <img src={perfil.avatar_url} alt="" className="w-full h-full object-cover" />
                         ) : (
@@ -1236,18 +1043,18 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
                         )}
                       </div>
                       <div>
-                        <span className="font-bold text-sm text-slate-900 block">{post.author_name}</span>
-                        <span className="text-[11px] text-slate-400">
+                        <span className="font-bold text-xs text-slate-900 block">{post.author_name}</span>
+                        <span className="text-[10px] text-slate-400">
                           {new Date(post.created_at).toLocaleDateString("pt-BR")}
                         </span>
                       </div>
                     </div>
-                    <p className="text-xs sm:text-sm text-slate-700 leading-relaxed mb-3">{post.content}</p>
+                    <p className="text-xs sm:text-sm text-slate-700 leading-relaxed mb-2.5">{post.content}</p>
                     {post.image_url && (
                       <img
                         src={post.image_url}
                         alt=""
-                        className="w-full max-h-80 object-cover rounded-2xl mb-3"
+                        className="w-full max-h-72 object-cover rounded-xl mb-2"
                       />
                     )}
                   </div>
@@ -1256,35 +1063,121 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
             </div>
           )}
 
-          {activeTab === "respostas" && (
-            <div className="bg-white rounded-3xl p-10 text-center border border-slate-200">
-              <MessageCircle className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-              <p className="font-bold text-sm text-slate-800 m-0">Nenhuma resposta recente</p>
-              <p className="text-xs text-slate-400 mt-1">Suas interações e respostas aos colegas do CEEP aparecerão aqui.</p>
+          {/* ABA: PERFIL (Visualização e Edição Minimalista) */}
+          {activeTab === "perfil" && (
+            <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm">
+              <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <UserCircle className="w-5 h-5 text-blue-600" />
+                  <h3 className="font-extrabold text-sm sm:text-base text-slate-900 m-0">Dados do Perfil</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingData(!isEditingData)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 transition cursor-pointer"
+                >
+                  <Edit2 className="w-3 h-3" />
+                  <span>{isEditingData ? "Modo Leitura" : "Editar Dados"}</span>
+                </button>
+              </div>
+
+              {isEditingData ? (
+                <form onSubmit={handleSaveData} className="flex flex-col gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="sm:col-span-2">
+                      <Field id="edit-nome" label="Nome Completo" value={editPerfil.nome}
+                        onChange={v => setEditPerfil(p => ({ ...p, nome: v }))} />
+                    </div>
+                    <Field id="edit-turma" label="Turma / Cargo" value={editPerfil.turma_ou_cargo}
+                      onChange={v => setEditPerfil(p => ({ ...p, turma_ou_cargo: v }))} />
+                    <Field id="edit-tel" label="Telefone" value={editPerfil.telefone}
+                      onChange={v => setEditPerfil(p => ({ ...p, telefone: v }))} placeholder="(75) 99999-9999" />
+                    <div className="sm:col-span-2">
+                      <Field id="edit-bio" label="Bio" value={editPerfil.bio}
+                        onChange={v => setEditPerfil(p => ({ ...p, bio: v }))} multiline
+                        placeholder="Escreva sobre você..." />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 mt-2 pt-3 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditPerfil({ ...perfil });
+                        setIsEditingData(false);
+                      }}
+                      className="px-3.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      <span>{saving ? "Salvando..." : "Salvar"}</span>
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div className="p-3 bg-slate-50 rounded-xl">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Nome</span>
+                    <span className="font-bold text-slate-800 text-sm">{perfil.nome}</span>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-xl">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Turma / Cargo</span>
+                    <span className="font-bold text-slate-800 text-sm">{perfil.turma_ou_cargo || "Não informada"}</span>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-xl">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">E-mail</span>
+                    <span className="font-semibold text-slate-700">{perfil.email || "Não informado"}</span>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-xl">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Telefone</span>
+                    <span className="font-semibold text-slate-700">{perfil.telefone || "Não informado"}</span>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-xl sm:col-span-2">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Localização</span>
+                    <span className="font-semibold text-slate-700">{perfil.cidade} — {perfil.estado}</span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
+          {/* ABA: RESPOSTAS */}
+          {activeTab === "respostas" && (
+            <div className="bg-white rounded-3xl p-8 text-center border border-slate-200">
+              <MessageCircle className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+              <p className="font-bold text-xs text-slate-800 m-0">Nenhuma resposta recente</p>
+              <p className="text-[11px] text-slate-400 mt-1">Suas respostas aos colegas aparecerão aqui.</p>
+            </div>
+          )}
+
+          {/* ABA: REPOSTAGENS */}
           {activeTab === "repostagens" && (
-            <div className="bg-white rounded-3xl p-10 text-center border border-slate-200">
-              <Share2 className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-              <p className="font-bold text-sm text-slate-800 m-0">Nenhuma repostagem encontrada</p>
-              <p className="text-xs text-slate-400 mt-1">Publicações que você repostar do Feed do Censo serão listadas aqui.</p>
+            <div className="bg-white rounded-3xl p-8 text-center border border-slate-200">
+              <Share2 className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+              <p className="font-bold text-xs text-slate-800 m-0">Nenhuma repostagem encontrada</p>
+              <p className="text-[11px] text-slate-400 mt-1">Publicações repostadas aparecerão aqui.</p>
             </div>
           )}
         </div>
 
-        {/* Coluna Lateral: "O que está acontecendo?" (Trends Mundiais + CEEP adaptadas estilo Twitter/X) */}
-        <div className="lg:col-span-4 order-1 lg:order-2 flex flex-col gap-4">
+        {/* Coluna Lateral: Trends Mundiais + CEEP adaptadas estilo Twitter/X */}
+        <div className="lg:col-span-4 order-1 lg:order-2 flex flex-col gap-3.5">
           
-          <div className="bg-slate-50 rounded-3xl p-5 border border-slate-200">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-black text-base sm:text-lg text-slate-900 tracking-tight m-0 flex items-center gap-2">
+          <div className="bg-slate-50 rounded-3xl p-4 sm:p-5 border border-slate-200">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-black text-sm sm:text-base text-slate-900 tracking-tight m-0 flex items-center gap-1.5">
                 <Globe className="w-4 h-4 text-blue-600" />
                 <span>O que está acontecendo?</span>
               </h3>
             </div>
 
-            <div className="flex flex-col gap-3.5">
+            <div className="flex flex-col gap-3">
               {trendingTopics.map((trend, idx) => (
                 <div
                   key={idx}
@@ -1292,10 +1185,10 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
                   onClick={() => navigate("/feed")}
                 >
                   <div className="min-w-0">
-                    <span className="text-[11px] font-semibold text-slate-500 block">
+                    <span className="text-[10px] font-semibold text-slate-500 block">
                       {trend.category}
                     </span>
-                    <span className="text-xs sm:text-sm font-extrabold text-slate-900 block mt-0.5 group-hover:text-blue-600 transition truncate">
+                    <span className="text-xs font-bold text-slate-900 block mt-0.5 group-hover:text-blue-600 transition truncate">
                       {trend.topic}
                     </span>
                     <span className="text-[10px] text-slate-400 block mt-0.5">
@@ -1304,10 +1197,10 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
                   </div>
                   <button
                     type="button"
-                    title="Mais informações da trend"
-                    className="text-slate-400 hover:text-slate-600 p-1 rounded-md"
+                    title="Mais informações"
+                    className="text-slate-400 hover:text-slate-600 p-1"
                   >
-                    <MoreHorizontal className="w-4 h-4" />
+                    <MoreHorizontal className="w-3.5 h-3.5" />
                   </button>
                 </div>
               ))}
@@ -1316,32 +1209,32 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
             <button
               type="button"
               onClick={() => navigate("/feed")}
-              className="mt-4 pt-3 border-t border-slate-200 w-full text-left text-xs font-bold text-blue-600 hover:underline cursor-pointer"
+              className="mt-3 pt-2.5 border-t border-slate-200 w-full text-left text-xs font-bold text-blue-600 hover:underline cursor-pointer"
             >
-              Mostrar mais notícias e tendências
+              Mostrar mais notícias
             </button>
           </div>
 
           {/* Dados de Contato / Localização do Pesquisador */}
-          <div className="bg-white rounded-3xl p-5 border border-slate-200">
-            <h4 className="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">
+          <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200">
+            <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2.5">
               Informações do Pesquisador
             </h4>
-            <div className="flex flex-col gap-2.5 text-xs text-slate-600">
+            <div className="flex flex-col gap-2 text-xs text-slate-600">
               {perfil.email && (
                 <div className="flex items-center gap-2 truncate">
-                  <Mail className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                  <Mail className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
                   <span className="truncate">{perfil.email}</span>
                 </div>
               )}
               {perfil.telefone && (
                 <div className="flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                  <Phone className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
                   <span>{perfil.telefone}</span>
                 </div>
               )}
               <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                <MapPin className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
                 <span>{perfil.cidade} — {perfil.estado}</span>
               </div>
             </div>
@@ -1359,39 +1252,39 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
         const progress = nextNivel ? Math.round(((totalXP - nivel.minXP) / (nextNivel.minXP - nivel.minXP)) * 100) : 100;
         
         return (
-          <div className="mt-6 bg-white rounded-3xl p-5 sm:p-7 shadow-sm border border-slate-200">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="p-2.5 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-600 text-white shadow-sm">
-                <Trophy className="w-5 h-5" />
+          <div className="mt-5 bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-slate-200">
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="p-2 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-600 text-white shadow-sm">
+                <Trophy className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="m-0 font-black text-base sm:text-lg text-slate-900">Conquistas do Pesquisador</h3>
-                <p className="m-0 text-xs text-slate-500 font-semibold">Gerenciado pelo módulo Accumbens (TAS)</p>
+                <h3 className="m-0 font-extrabold text-sm sm:text-base text-slate-900">Conquistas do Pesquisador</h3>
+                <p className="m-0 text-[11px] text-slate-500 font-semibold">Gerenciado pelo módulo Accumbens (TAS)</p>
               </div>
             </div>
 
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3">
               <div className="flex justify-between items-end">
                 <div>
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Nível Atual</span>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xl sm:text-2xl">{nivel.icon}</span>
-                    <span className="text-xl sm:text-2xl font-black" style={{ color: nivel.color }}>{nivel.nome}</span>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="text-lg sm:text-xl">{nivel.icon}</span>
+                    <span className="text-lg sm:text-xl font-black" style={{ color: nivel.color }}>{nivel.nome}</span>
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="text-2xl sm:text-3xl font-black text-slate-900 leading-none">{totalXP.toLocaleString()}</span>
-                  <span className="text-xs sm:text-sm font-bold text-slate-500 ml-1">XP</span>
+                  <span className="text-xl sm:text-2xl font-black text-slate-900 leading-none">{totalXP.toLocaleString()}</span>
+                  <span className="text-xs font-bold text-slate-500 ml-1">XP</span>
                 </div>
               </div>
 
               {nextNivel && (
                 <div>
-                  <div className="flex justify-between text-xs font-bold text-slate-600 mb-1.5">
+                  <div className="flex justify-between text-[11px] font-bold text-slate-600 mb-1">
                     <span>Progresso para {nextNivel.nome}</span>
                     <span>{progress}%</span>
                   </div>
-                  <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all duration-700"
                       style={{
@@ -1400,22 +1293,22 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
                       }}
                     />
                   </div>
-                  <div className="text-right text-[10px] font-bold text-slate-400 mt-1">
+                  <div className="text-right text-[10px] font-bold text-slate-400 mt-0.5">
                     Faltam {(nextNivel.minXP - totalXP).toLocaleString()} XP
                   </div>
                 </div>
               )}
               
-              <div className="grid grid-cols-2 gap-3 mt-1">
-                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                  <BookOpen className="w-4 h-4 text-blue-600 mb-1.5" />
-                  <div className="text-lg font-black text-slate-900">{totalFichas}</div>
-                  <div className="text-[11px] font-semibold text-slate-500">Fichas Coletadas (x100 XP)</div>
+              <div className="grid grid-cols-2 gap-2.5 mt-1">
+                <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                  <BookOpen className="w-3.5 h-3.5 text-blue-600 mb-1" />
+                  <div className="text-base font-black text-slate-900">{totalFichas}</div>
+                  <div className="text-[10px] font-semibold text-slate-500">Fichas (x100 XP)</div>
                 </div>
-                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                  <Target className="w-4 h-4 text-emerald-600 mb-1.5" />
-                  <div className="text-lg font-black text-slate-900">{xpStats.posts + xpStats.msgs + xpStats.likes}</div>
-                  <div className="text-[11px] font-semibold text-slate-500">Interações Sociais</div>
+                <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                  <Target className="w-3.5 h-3.5 text-emerald-600 mb-1" />
+                  <div className="text-base font-black text-slate-900">{xpStats.posts + xpStats.msgs + xpStats.likes}</div>
+                  <div className="text-[10px] font-semibold text-slate-500">Interações Sociais</div>
                 </div>
               </div>
             </div>
@@ -1423,7 +1316,7 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
         );
       })()}
 
-      <div className="mt-5">
+      <div className="mt-4">
         <BadgeList userId={perfil.id} />
       </div>
 
