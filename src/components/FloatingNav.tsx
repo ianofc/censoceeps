@@ -57,6 +57,7 @@ export const FloatingNav: React.FC<FloatingNavProps> = ({ onLogout }) => {
       ? [{ id: '/auditoria', label: 'Gestão & Auditoria', icon: FolderCheck, activeColor: 'bg-emerald-600 shadow-emerald-600/30' }]
       : [{ id: '/coleta', label: 'Ficha Censo', icon: ClipboardList, activeColor: 'bg-indigo-600 shadow-indigo-600/30' }]
     ),
+    { id: '/telao', label: 'Telão Interativo', icon: Landmark, activeColor: 'bg-blue-600 shadow-blue-600/30' },
     { id: '/feed', label: 'Feed & Evidências', icon: Rss, activeColor: 'bg-blue-600 shadow-blue-600/30' },
     { id: '/ranking', label: 'Ranking Alunos', icon: Trophy, activeColor: 'bg-amber-500 shadow-amber-500/30' },
     { id: '/jornal', label: 'Censo Tribune', icon: NewspaperIcon, activeColor: 'bg-purple-600 shadow-purple-600/30' },
