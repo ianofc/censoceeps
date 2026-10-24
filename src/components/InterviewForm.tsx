@@ -241,14 +241,16 @@ export const InterviewForm: React.FC<Props> = ({ userId }) => {
 
             <div>
               <label htmlFor="genero" className="block text-xs font-bold text-slate-700 uppercase mb-2">Gênero</label>
-              <input 
+              <select
                 id="genero"
-                type="text" 
-                value={formData.genero || ''} 
+                value={formData.genero || ''}
                 onChange={e => setFormData({ ...formData, genero: e.target.value })}
-                placeholder="Ex: Masculino, Feminino, Não-binário..."
-                className="w-full p-3 border border-slate-200 rounded-xl text-sm font-semibold bg-slate-50 focus:bg-white" 
-              />
+                className="w-full p-3 border border-slate-200 rounded-xl text-sm font-semibold bg-slate-50 focus:bg-white"
+              >
+                <option value="">Selecione o gênero...</option>
+                <option value="Masculino">Masculino</option>
+                <option value="Feminino">Feminino</option>
+              </select>
             </div>
 
             <div>

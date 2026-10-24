@@ -84,6 +84,18 @@ export function formatEntrevistaPayload(item: any, fallbackInterviewerId?: strin
   const rawNome = (item.nome_participante?.trim() || item.nome?.trim() || 'PARTICIPANTE').toUpperCase();
   const faixaEtaria = item.faixa_etaria || item.idade || null;
 
+  // Unificação e validação estrita de gênero: apenas Masculino ou Feminino
+  let rawGenero = item.genero?.trim() || null;
+  let generoCanonico: string | null = null;
+  if (rawGenero) {
+    const gLow = rawGenero.toLowerCase();
+    if (gLow.includes('fem') || gLow.includes('mulher')) {
+      generoCanonico = 'Feminino';
+    } else if (gLow.includes('masc') || gLow.includes('homem') || gLow.includes('máscara')) {
+      generoCanonico = 'Masculino';
+    }
+  }
+
   return {
     entrevistador_id: interviewerId,
     nome_participante: rawNome,
@@ -115,7 +127,7 @@ export function formatEntrevistaPayload(item: any, fallbackInterviewerId?: strin
     renda_familiar: item.renda_familiar || null,
     acesso_internet: item.acesso_internet || null,
     risco_evasao: item.risco_evasao || null,
-    genero: item.genero?.trim() || null,
+    genero: generoCanonico,
     created_at: item.created_at || new Date().toISOString(),
   };
 }

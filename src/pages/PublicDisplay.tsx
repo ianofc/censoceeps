@@ -120,19 +120,16 @@ export function PublicDisplay() {
     let relatosPreconceito = 0;
 
     entrevistas.forEach((item) => {
-      // Normalização amigável de gênero
+      // Unificação estrita de gênero: apenas Masculino e Feminino (unifica erros de digitação como femino, femenino, etc)
       let g = (item.genero || '').trim();
-      if (!g) {
-        g = 'Não informado';
-      } else {
+      if (g) {
         const gLow = g.toLowerCase();
-        if (gLow.includes('fem')) g = 'Feminino';
-        else if (gLow.includes('masc')) g = 'Masculino';
-        else if (gLow.includes('não bin') || gLow.includes('nao bin')) g = 'Não-binário';
-        else if (gLow.includes('trans')) g = 'Transgênero';
-        else g = g.charAt(0).toUpperCase() + g.slice(1);
+        if (gLow.includes('fem') || gLow.includes('mulher')) {
+          generosRaw['Feminino'] = (generosRaw['Feminino'] || 0) + 1;
+        } else if (gLow.includes('masc') || gLow.includes('homem') || gLow.includes('máscara')) {
+          generosRaw['Masculino'] = (generosRaw['Masculino'] || 0) + 1;
+        }
       }
-      generosRaw[g] = (generosRaw[g] || 0) + 1;
 
       // Raça / Etnia
       let r = (item.cor_raca || '').trim();

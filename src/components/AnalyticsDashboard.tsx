@@ -412,7 +412,15 @@ export function AnalyticsDashboard() {
         };
 
         data.forEach((row) => {
-          if (row.genero) newStats.genero[row.genero] = (newStats.genero[row.genero] || 0) + 1;
+          // Unificação estrita de gênero: apenas Masculino e Feminino (erros de digitação unificados)
+          if (row.genero) {
+            const gLow = String(row.genero).toLowerCase().trim();
+            if (gLow.includes('fem') || gLow.includes('mulher')) {
+              newStats.genero['Feminino'] = (newStats.genero['Feminino'] || 0) + 1;
+            } else if (gLow.includes('masc') || gLow.includes('homem') || gLow.includes('máscara')) {
+              newStats.genero['Masculino'] = (newStats.genero['Masculino'] || 0) + 1;
+            }
+          }
           if (row.cor_raca) newStats.raca[row.cor_raca] = (newStats.raca[row.cor_raca] || 0) + 1;
           if (row.vinculo) newStats.vinculo[row.vinculo] = (newStats.vinculo[row.vinculo] || 0) + 1;
           if (row.acesso_internet) newStats.internet[row.acesso_internet] = (newStats.internet[row.acesso_internet] || 0) + 1;
