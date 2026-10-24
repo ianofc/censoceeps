@@ -18,25 +18,6 @@ import { badgeService } from "../services/badgeService";
 import { tasFeedScraperService } from "../services/tasFeedScraperService";
 
 /**
- * Ícone visual do Lyka Chat oficial do Censo CEEP
- */
-function LaikaNavIcon({ size = 16 }: { readonly size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M5 8 C4 4 2 3 3 7" />
-      <path d="M19 8 C20 4 22 3 21 7" />
-      <ellipse cx="12" cy="10" rx="7" ry="6" />
-      <ellipse cx="12" cy="13" rx="3" ry="2" />
-      <ellipse cx="12" cy="12" rx="1.2" ry="0.8" fill="currentColor" stroke="none" />
-      <circle cx="9" cy="9" r="0.9" fill="currentColor" stroke="none" />
-      <circle cx="15" cy="9" r="0.9" fill="currentColor" stroke="none" />
-      <path d="M7 15.5 C6 18 6 21 8 21 L16 21 C18 21 18 18 17 15.5" />
-      <path d="M17 16 C21 14 22 10 20 9" />
-    </svg>
-  );
-}
-
-/**
  * Redimensiona e recorta a imagem em quadrado (512x512) no cliente antes do upload.
  */
 async function processImageForAvatar(file: File): Promise<Blob> {
@@ -921,19 +902,6 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
                 <span>{seguidoresCount}</span>
                 <span className="icon-stat-tooltip">Seguidores: {seguidoresCount}</span>
               </button>
-
-              {/* 6. Ícone do Lyka Chat direcionando diretamente para /lyka-chat */}
-              <button
-                type="button"
-                onClick={() => navigate("/lyka-chat")}
-                className="icon-stat-btn !bg-violet-600 hover:!bg-violet-700 !text-white !border-violet-600 shadow-sm"
-                tabIndex={0}
-                aria-label="Abrir Lyka Chat"
-              >
-                <LaikaNavIcon size={16} />
-                <span>Chat</span>
-                <span className="icon-stat-tooltip">Abrir Lyka Chat</span>
-              </button>
             </div>
 
           </div>
@@ -1344,9 +1312,9 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
         {/* Coluna Lateral: Trends Mundiais + CEEP adaptadas estilo Twitter/X */}
         <div className="lg:col-span-4 order-1 lg:order-2 flex flex-col gap-3.5">
           
-          <div className="bg-slate-50 rounded-3xl p-4 sm:p-5 border border-slate-200">
+          <div className="bg-slate-50 dark:bg-slate-900 rounded-3xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-black text-sm sm:text-base text-slate-900 tracking-tight m-0 flex items-center gap-1.5">
+              <h3 className="font-black text-sm sm:text-base text-slate-900 dark:text-slate-100 tracking-tight m-0 flex items-center gap-1.5">
                 <Globe className="w-4 h-4 text-blue-600" />
                 <span>O que está acontecendo?</span>
               </h3>
@@ -1360,20 +1328,20 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
                   onClick={() => navigate("/feed")}
                 >
                   <div className="min-w-0">
-                    <span className="text-[10px] font-semibold text-slate-500 block">
+                    <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 block tracking-tight">
                       {trend.category}
                     </span>
-                    <span className="text-xs font-bold text-slate-900 block mt-0.5 group-hover:text-blue-600 transition truncate">
+                    <span className="text-xs font-bold text-slate-900 dark:text-slate-100 block mt-0.5 group-hover:text-blue-600 transition truncate">
                       {trend.topic}
                     </span>
-                    <span className="text-[10px] text-slate-400 block mt-0.5">
+                    <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 block mt-0.5">
                       {trend.posts}
                     </span>
                   </div>
                   <button
                     type="button"
                     title="Mais informações"
-                    className="text-slate-400 hover:text-slate-600 p-1"
+                    className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 p-1"
                   >
                     <MoreHorizontal className="w-3.5 h-3.5" />
                   </button>
