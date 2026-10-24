@@ -1312,7 +1312,7 @@ export const MeuPerfil: React.FC<MeuPerfilProps> = ({ escolaNome }) => {
         {/* Coluna Lateral: Trends Mundiais + CEEP adaptadas estilo Twitter/X */}
         <div className="lg:col-span-4 order-1 lg:order-2 flex flex-col gap-3.5">
           
-          <div className="bg-slate-50 dark:bg-slate-900 rounded-3xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-sm">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-black text-sm sm:text-base text-slate-900 dark:text-slate-100 tracking-tight m-0 flex items-center gap-1.5">
                 <Globe className="w-4 h-4 text-blue-600" />

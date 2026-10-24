@@ -22,20 +22,18 @@ import {
   Shield } from 'lucide-react';
 
 const adinhaAvatar = new URL('../assets/imgs/AdaLovelace.png', import.meta.url).href;
+const laykaLogoImg = new URL('../assets/imgs/laykalogo.png', import.meta.url).href;
 
-function LaikaNavIcon({ size = 20 }: { readonly size?: number }) {
+function LaikaNavIcon({ size = 20, className = "" }: { readonly size?: number; readonly className?: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M5 8 C4 4 2 3 3 7" />
-      <path d="M19 8 C20 4 22 3 21 7" />
-      <ellipse cx="12" cy="10" rx="7" ry="6" />
-      <ellipse cx="12" cy="13" rx="3" ry="2" />
-      <ellipse cx="12" cy="12" rx="1.2" ry="0.8" fill="currentColor" stroke="none" />
-      <circle cx="9" cy="9" r="0.9" fill="currentColor" stroke="none" />
-      <circle cx="15" cy="9" r="0.9" fill="currentColor" stroke="none" />
-      <path d="M7 15.5 C6 18 6 21 8 21 L16 21 C18 21 18 18 17 15.5" />
-      <path d="M17 16 C21 14 22 10 20 9" />
-    </svg>
+    <img
+      src={laykaLogoImg}
+      alt="Layka Chat"
+      width={size}
+      height={size}
+      className={`object-contain select-none pointer-events-none drop-shadow-sm ${className}`}
+      style={{ width: size, height: size }}
+    />
   );
 }
 
@@ -260,11 +258,11 @@ export const FloatingNav: React.FC<FloatingNavProps> = ({ onLogout }) => {
             onClick={() => handleTabClick('/chat')}
             title="Layka Chat"
             aria-label="Layka Chat"
-            className={`flex items-center justify-center w-11 h-11 bg-gradient-to-tr from-violet-600 to-fuchsia-500 text-white font-black rounded-2xl shadow-lg shadow-violet-500/30 hover:scale-105 active:scale-95 transition-all cursor-pointer border-0 -my-2 ${
-              activeTab === '/chat' ? 'ring-2 ring-white/40 scale-105' : ''
+            className={`flex items-center justify-center w-11 h-11 bg-gradient-to-tr from-violet-600 to-fuchsia-500 text-white font-black rounded-2xl shadow-lg shadow-violet-500/30 hover:scale-105 active:scale-95 transition-all cursor-pointer border-0 -my-2 overflow-hidden p-1.5 ${
+              activeTab === '/chat' ? 'ring-2 ring-white/60 scale-105' : ''
             }`}
           >
-            <LaikaNavIcon size={26} />
+            <LaikaNavIcon size={28} />
           </button>
 
           {/* 3. Ranking */}

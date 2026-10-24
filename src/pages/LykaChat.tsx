@@ -10,18 +10,19 @@ import {
 import EmojiPicker from 'emoji-picker-react';
 import { ColegaProfileModal, ColegaProfileData } from "../components/ColegaProfileModal";
 
+const laykaLogoImg = new URL('../assets/imgs/laykalogo.png', import.meta.url).href;
+
 // ─── Icons ───────────────────────────────────────────────────────────────────
-function LaikaIcon({ size = 20, color = "currentColor" }: { size?: number; color?: string }) {
+function LaikaIcon({ size = 20, className = "" }: { size?: number; color?: string; className?: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M5 8 C4 4 2 3 3 7" /><path d="M19 8 C20 4 22 3 21 7" />
-      <ellipse cx="12" cy="10" rx="7" ry="6" /><ellipse cx="12" cy="13" rx="3" ry="2" />
-      <ellipse cx="12" cy="12" rx="1.2" ry="0.8" fill={color} stroke="none" />
-      <circle cx="9" cy="9" r="0.9" fill={color} stroke="none" />
-      <circle cx="15" cy="9" r="0.9" fill={color} stroke="none" />
-      <path d="M7 15.5 C6 18 6 21 8 21 L16 21 C18 21 18 18 17 15.5" />
-      <path d="M17 16 C21 14 22 10 20 9" />
-    </svg>
+    <img
+      src={laykaLogoImg}
+      alt="Layka"
+      width={size}
+      height={size}
+      className={`object-contain select-none pointer-events-none ${className}`}
+      style={{ width: size, height: size }}
+    />
   );
 }
 function PawIcon({ size = 16, color = "currentColor" }: { size?: number; color?: string }) {
