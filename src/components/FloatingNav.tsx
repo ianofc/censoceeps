@@ -18,6 +18,7 @@ import {
   Briefcase, 
   Library, 
   Headset,
+  Landmark,
   Shield } from 'lucide-react';
 
 const adinhaAvatar = new URL('../assets/imgs/AdaLovelace.png', import.meta.url).href;
@@ -67,6 +68,7 @@ export const FloatingNav: React.FC<FloatingNavProps> = ({ onLogout }) => {
 
   const secondaryItems = [
     { id: '/dashboard', label: isTeacher || isAdmin ? 'Todas as Coletas' : 'Minhas Coletas', icon: ClipboardList, activeColor: 'bg-indigo-600 shadow-indigo-600/30' },
+    { id: '/telao', label: 'Telão Interativo (Painel)', icon: Landmark, activeColor: 'bg-blue-600 shadow-blue-600/30' },
     { id: '/biblioteca', label: 'Biblioteca Viva', icon: Library, activeColor: 'bg-blue-600 shadow-blue-600/30' },
     ...(isAdmin ? [{ id: '/ouvidoria', label: 'Ouvidoria', icon: Headset, activeColor: 'bg-rose-600 shadow-rose-600/30' }] : []),
     { id: '/sobre', label: 'Sobre o Projeto', icon: Info, activeColor: 'bg-blue-600 shadow-blue-600/30' },
