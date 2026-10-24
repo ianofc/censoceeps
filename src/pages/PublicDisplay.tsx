@@ -392,7 +392,7 @@ export function PublicDisplay() {
               </div>
             </div>
 
-            <AnalyticsDashboard />
+            <AnalyticsDashboard isPublicDisplay={true} />
           </div>
         </main>
       ) : (

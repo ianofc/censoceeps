@@ -10,8 +10,17 @@ import {
   Home,
   Compass,
   Layers,
-  Grid
+  Grid,
+  ChevronLeft,
+  ChevronRight,
+  Tv,
+  Pause,
+  Play
 } from 'lucide-react';
+
+interface AnalyticsDashboardProps {
+  isPublicDisplay?: boolean;
+}
 
 const DONUT_COLORS = [
   '#6366f1',
@@ -357,9 +366,11 @@ function renderProgressBar(label: string, count: number, total: number, colorCla
 }
 
 // ─── Componente Principal AnalyticsDashboard ──────────────────────────────────
-export function AnalyticsDashboard() {
+export function AnalyticsDashboard({ isPublicDisplay = false }: AnalyticsDashboardProps) {
   const [loading, setLoading] = useState(true);
   const [totalAmostras, setTotalAmostras] = useState(0);
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const [autoRotate, setAutoRotate] = useState(true);
   const [viewModes, setViewModes] = useState<Record<string, 'donut' | 'column' | 'bar' | 'pictogram'>>({
     raca: 'column',
     genero: 'donut',
@@ -488,11 +499,465 @@ export function AnalyticsDashboard() {
     setViewModes(prev => ({ ...prev, [card]: mode }));
   };
 
+  // Carrossel para exibição em TV (PublicDisplay) com transição de slides
+  const tvSlides = [
+    {
+      id: 'raca-genero',
+      tag: 'Identidade & Origens',
+      title: 'Composição Étnico-Racial & Gênero',
+      subtitle: 'Distribuição dos estudantes segundo declaração oficial',
+      cards: ['raca', 'genero']
+    },
+    {
+      id: 'moradia-vinculo',
+      tag: 'Território & Instituição',
+      title: 'Localização Geográfica & Vínculo Escolar',
+      subtitle: 'Sede vs. Povoados da Chapada Diamantina e perfil da comunidade',
+      cards: ['moradia', 'vinculo']
+    },
+    {
+      id: 'digital-evasao',
+      tag: 'Inclusão & Permanência',
+      title: 'Inclusão Digital & Fatores de Evasão',
+      subtitle: 'Acesso a computadores/internet e diagnóstico preventivo de evasão',
+      cards: ['internet', 'evasao']
+    },
+    {
+      id: 'familia-social',
+      tag: 'Contexto Social',
+      title: 'Arranjo Familiar & Influência Social',
+      subtitle: 'Com quem o estudante reside e percepção sobre o impacto da raiz social',
+      cards: ['moraCom', 'raizSocial']
+    },
+    {
+      id: 'dispersao-tempo',
+      tag: 'Linha do Tempo & Dispersão',
+      title: 'Ritmo da Coleta & Matriz de Dispersão',
+      subtitle: 'Série temporal de coletas e cruzamento de deslocamento x permanência',
+      cards: ['timeline', 'scatter']
+    }
+  ];
+
+  // Rotação automática suave do carrossel no modo TV (a cada 10 segundos)
+  useEffect(() => {
+    if (!isPublicDisplay || !autoRotate || tvSlides.length === 0) return;
+    const timer = setInterval(() => {
+      setCurrentSlideIndex((prev) => (prev + 1) % tvSlides.length);
+    }, 10000);
+    return () => clearInterval(timer);
+  }, [isPublicDisplay, autoRotate, tvSlides.length]);
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center p-12 text-slate-400">
         <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4" />
         <p className="text-sm font-bold animate-pulse">Carregando métricas e gráficos diversificados...</p>
+      </div>
+    );
+  }
+
+  const renderCardContent = (cardKey: string) => {
+    switch (cardKey) {
+      case 'raca':
+        return (
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-100 dark:border-slate-800 shadow-sm space-y-4 h-full flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between pb-3 border-b border-slate-50 dark:border-slate-800 flex-wrap gap-2">
+                <h3 className="font-black text-slate-800 dark:text-slate-100 text-base flex items-center gap-2">
+                  <BarChart2 className="w-5 h-5 text-indigo-600" /> Cor ou Raça Declarada (IBGE)
+                </h3>
+                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setCardMode('raca', 'column')}
+                    className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border-0 cursor-pointer ${viewModes.raca === 'column' ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-sm' : 'text-slate-500'}`}
+                  >
+                    Colunas 📊
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCardMode('raca', 'donut')}
+                    className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border-0 cursor-pointer ${viewModes.raca === 'donut' ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-sm' : 'text-slate-500'}`}
+                  >
+                    Rosca 🍩
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCardMode('raca', 'bar')}
+                    className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border-0 cursor-pointer ${viewModes.raca === 'bar' ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-sm' : 'text-slate-500'}`}
+                  >
+                    Barras 📑
+                  </button>
+                </div>
+              </div>
+              {viewModes.raca === 'column' && <VerticalColumnChart data={stats.raca} total={totalAmostras} color="#6366f1" />}
+              {viewModes.raca === 'donut' && <DonutChart data={stats.raca} total={totalAmostras} />}
+              {viewModes.raca === 'bar' && (
+                <div className="space-y-4 py-2">
+                  {Object.entries(stats.raca).map(([key, count]) =>
+                    renderProgressBar(key, count, totalAmostras, 'bg-indigo-500')
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'genero':
+        return (
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-100 dark:border-slate-800 shadow-sm space-y-4 h-full flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between pb-3 border-b border-slate-50 dark:border-slate-800 flex-wrap gap-2">
+                <h3 className="font-black text-slate-800 dark:text-slate-100 text-base flex items-center gap-2">
+                  <PieIcon className="w-5 h-5 text-fuchsia-600" /> Identidade de Gênero
+                </h3>
+                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setCardMode('genero', 'donut')}
+                    className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border-0 cursor-pointer ${viewModes.genero === 'donut' ? 'bg-white dark:bg-slate-700 text-fuchsia-600 shadow-sm' : 'text-slate-500'}`}
+                  >
+                    Rosca 🍩
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCardMode('genero', 'column')}
+                    className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border-0 cursor-pointer ${viewModes.genero === 'column' ? 'bg-white dark:bg-slate-700 text-fuchsia-600 shadow-sm' : 'text-slate-500'}`}
+                  >
+                    Colunas 📊
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCardMode('genero', 'bar')}
+                    className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border-0 cursor-pointer ${viewModes.genero === 'bar' ? 'bg-white dark:bg-slate-700 text-fuchsia-600 shadow-sm' : 'text-slate-500'}`}
+                  >
+                    Barras 📑
+                  </button>
+                </div>
+              </div>
+              {viewModes.genero === 'donut' && <DonutChart data={stats.genero} total={totalAmostras} />}
+              {viewModes.genero === 'column' && <VerticalColumnChart data={stats.genero} total={totalAmostras} color="#d946ef" />}
+              {viewModes.genero === 'bar' && (
+                <div className="space-y-4 py-2">
+                  {Object.entries(stats.genero).map(([key, count]) =>
+                    renderProgressBar(key, count, totalAmostras, 'bg-fuchsia-500')
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'moradia':
+        return (
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-100 dark:border-slate-800 shadow-sm space-y-4 h-full flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between pb-3 border-b border-slate-50 dark:border-slate-800 flex-wrap gap-2">
+                <h3 className="font-black text-slate-800 dark:text-slate-100 text-base flex items-center gap-2">
+                  <Home className="w-5 h-5 text-emerald-600" /> Localização Geográfica (Sede x Povoados)
+                </h3>
+                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setCardMode('moradia', 'pictogram')}
+                    className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border-0 cursor-pointer ${viewModes.moradia === 'pictogram' ? 'bg-white dark:bg-slate-700 text-emerald-600 shadow-sm' : 'text-slate-500'}`}
+                  >
+                    Pictograma 🏘️
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCardMode('moradia', 'donut')}
+                    className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border-0 cursor-pointer ${viewModes.moradia === 'donut' ? 'bg-white dark:bg-slate-700 text-emerald-600 shadow-sm' : 'text-slate-500'}`}
+                  >
+                    Rosca 🍩
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCardMode('moradia', 'bar')}
+                    className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border-0 cursor-pointer ${viewModes.moradia === 'bar' ? 'bg-white dark:bg-slate-700 text-emerald-600 shadow-sm' : 'text-slate-500'}`}
+                  >
+                    Barras 📑
+                  </button>
+                </div>
+              </div>
+              {viewModes.moradia === 'pictogram' && <PictogramChart data={stats.moradia} total={totalAmostras} />}
+              {viewModes.moradia === 'donut' && <DonutChart data={stats.moradia} total={totalAmostras} />}
+              {viewModes.moradia === 'bar' && (
+                <div className="space-y-4 py-2">
+                  {Object.entries(stats.moradia).map(([key, count]) =>
+                    renderProgressBar(key, count, totalAmostras, 'bg-emerald-500')
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'vinculo':
+        return (
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-100 dark:border-slate-800 shadow-sm space-y-4 h-full flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between pb-3 border-b border-slate-50 dark:border-slate-800 flex-wrap gap-2">
+                <h3 className="font-black text-slate-800 dark:text-slate-100 text-base flex items-center gap-2">
+                  <Users className="w-5 h-5 text-blue-600" /> Vínculo Institucional
+                </h3>
+                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setCardMode('vinculo', 'donut')}
+                    className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border-0 cursor-pointer ${viewModes.vinculo === 'donut' ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm' : 'text-slate-500'}`}
+                  >
+                    Rosca 🍩
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCardMode('vinculo', 'column')}
+                    className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border-0 cursor-pointer ${viewModes.vinculo === 'column' ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm' : 'text-slate-500'}`}
+                  >
+                    Colunas 📊
+                  </button>
+                </div>
+              </div>
+              {viewModes.vinculo === 'donut' && <DonutChart data={stats.vinculo} total={totalAmostras} />}
+              {viewModes.vinculo === 'column' && <VerticalColumnChart data={stats.vinculo} total={totalAmostras} color="#3b82f6" />}
+            </div>
+          </div>
+        );
+
+      case 'internet':
+        return (
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-100 dark:border-slate-800 shadow-sm space-y-4 h-full flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between pb-3 border-b border-slate-50 dark:border-slate-800">
+                <h3 className="font-black text-slate-800 dark:text-slate-100 text-base flex items-center gap-2">
+                  <Laptop className="w-5 h-5 text-cyan-600" /> Inclusão Digital (Computador & Celular)
+                </h3>
+                <span className="text-[10px] font-black bg-cyan-50 dark:bg-cyan-950 text-cyan-600 px-3 py-1 rounded-full uppercase">
+                  Acesso
+                </span>
+              </div>
+              <div className="space-y-4 py-2">
+                {Object.keys(stats.internet).length === 0 ? (
+                  <p className="text-xs text-slate-400 font-medium">Sem dados suficientes.</p>
+                ) : (
+                  Object.entries(stats.internet).map(([key, count]) =>
+                    renderProgressBar(key, count, totalAmostras, 'bg-cyan-500')
+                  )
+                )}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'evasao':
+        return (
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-100 dark:border-slate-800 shadow-sm space-y-4 h-full flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between pb-3 border-b border-slate-50 dark:border-slate-800">
+                <h3 className="font-black text-slate-800 dark:text-slate-100 text-base flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-rose-600" /> Risco de Evasão Escolar (por motivos)
+                </h3>
+                <span className="text-[10px] font-black bg-rose-50 dark:bg-rose-950 text-rose-600 px-3 py-1 rounded-full uppercase">
+                  Permanência
+                </span>
+              </div>
+              <div className="space-y-4 py-2">
+                {Object.keys(stats.evasao).length === 0 ? (
+                  <p className="text-xs text-slate-400 font-medium">Sem dados suficientes.</p>
+                ) : (
+                  Object.entries(stats.evasao).map(([key, count]) =>
+                    renderProgressBar(key, count, totalAmostras, 'bg-rose-500')
+                  )
+                )}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'moraCom':
+        return (
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-100 dark:border-slate-800 shadow-sm space-y-4 h-full flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between pb-3 border-b border-slate-50 dark:border-slate-800">
+                <h3 className="font-black text-slate-800 dark:text-slate-100 text-base flex items-center gap-2">
+                  <Users className="w-5 h-5 text-orange-600" /> Arranjo Familiar (Com Quem Mora)
+                </h3>
+                <span className="text-[10px] font-black bg-orange-50 dark:bg-orange-950 text-orange-600 px-3 py-1 rounded-full uppercase">
+                  Família
+                </span>
+              </div>
+              <div className="space-y-4 py-2">
+                {Object.keys(stats.moraCom).length === 0 ? (
+                  <p className="text-xs text-slate-400 font-medium">Sem dados suficientes.</p>
+                ) : (
+                  Object.entries(stats.moraCom).map(([key, count]) =>
+                    renderProgressBar(key, count, totalAmostras, 'bg-orange-500')
+                  )
+                )}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'raizSocial':
+        return (
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-100 dark:border-slate-800 shadow-sm space-y-4 h-full flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between pb-3 border-b border-slate-50 dark:border-slate-800">
+                <h3 className="font-black text-slate-800 dark:text-slate-100 text-base flex items-center gap-2">
+                  <Compass className="w-5 h-5 text-purple-600" /> A Raiz Social Influencia no Brasil?
+                </h3>
+                <span className="text-[10px] font-black bg-purple-50 dark:bg-purple-950 text-purple-600 px-3 py-1 rounded-full uppercase">
+                  Opinião
+                </span>
+              </div>
+              <div className="space-y-4 py-2">
+                {Object.keys(stats.raizSocial).length === 0 ? (
+                  <p className="text-xs text-slate-400 font-medium">Sem dados suficientes.</p>
+                ) : (
+                  Object.entries(stats.raizSocial).map(([key, count]) =>
+                    renderProgressBar(key, count, totalAmostras, 'bg-purple-500')
+                  )
+                )}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'timeline':
+        return (
+          <div className="h-full flex flex-col justify-between">
+            <SplineAreaChart rawData={rawData} />
+          </div>
+        );
+
+      case 'scatter':
+        return (
+          <div className="h-full flex flex-col justify-between">
+            <ScatterPlotChart rawData={rawData} />
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  // Se for exibição de TV no Telão, renderiza como Carrossel de 1 tela sem necessidade de scroll
+  if (isPublicDisplay) {
+    const activeSlide = tvSlides[currentSlideIndex];
+
+    return (
+      <div className="space-y-4 animate-in fade-in duration-500 select-none">
+        {/* CABEÇALHO DO SLIDE DA TV COM CONTROLES */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-4 sm:p-5 text-white shadow-md">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-wider bg-white/20 backdrop-blur px-2.5 py-0.5 rounded-full inline-flex items-center gap-1">
+                <Tv className="w-3 h-3" /> Modo Telão ({currentSlideIndex + 1} de {tvSlides.length})
+              </span>
+              <span className="text-xs font-bold text-amber-300">
+                • {activeSlide.tag}
+              </span>
+            </div>
+            <h2 className="text-lg sm:text-xl font-black tracking-tight">
+              {activeSlide.title}
+            </h2>
+            <p className="text-xs text-blue-100">
+              {activeSlide.subtitle}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 self-end sm:self-center">
+            {/* Play / Pause da Rotação Automática */}
+            <button
+              type="button"
+              onClick={() => setAutoRotate(!autoRotate)}
+              title={autoRotate ? 'Pausar rotação automática' : 'Retomar rotação automática'}
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white backdrop-blur transition cursor-pointer border-0 flex items-center gap-1.5 text-xs font-bold"
+            >
+              {autoRotate ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+              <span className="hidden md:inline">{autoRotate ? 'Auto (10s)' : 'Pausado'}</span>
+            </button>
+
+            {/* Navegação Manual Anterior / Próximo */}
+            <button
+              type="button"
+              onClick={() => setCurrentSlideIndex((prev) => (prev - 1 + tvSlides.length) % tvSlides.length)}
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white backdrop-blur transition cursor-pointer border-0"
+              aria-label="Slide anterior"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setCurrentSlideIndex((prev) => (prev + 1) % tvSlides.length)}
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white backdrop-blur transition cursor-pointer border-0"
+              aria-label="Próximo slide"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* INDICADORES DO SLIDE */}
+        <div className="flex items-center justify-center gap-2">
+          {tvSlides.map((s, idx) => (
+            <button
+              key={s.id}
+              onClick={() => setCurrentSlideIndex(idx)}
+              className={`h-2 rounded-full transition-all cursor-pointer border-0 ${
+                currentSlideIndex === idx
+                  ? 'w-10 bg-blue-600 dark:bg-blue-400'
+                  : 'w-2.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300'
+              }`}
+              aria-label={`Ir para ${s.title}`}
+            />
+          ))}
+        </div>
+
+        {/* CONTEÚDO ATIVO DO SLIDE (GRID DE 2 CARDS LADO A LADO PARA TV) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {activeSlide.cards.map((cardKey) => (
+            <div key={cardKey} className="w-full">
+              {renderCardContent(cardKey)}
+            </div>
+          ))}
+        </div>
+
+        {/* BARRA INFERIOR DE STATUS E MÉTRICAS FIXAS */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-3 flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Amostras</span>
+              <p className="text-lg font-black text-blue-600 dark:text-blue-400">{totalAmostras}</p>
+            </div>
+            <Users className="w-5 h-5 text-blue-500 opacity-60" />
+          </div>
+          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-3 flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Gênero</span>
+              <p className="text-lg font-black text-fuchsia-600">2 categorias</p>
+            </div>
+            <PieIcon className="w-5 h-5 text-fuchsia-500 opacity-60" />
+          </div>
+          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-3 flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Etnias</span>
+              <p className="text-lg font-black text-amber-600">{Object.keys(stats.raca).length} raças</p>
+            </div>
+            <Compass className="w-5 h-5 text-amber-500 opacity-60" />
+          </div>
+          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-3 flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Transmissão</span>
+              <p className="text-xs font-black text-emerald-600 flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> Ao Vivo
+              </p>
+            </div>
+            <Tv className="w-5 h-5 text-emerald-500 opacity-60" />
+          </div>
+        </div>
       </div>
     );
   }
