@@ -22,11 +22,16 @@ import {
   Calendar,
   Layers,
   BarChart3,
+  BarChart2,
   CheckCircle2,
-  Clock
+  Clock,
+  PieChart as PieIcon,
+  HelpCircle,
+  FileSpreadsheet
 } from 'lucide-react';
 import { useUserSession } from '../hooks/useUserSession';
 import { Navigate } from 'react-router-dom';
+import { AnalyticsDashboard } from '../components/AnalyticsDashboard';
 
 interface SlideHighlight {
   id: string;
@@ -50,7 +55,7 @@ export function PublicDisplay() {
   const [loading, setLoading] = useState<boolean>(true);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [currentSlide, setCurrentSlide] = useState<number>(0);
-  const [activeTab, setActiveTab] = useState<'censo' | 'avisos' | 'conquistas'>('censo');
+  const [activeTab, setActiveTab] = useState<'censo' | 'graficos' | 'conquistas' | 'avisos'>('censo');
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
 
@@ -269,6 +274,17 @@ export function PublicDisplay() {
               Censo & Dados
             </button>
             <button
+              onClick={() => setActiveTab('graficos')}
+              className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
+                activeTab === 'graficos'
+                  ? 'bg-blue-600 text-white shadow'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <BarChart2 className="w-3.5 h-3.5" />
+              Gráficos da Pesquisa
+            </button>
+            <button
               onClick={() => setActiveTab('conquistas')}
               className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
                 activeTab === 'conquistas'
@@ -325,6 +341,39 @@ export function PublicDisplay() {
       </header>
 
       {/* ─── 2. CORPO PRINCIPAL COM GRID WIDGETS + FEED ─────────────────────── */}
+      {activeTab === 'graficos' ? (
+        <main className="my-4 flex-1 w-full animate-in fade-in duration-300">
+          <div className={`p-6 sm:p-8 rounded-3xl border ${
+            isDarkMode ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200/80 shadow-sm'
+          }`}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 mb-6 border-b border-slate-200/60 dark:border-slate-800 gap-4">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/80 px-2.5 py-1 rounded-full inline-flex items-center gap-1.5 mb-2">
+                  <BarChart2 className="w-3.5 h-3.5" /> Painel de Inteligência Científica
+                </span>
+                <h2 className="text-xl sm:text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight">
+                  Gráficos da Pesquisa & Distribuição Censitária
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+                  Métricas em tempo real de diversidade, perfil socioeconômico, inclusão digital e riscos de evasão no CEEP Seabra.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('censo')}
+                  className="px-3.5 py-1.5 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
+                >
+                  Voltar ao Telão Principal
+                </button>
+              </div>
+            </div>
+
+            <AnalyticsDashboard />
+          </div>
+        </main>
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 my-4 flex-1 items-stretch">
         
         {/* COLUNA ESQUERDA: WIDGETS LATERAIS (4 colunas) */}
@@ -601,7 +650,13 @@ export function PublicDisplay() {
 
               <div className="pt-3 mt-2 border-t border-slate-100 dark:border-slate-800 text-[10px] text-slate-400 flex items-center justify-between">
                 <span>Fonte: Censo CEEP 2026</span>
-                <span className="font-bold text-blue-600 dark:text-blue-400">Projeto Ada Lovelace</span>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('graficos')}
+                  className="font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer border-0 bg-transparent p-0 flex items-center gap-1"
+                >
+                  Ver Gráficos Detalhados →
+                </button>
               </div>
             </div>
 
@@ -648,7 +703,13 @@ export function PublicDisplay() {
 
               <div className="pt-3 mt-2 border-t border-slate-100 dark:border-slate-800 text-[10px] text-slate-400 flex items-center justify-between">
                 <span>Pertencimento Escolar</span>
-                <span className="font-bold text-amber-600">Equidade</span>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('graficos')}
+                  className="font-bold text-amber-600 dark:text-amber-400 hover:underline cursor-pointer border-0 bg-transparent p-0 flex items-center gap-1"
+                >
+                  Painel Analítico →
+                </button>
               </div>
             </div>
 
@@ -697,6 +758,7 @@ export function PublicDisplay() {
         </section>
 
       </div>
+      )}
 
       {/* ─── 3. RODAPÉ DE NOTÍCIAS ROLANTES & CRÉDITOS ──────────────────────── */}
       <footer className="pt-3 border-t border-slate-200/60 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
