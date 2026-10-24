@@ -31,8 +31,8 @@ function LaikaNavIcon({ size = 20, className = "" }: { readonly size?: number; r
       alt="Layka Chat"
       width={size}
       height={size}
-      className={`object-contain select-none pointer-events-none drop-shadow-sm ${className}`}
-      style={{ width: size, height: size }}
+      className={`object-cover select-none pointer-events-none drop-shadow-sm ${className}`}
+      style={className.includes("w-full") ? undefined : { width: size, height: size }}
     />
   );
 }
@@ -258,11 +258,11 @@ export const FloatingNav: React.FC<FloatingNavProps> = ({ onLogout }) => {
             onClick={() => handleTabClick('/chat')}
             title="Layka Chat"
             aria-label="Layka Chat"
-            className={`flex items-center justify-center w-11 h-11 bg-gradient-to-tr from-violet-600 to-fuchsia-500 text-white font-black rounded-2xl shadow-lg shadow-violet-500/30 hover:scale-105 active:scale-95 transition-all cursor-pointer border-0 -my-2 overflow-hidden p-1.5 ${
-              activeTab === '/chat' ? 'ring-2 ring-white/60 scale-105' : ''
+            className={`flex items-center justify-center w-12 h-12 bg-gradient-to-tr from-violet-600 to-fuchsia-500 text-white font-black rounded-2xl shadow-lg shadow-violet-500/40 hover:scale-105 active:scale-95 transition-all cursor-pointer border-0 -my-2 overflow-hidden p-0 ${
+              activeTab === '/chat' ? 'ring-2 ring-white/80 scale-105' : ''
             }`}
           >
-            <LaikaNavIcon size={28} />
+            <LaikaNavIcon className="w-full h-full object-cover scale-110" />
           </button>
 
           {/* 3. Ranking */}
