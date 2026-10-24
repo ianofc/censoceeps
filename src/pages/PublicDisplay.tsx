@@ -84,12 +84,12 @@ export function PublicDisplay() {
       const totalCalculado = (count || 0) + pendingCount;
       setTotalAmostras(totalCalculado);
 
-      // 2. Busca as últimas 350 entrevistas para computar estatísticas e gráficos do censo
+      // 2. Busca as últimas entrevistas para computar estatísticas e gráficos do censo
       const { data } = await supabase
         .from('entrevistas')
-        .select('turma, serie, grupo_escolar, genero, cor_raca, sofreu_preconceito, curso, created_at')
+        .select('turma, serie, genero, cor_raca, sofreu_preconceito, created_at')
         .order('created_at', { ascending: false })
-        .limit(400);
+        .limit(500);
 
       const serverList = data || [];
       const localFormatted = localPendingDrafts.map((p: any) => p.data || p);
@@ -112,24 +112,41 @@ export function PublicDisplay() {
     const total = entrevistas.length || totalAmostras || 1;
 
     // Gênero
-    const generos: Record<string, number> = {};
+    const generosRaw: Record<string, number> = {};
     // Raça / Etnia
-    const racas: Record<string, number> = {};
+    const racasRaw: Record<string, number> = {};
     // Engajamento por Turma/Curso
     const turmas: Record<string, number> = {};
     let relatosPreconceito = 0;
 
     entrevistas.forEach((item) => {
-      // Gênero
-      const g = item.genero || 'Não informado';
-      generos[g] = (generos[g] || 0) + 1;
+      // Normalização amigável de gênero
+      let g = (item.genero || '').trim();
+      if (!g) {
+        g = 'Não informado';
+      } else {
+        const gLow = g.toLowerCase();
+        if (gLow.includes('fem')) g = 'Feminino';
+        else if (gLow.includes('masc')) g = 'Masculino';
+        else if (gLow.includes('não bin') || gLow.includes('nao bin')) g = 'Não-binário';
+        else if (gLow.includes('trans')) g = 'Transgênero';
+        else g = g.charAt(0).toUpperCase() + g.slice(1);
+      }
+      generosRaw[g] = (generosRaw[g] || 0) + 1;
 
-      // Raça
-      const r = item.cor_raca || 'Não informado';
-      racas[r] = (racas[r] || 0) + 1;
+      // Raça / Etnia
+      let r = (item.cor_raca || '').trim();
+      if (!r) {
+        r = 'Não informado';
+      } else {
+        r = r.charAt(0).toUpperCase() + r.slice(1);
+      }
+      racasRaw[r] = (racasRaw[r] || 0) + 1;
 
       // Turma / Curso
-      const t = item.turma || item.grupo_escolar || 'Geral';
+      const t = item.turma?.trim() 
+        ? (item.serie?.trim() ? `${item.serie.trim()}ª ${item.turma.trim()}` : item.turma.trim())
+        : (item.grupo_escolar?.trim() || 'Comunidade Escolar');
       turmas[t] = (turmas[t] || 0) + 1;
 
       if (
@@ -140,6 +157,14 @@ export function PublicDisplay() {
         relatosPreconceito++;
       }
     });
+
+    // Ordena gêneros e raças pelo maior número
+    const generos = Object.fromEntries(
+      Object.entries(generosRaw).sort((a, b) => b[1] - a[1])
+    );
+    const racas = Object.fromEntries(
+      Object.entries(racasRaw).sort((a, b) => b[1] - a[1])
+    );
 
     // Top 4 turmas mais engajadas
     const topTurmas = Object.entries(turmas)
