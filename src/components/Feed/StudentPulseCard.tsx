@@ -222,7 +222,22 @@ export const StudentPulseCard: React.FC<StudentPulseCardProps> = ({
                 </div>
                 {showBar && (
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    {isSelected && <CheckCircle2 style={{ width: 14, height: 14, color: "#6366f1" }} />}
+                    {isSelected && (
+                      <span style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 3,
+                        background: "#dcfce7",
+                        color: "#15803d",
+                        fontSize: 10,
+                        fontWeight: 800,
+                        padding: "2px 7px",
+                        borderRadius: 99,
+                        border: "1px solid #bbf7d0"
+                      }}>
+                        <CheckCircle2 style={{ width: 11, height: 11 }} /> Voto computado
+                      </span>
+                    )}
                     <span style={{
                       fontSize: 12, fontWeight: 900,
                       color: isSelected ? "#4338ca" : "#64748b"

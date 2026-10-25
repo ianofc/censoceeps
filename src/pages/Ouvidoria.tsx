@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { EmptyState } from '../components/EmptyState';
+import { MessageSquarePlus } from 'lucide-react';
 
 interface Ticket {
   id: string;
@@ -164,7 +166,11 @@ export function Ouvidoria() {
           {loading ? (
             <p className="text-gray-500 text-center py-4">Carregando...</p>
           ) : tickets.length === 0 ? (
-            <p className="text-gray-500 text-center py-4 bg-gray-50 rounded-md">Você ainda não tem nenhum chamado aberto.</p>
+            <EmptyState
+              icon={MessageSquarePlus}
+              title="Nenhum chamado aberto"
+              description="Você ainda não registrou nenhum chamado na Ouvidoria. Quando registrar, o status e as respostas aparecerão aqui."
+            />
           ) : (
             <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
               {tickets.map(ticket => (

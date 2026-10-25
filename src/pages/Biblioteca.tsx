@@ -17,7 +17,7 @@ const CURATED_BIBLIOTECA_ITEMS: BibliotecaItem[] = [
     title: 'Cartilha Oficial do Censo CEEP Ada Lovelace',
     description: 'Manual metodológico para coleta científica sobre gênero, raça e pertencimento na comunidade escolar.',
     category: 'Cartilha',
-    file_url: 'https://ceeps.edu.br/materiais/cartilha_censo_ada_lovelace.pdf',
+    file_url: '/docs/cartilha_censo_ada_lovelace.pdf',
     created_at: '2026-03-01T10:00:00Z',
   },
   {
@@ -25,7 +25,7 @@ const CURATED_BIBLIOTECA_ITEMS: BibliotecaItem[] = [
     title: 'Guia de Abordagem Ética e Empática de Campo',
     description: 'Técnicas de escuta ativa, garantia de sigilo e conforto psicológico para estudantes entrevistados.',
     category: 'Material Pedagógico',
-    file_url: 'https://ceeps.edu.br/materiais/guia_abordagem_humanizada.pdf',
+    file_url: '/docs/guia_abordagem_humanizada.pdf',
     created_at: '2026-03-05T12:00:00Z',
   },
   {
@@ -33,7 +33,7 @@ const CURATED_BIBLIOTECA_ITEMS: BibliotecaItem[] = [
     title: 'Diretrizes de LGPD e Privacidade em Pesquisas Escolares',
     description: 'Protocolos de segurança, anonimização e conformidade legal com a Lei Geral de Proteção de Dados.',
     category: 'Regulamento',
-    file_url: 'https://ceeps.edu.br/materiais/lgpd_pesquisa_escolar.pdf',
+    file_url: '/docs/lgpd_pesquisa_escolar.pdf',
     created_at: '2026-03-10T14:30:00Z',
   },
   {
@@ -41,7 +41,7 @@ const CURATED_BIBLIOTECA_ITEMS: BibliotecaItem[] = [
     title: 'Regulamento do Prêmio Científico Ada Lovelace 2026',
     description: 'Critérios da premiação para alunos que atingirem as metas de entrevistas e produções acadêmicas.',
     category: 'Regulamento',
-    file_url: 'https://ceeps.edu.br/materiais/regulamento_premio_ada_lovelace.pdf',
+    file_url: '/docs/regulamento_premio_ada_lovelace.pdf',
     created_at: '2026-03-12T09:00:00Z',
   },
   {
@@ -49,7 +49,7 @@ const CURATED_BIBLIOTECA_ITEMS: BibliotecaItem[] = [
     title: 'Glossário Étnico-Racial e Territórios da Chapada Diamantina',
     description: 'Apoio conceitual sobre identidades quilombolas, indígenas, pardas e comunidades tradicionais da região.',
     category: 'Material Pedagógico',
-    file_url: 'https://ceeps.edu.br/materiais/glossario_etnico_racial_seabra.pdf',
+    file_url: '/docs/glossario_etnico_racial_seabra.pdf',
     created_at: '2026-03-15T16:00:00Z',
   },
 ];

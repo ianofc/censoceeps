@@ -337,19 +337,24 @@ function PostCard({ post, profile, onRefresh, onOpenProfile }: { post:Post; prof
   const isAutoPost = post.type === "censo_auto";
   const isConquista = post.type === "conquista" || post.type === "conquista_censo";
   const isOfficial = post.type === "comunicado" || post.type === "official" || post.type === "aviso";
+  const isNoticia = (post as any).is_external_news || post.type === "noticia_curada";
 
-  let cardBg = "#fff";
+  let cardBg = "#ffffff";
   let cardBorder = "1px solid #f1f5f9";
-  let cardShadow = "0 2px 12px rgba(0,0,0,0.04)";
+  let cardShadow = "0 2px 12px rgba(0,0,0,0.03)";
 
   if (isConquista) {
-    cardBg = "linear-gradient(180deg, #fef3c7 0%, #ffffff 80px)";
-    cardBorder = "1.5px solid #fbbf24";
-    cardShadow = "0 4px 20px rgba(251,191,36,0.15)";
+    cardBg = "linear-gradient(180deg, #fefce8 0%, #ffffff 90px)";
+    cardBorder = "1.5px solid #fef08a";
+    cardShadow = "0 4px 16px rgba(234,179,8,0.08)";
   } else if (isOfficial) {
-    cardBg = "linear-gradient(180deg, #f0fdfa 0%, #ffffff 80px)";
-    cardBorder = "1.5px solid #38bdf8";
-    cardShadow = "0 4px 20px rgba(14,165,233,0.12)";
+    cardBg = "linear-gradient(180deg, #f0fdf4 0%, #ffffff 90px)";
+    cardBorder = "1.5px solid #86efac";
+    cardShadow = "0 4px 16px rgba(34,197,94,0.08)";
+  } else if (isNoticia) {
+    cardBg = "linear-gradient(180deg, #eff6ff 0%, #ffffff 90px)";
+    cardBorder = "1.5px solid #bfdbfe";
+    cardShadow = "0 4px 16px rgba(59,130,246,0.08)";
   }
 
   // Identifica o rótulo da reação ativa
@@ -484,9 +489,14 @@ function PostCard({ post, profile, onRefresh, onOpenProfile }: { post:Post; prof
       {/* Content */}
       <div style={{ padding:"0 18px 14px" }}>
         {isConquista ? (
-          <p style={{ fontSize:16, fontWeight:800, color:"#92400e", lineHeight:1.6, margin:0, whiteSpace:"pre-wrap", wordBreak:"break-word", padding:"12px 16px", background:"#fefce8", border:"1px dashed #fde047", borderRadius:16, textAlign:"center" }}>
-            {post.content}
-          </p>
+          <div style={{ padding:"12px 16px", background:"#fefce8", border:"1px solid #fde047", borderRadius:16 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:4, color:"#a16207", fontSize:11.5, fontWeight:800 }}>
+              <span>🏆 Marco Comunitário</span>
+            </div>
+            <p style={{ fontSize:15, fontWeight:700, color:"#854d0e", lineHeight:1.6, margin:0, whiteSpace:"pre-wrap", wordBreak:"break-word" }}>
+              {post.content}
+            </p>
+          </div>
         ) : (
           <p style={{ fontSize:14, color:"#1e293b", lineHeight:1.7, margin:0, whiteSpace:"pre-wrap", wordBreak:"break-word" }}>
             {post.content}
@@ -848,10 +858,10 @@ function StoriesBar({
           {/* Anel Gradiente Instagram / Telegram */}
           <div
             style={{
-              padding: 2.5,
+              padding: 3,
               borderRadius: "50%",
-              background: story.gradient,
-              boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+              background: story.gradient || "linear-gradient(45deg, #f59e0b, #ec4899, #8b5cf6)",
+              boxShadow: "0 2px 10px rgba(99,102,241,0.2)",
               transition: "transform 0.15s ease",
             }}
             onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.06)")}
@@ -871,18 +881,20 @@ function StoriesBar({
             </div>
           </div>
           <span
+            title={story.author}
             style={{
-              fontSize: 11,
+              fontSize: 11.5,
               fontWeight: 700,
-              color: "#1e293b",
-              maxWidth: 68,
+              color: "#334155",
+              maxWidth: 72,
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
               textAlign: "center",
+              display: "block",
             }}
           >
-            {story.author.split(" ")[0]}
+            {story.author}
           </span>
         </button>
       ))}
@@ -1646,6 +1658,7 @@ export function Feed() {
   const [showImageInput, setShowImageInput] = useState(false);
   const [posting, setPosting]       = useState(false);
   const [fetchingPosts, setFetchingPosts] = useState(true);
+  const [visibleCount, setVisibleCount] = useState(15);
   const [totalUsers, setTotalUsers] = useState(0);
   const [newPostsBanner, setNewPostsBanner] = useState(0);
   const lastSeenRef = useRef<string>(new Date().toISOString());
@@ -1809,36 +1822,36 @@ export function Feed() {
 
         {/* Header */}
         <div style={{
-          background:"linear-gradient(135deg,#1d4ed8,#4f46e5,#7c3aed)",
+          background:"linear-gradient(135deg,#1e40af,#3730a3,#6b21a8)",
           borderRadius:24, padding:"22px 24px",
-          boxShadow:"0 12px 40px rgba(79,70,229,0.3)", position:"relative", overflow:"hidden",
+          boxShadow:"0 12px 36px rgba(30,58,138,0.25)", position:"relative", overflow:"hidden",
         }}>
-          <div style={{position:"absolute",top:-40,right:-40,width:180,height:180,borderRadius:"50%",background:"rgba(255,255,255,0.05)"}}/>
+          <div style={{position:"absolute",top:-40,right:-40,width:180,height:180,borderRadius:"50%",background:"rgba(255,255,255,0.06)"}}/>
           <div style={{position:"relative"}}>
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
-              <div style={{width:40,height:40,borderRadius:12,background:"rgba(255,255,255,0.2)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                <Sparkles style={{width:20,height:20,color:"#fff"}}/>
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
+              <div style={{width:42,height:42,borderRadius:14,background:"rgba(255,255,255,0.18)",backdropFilter:"blur(8px)",border:"1px solid rgba(255,255,255,0.25)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <Sparkles style={{width:22,height:22,color:"#fff"}}/>
               </div>
               <div>
-                <h1 style={{color:"#fff",fontWeight:900,fontSize:19,margin:0,letterSpacing:"-0.3px"}}>Feed da Pesquisa</h1>
-                <p style={{color:"rgba(199,210,254,0.8)",fontSize:12,margin:0}}>CEEP Seabra · Projeto Ada Lovelace</p>
+                <h1 style={{color:"#ffffff",fontWeight:900,fontSize:20,margin:0,letterSpacing:"-0.3px",textShadow:"0 1px 2px rgba(0,0,0,0.2)"}}>Feed da Pesquisa</h1>
+                <p style={{color:"#e0e7ff",fontSize:12.5,margin:"2px 0 0",fontWeight:600}}>CEEP Seabra · Projeto Ada Lovelace</p>
               </div>
             </div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-              <span style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.8)",
-                background:"rgba(255,255,255,0.12)",border:"1px solid rgba(255,255,255,0.2)",
-                padding:"4px 12px",borderRadius:99,display:"flex",alignItems:"center",gap:5}}>
-                <TrendingUp style={{width:12,height:12}}/> {posts.length} publicações
+              <span style={{fontSize:11.5,fontWeight:800,color:"#ffffff",
+                background:"rgba(15,23,42,0.35)",border:"1px solid rgba(255,255,255,0.25)",backdropFilter:"blur(6px)",
+                padding:"5px 12px",borderRadius:99,display:"flex",alignItems:"center",gap:6}}>
+                <TrendingUp style={{width:13,height:13,color:"#93c5fd"}}/> {posts.length} publicações
               </span>
-              <span style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.8)",
-                background:"rgba(255,255,255,0.12)",border:"1px solid rgba(255,255,255,0.2)",
-                padding:"4px 12px",borderRadius:99,display:"flex",alignItems:"center",gap:5}}>
-                <Users style={{width:12,height:12}}/> {totalUsers} pesquisadores
+              <span style={{fontSize:11.5,fontWeight:800,color:"#ffffff",
+                background:"rgba(15,23,42,0.35)",border:"1px solid rgba(255,255,255,0.25)",backdropFilter:"blur(6px)",
+                padding:"5px 12px",borderRadius:99,display:"flex",alignItems:"center",gap:6}}>
+                <Users style={{width:13,height:13,color:"#c4b5fd"}}/> {totalUsers} pesquisadores
               </span>
-              <span style={{fontSize:11,fontWeight:700,color:"#6ee7b7",
-                background:"rgba(16,185,129,0.15)",border:"1px solid rgba(16,185,129,0.3)",
-                padding:"4px 12px",borderRadius:99,display:"flex",alignItems:"center",gap:5}}>
-                <span style={{width:6,height:6,borderRadius:"50%",background:"#10b981",display:"inline-block",animation:"feedPulse 2s infinite"}}/>
+              <span style={{fontSize:11.5,fontWeight:800,color:"#a7f3d0",
+                background:"rgba(6,78,59,0.55)",border:"1px solid rgba(52,211,153,0.5)",backdropFilter:"blur(6px)",
+                padding:"5px 12px",borderRadius:99,display:"flex",alignItems:"center",gap:6}}>
+                <span style={{width:7,height:7,borderRadius:"50%",background:"#34d399",display:"inline-block",boxShadow:"0 0 8px #34d399",animation:"feedPulse 2s infinite"}}/>
                 Ao vivo
               </span>
             </div>
@@ -1909,17 +1922,23 @@ export function Feed() {
                   </button>
                 </div>
               )}
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                <div style={{display:"flex",alignItems:"center",gap:4}}>
-                  <button type="button" onClick={()=>setShowImageInput(v=>!v)}
-                    style={{padding:"7px 12px",borderRadius:10,border:"none",cursor:"pointer",
-                      background:showImageInput?"#ede9fe":"transparent",
-                      color:showImageInput?"#7c3aed":"#64748b",fontSize:12,fontWeight:700,
-                      display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>
-                    📸 Anexar Foto / Evidência
-                  </button>
-                </div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
                 <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <button type="button" onClick={()=>setShowImageInput(v=>!v)}
+                    title="Anexe uma foto para comprovar sua aplicação com a coordenação"
+                    style={{padding:"7px 12px",borderRadius:10,border:"none",cursor:"pointer",
+                      background:showImageInput?"#ede9fe":"#f1f5f9",
+                      color:showImageInput?"#7c3aed":"#475569",fontSize:12,fontWeight:700,
+                      display:"flex",alignItems:"center",gap:5,fontFamily:"inherit",
+                      transition:"background 0.15s"}}>
+                    📸 Anexar Evidência
+                  </button>
+                  <span style={{fontSize:11,color:"#64748b",display:"inline-flex",alignItems:"center",gap:4}}>
+                    <span style={{width:5,height:5,borderRadius:"50%",background:"#10b981",display:"inline-block"}}/>
+                    Comprova aplicação em campo
+                  </span>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
                   <span style={{fontSize:11,color:"#94a3b8"}}>{newPostContent.length}/500</span>
                   <button type="submit" disabled={posting||!newPostContent.trim()}
                     style={{
@@ -1934,55 +1953,40 @@ export function Feed() {
                   </button>
                 </div>
               </div>
-              <div style={{
-                marginTop: 2,
-                padding: "8px 12px",
-                borderRadius: 12,
-                background: "#f0fdf4",
-                border: "1px solid #bbf7d0",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                fontSize: 12,
-                color: "#166534",
-                fontWeight: 600,
-              }}>
-                <span style={{ fontSize: 14 }}>📸</span>
-                <span><strong>Evidência de Campo:</strong> Sempre que realizar entrevistas, anexe uma foto para comprovar sua aplicação com a coordenação!</span>
-              </div>
             </form>
           </div>
         </div>
 
-        {/* Banner de Crescimento Viral e Indicação de Colegas (Estratégias de Crescimento Facebook) */}
+        {/* Banner de Crescimento Viral e Indicação de Colegas */}
         <div style={{
-          background: "linear-gradient(135deg, #3730a3 0%, #4f46e5 50%, #7c3aed 100%)",
+          background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
           borderRadius: 20,
-          padding: "16px 20px",
+          padding: "14px 18px",
           color: "#fff",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           gap: 16,
-          boxShadow: "0 8px 24px rgba(79,70,229,0.22)",
+          border: "1px solid #334155",
+          boxShadow: "0 4px 16px rgba(15,23,42,0.08)",
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{
-              width: 44, height: 44, borderRadius: 14,
-              background: "rgba(255,255,255,0.18)",
+              width: 38, height: 38, borderRadius: 12,
+              background: "rgba(255,255,255,0.08)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 22, flexShrink: 0
+              fontSize: 18, flexShrink: 0
             }}>
               🤝
             </div>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <h3 style={{ fontSize: 14, fontWeight: 900, margin: 0 }}>Cresça a Rede Científica</h3>
-                <span style={{ fontSize: 10, fontWeight: 900, background: "#fef08a", color: "#854d0e", padding: "2px 8px", borderRadius: 99 }}>
+                <h3 style={{ fontSize: 13.5, fontWeight: 800, margin: 0, color: "#f8fafc" }}>Cresça a Rede Científica</h3>
+                <span style={{ fontSize: 10, fontWeight: 800, background: "#fef08a", color: "#854d0e", padding: "1px 7px", borderRadius: 99 }}>
                   +30 XP
                 </span>
               </div>
-              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.85)", margin: "4px 0 0", lineHeight: 1.4 }}>
+              <p style={{ fontSize: 11.5, color: "#94a3b8", margin: "2px 0 0", lineHeight: 1.4 }}>
                 Indique colegas de sala pelo WhatsApp para entrevistarem e ganhe pontos no ranking!
               </p>
             </div>
@@ -1995,15 +1999,15 @@ export function Feed() {
             }}
             style={{
               flexShrink: 0,
-              padding: "10px 16px",
-              borderRadius: 14,
-              background: "#fff",
-              color: "#4338ca",
-              fontWeight: 900,
+              padding: "8px 14px",
+              borderRadius: 12,
+              background: "#4f46e5",
+              color: "#fff",
+              fontWeight: 800,
               fontSize: 12,
               border: "none",
               cursor: "pointer",
-              boxShadow: "0 2px 10px rgba(0,0,0,0.15)",
+              boxShadow: "0 2px 8px rgba(79,70,229,0.3)",
               display: "flex",
               alignItems: "center",
               gap: 6,
@@ -2011,7 +2015,7 @@ export function Feed() {
               whiteSpace: "nowrap"
             }}
           >
-            <Share2 style={{ width: 14, height: 14 }} />
+            <Share2 style={{ width: 13, height: 13 }} />
             Indicar Amigos
           </button>
         </div>
@@ -2020,18 +2024,18 @@ export function Feed() {
         <div style={{
           display: "flex",
           background: "#fff",
-          borderRadius: 18,
+          borderRadius: 16,
           padding: 4,
           border: "1px solid #e2e8f0",
           boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
           gap: 4
         }}>
           {[
-            { id: "para_voce", label: "✨ Para Você", desc: "Algoritmo TAS" },
-            { id: "recentes", label: "🕒 Recentes", desc: "Tempo real" },
-            { id: "minha_turma", label: "👥 Minha Turma", desc: profile.turmaOuCargo || "Minha Turma" },
-            { id: "noticias", label: "📰 Oportunidades", desc: "Mural CEEP" },
-            { id: "conquistas", label: "🏆 Conquistas", desc: "Marcos" },
+            { id: "para_voce", label: "✨ Para Você" },
+            { id: "recentes", label: "🕒 Recentes" },
+            { id: "minha_turma", label: "👥 Minha Turma" },
+            { id: "noticias", label: "📰 Oportunidades" },
+            { id: "conquistas", label: "🏆 Conquistas" },
           ].map((tab) => {
             const active = feedTab === tab.id;
             return (
@@ -2044,24 +2048,23 @@ export function Feed() {
                 }}
                 style={{
                   flex: 1,
-                  padding: "10px 4px",
-                  borderRadius: 14,
+                  padding: "10px 8px",
+                  borderRadius: 12,
                   border: "none",
                   cursor: "pointer",
                   fontFamily: "inherit",
                   background: active ? "linear-gradient(135deg, #4f46e5, #6366f1)" : "transparent",
                   color: active ? "#fff" : "#64748b",
                   fontWeight: active ? 800 : 700,
-                  fontSize: 11,
+                  fontSize: 12,
                   transition: "all 0.15s ease",
                   display: "flex",
-                  flexDirection: "column",
                   alignItems: "center",
-                  gap: 2,
+                  justifyContent: "center",
+                  whiteSpace: "nowrap",
                 }}
               >
                 <span>{tab.label}</span>
-                <span style={{ fontSize: 9, opacity: active ? 0.85 : 0.6, fontWeight: 500 }}>{tab.desc}</span>
               </button>
             );
           })}
@@ -2087,11 +2090,57 @@ export function Feed() {
             </p>
           </div>
         ) : (
-          displayedPosts.map((p,i)=>(
-            <div key={p.id} style={{animation:`feedIn 0.3s ease ${i*0.04}s both`}}>
-              <PostCard post={p} profile={profile} onRefresh={()=>void fetchPosts(true)} onOpenProfile={handleOpenColegaProfile} />
-            </div>
-          ))
+          <>
+            {displayedPosts.slice(0, visibleCount).map((p,i)=>(
+              <div key={p.id} style={{animation:`feedIn 0.3s ease ${Math.min(i, 8)*0.04}s both`}}>
+                <PostCard post={p} profile={profile} onRefresh={()=>void fetchPosts(true)} onOpenProfile={handleOpenColegaProfile} />
+              </div>
+            ))}
+
+            {visibleCount < displayedPosts.length ? (
+              <button
+                type="button"
+                onClick={() => setVisibleCount(c => c + 15)}
+                style={{
+                  width: "100%",
+                  padding: "13px 20px",
+                  borderRadius: 16,
+                  background: "#fff",
+                  border: "1.5px solid #e2e8f0",
+                  color: "#4f46e5",
+                  fontWeight: 800,
+                  fontSize: 13,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  boxShadow: "0 2px 10px rgba(0,0,0,0.03)",
+                  transition: "all 0.15s ease",
+                  fontFamily: "inherit"
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = "#c7d2fe"; e.currentTarget.style.background = "#f5f3ff"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.background = "#fff"; }}
+              >
+                <ChevronDown style={{ width: 16, height: 16 }} />
+                Carregar mais publicações ({displayedPosts.length - visibleCount} restantes)
+              </button>
+            ) : displayedPosts.length > 5 ? (
+              <div style={{
+                textAlign: "center",
+                padding: "20px 0 10px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 6
+              }}>
+                <div style={{ width: 36, height: 2, background: "#e2e8f0", borderRadius: 99 }} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#94a3b8" }}>
+                  🎉 Você visualizou todas as publicações do momento!
+                </span>
+              </div>
+            ) : null}
+          </>
         )}
       </div>
 

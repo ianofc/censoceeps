@@ -16,7 +16,8 @@ Este arquivo define as regras contextuais para agentes de IA trabalhando no proj
 
 ## Padrões de UI/UX e Exportação
 1. **Layout Desktop vs Mobile**: Mantenha o espaçamento lateral `lg:pl-28` no `<main>` (`src/App.tsx`) para não sobrepor a `FloatingNav`.
-2. **Exportações CSV e PDF**:
+2. **Tecnologia Persuasiva & Fogg Behavior Model ($B = MAP$)**: Consulte `.agents/skills/tecnologia-persuasiva-fogg/SKILL.md` para orientações sobre simplificação de fluxo (habilidade), gatilhos com *kairos* e salvamento progressivo sem degradar a resiliência offline.
+3. **Exportações CSV e PDF**:
    - Em exportações CSV, utilize sempre `Blob` com BOM UTF-8 (`\ufeff`) e `URL.createObjectURL` seguido de `URL.revokeObjectURL`.
    - Em relatórios PDF (`src/utils/tasPdfGenerator.ts`), valide se `finalY` não ultrapassa a margem inferior da folha A4 (`280mm`) antes de desenhar assinaturas ou rodapés.
-3. **Verificação Obrigatória**: Antes de concluir qualquer tarefa, execute `npm run lint` (`tsc --noEmit`) e `npm run test:run` para garantir zero regressões.
+4. **Verificação Obrigatória**: Antes de concluir qualquer tarefa, execute `npm run lint` (`tsc --noEmit`) e `npm run test:run` para garantir zero regressões.

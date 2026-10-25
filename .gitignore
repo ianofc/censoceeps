@@ -16,6 +16,14 @@ temp.txt
 *.sln
 *.sw?
 
+# Dados Pessoais / PII e Listas locais
+scripts/alunos_extraidos_unicos.json
+scripts/nomes_alunos_unicos.json
+scripts/nomes_alunos_unicos.txt
+scripts/*.local
+scripts/dados_*.json
+scripts/dados_*.txt
+
 # Testing
 /coverage
 
